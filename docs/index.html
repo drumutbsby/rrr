@@ -192,7 +192,7 @@ async function webdeAra(soru) {
     let dil = "tr";
     if (!basliklar.length && sorgu !== soru) basliklar = await vikiAra("tr", soru);
     if (!basliklar.length) { basliklar = await vikiAra("en", sorgu); dil = "en"; }
-    for (const b of basliklar.slice(0, 2)) {
+    for (const b of basliklar.slice(0, 1)) { // en isabetli madde yeter; 2. madde çoğu kez alakasız
       const o = await vikiOzet(dil, b).catch(() => null);
       if (o) kaynaklar.push({ ad: "Vikipedi (" + dil + "): " + o.baslik,
                               metin: o.metin.slice(0, 1200), url: o.url });
@@ -212,7 +212,8 @@ function aramaMetni(kaynaklar) {
   // mesajının içine eklenir (ayrı system mesajı GÖNDERME — üretim hatası verir).
   return "Az önce kullanıcının sorusu için web araması yapıldı. Aşağıdaki KAYNAK " +
     "metinleri günceldir; cevabını öncelikle bunlara dayandır ve [1], [2] gibi atıf ver. " +
-    "Kaynaklar soruyu karşılamıyorsa bunu açıkça söyle, uydurma.\n\n" +
+    "YALNIZCA soruyla doğrudan ilgili kaynakları kullan; ilgisiz kaynağı görmezden gel, " +
+    "içeriğini cevaba karıştırma. Kaynaklar soruyu karşılamıyorsa bunu açıkça söyle, uydurma.\n\n" +
     kaynaklar.map((k, i) => `[KAYNAK ${i + 1}] ${k.ad}\n${k.metin}`).join("\n\n");
 }
 
