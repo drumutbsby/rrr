@@ -1,0 +1,9 @@
+# Kişisel veri ve çıktılar — depoya girmez
+belgeler/
+raporlar/
+veri/
+__pycache__/
+*.pyc
+
+# Yerel test artıkları
+test-resim.png

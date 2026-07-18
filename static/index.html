@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moralite — İstihbarat Modülü</title>
+<style>
+  :root {
+    --arka: #0d1117; --panel: #161b22; --panel2: #1c2333; --cizgi: #2d3548;
+    --metin: #e6e8ee; --soluk: #8b93a7; --vurgu: #4f8cff; --vurgu2: #2563eb;
+    --kullanici: #1e3a5f; --asistan: #1a2030; --tehlike: #f87171; --basari: #34d399;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--arka); color: var(--metin); height: 100vh; display: flex;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden;
+  }
+
+  /* ── Kenar çubuğu ─────────────────────────── */
+  aside {
+    width: 280px; min-width: 280px; background: var(--panel);
+    border-right: 1px solid var(--cizgi); display: flex; flex-direction: column;
+    padding: 20px 16px; gap: 18px;
+  }
+  .marka { display: flex; align-items: center; gap: 10px; }
+  .marka .logo {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f8cff, #9333ea);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 19px; color: #fff;
+  }
+  .marka h1 { font-size: 17px; letter-spacing: 0.5px; }
+  .marka small { display: block; color: var(--soluk); font-size: 11px; font-weight: 400; }
+  .blok label {
+    display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--soluk); margin-bottom: 7px;
+  }
+  select, .btn {
+    width: 100%; background: var(--panel2); color: var(--metin);
+    border: 1px solid var(--cizgi); border-radius: 10px; padding: 10px 12px;
+    font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  select:focus { outline: 1px solid var(--vurgu); }
+  .btn:hover { border-color: var(--vurgu); }
+  .btn.birincil { background: var(--vurgu2); border-color: var(--vurgu2); font-weight: 600; }
+  .btn.birincil:hover { filter: brightness(1.15); }
+  .durum { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--soluk); }
+  .nokta { width: 9px; height: 9px; border-radius: 50%; background: var(--tehlike); flex-shrink: 0; }
+  .nokta.acik { background: var(--basari); box-shadow: 0 0 6px var(--basari); }
+  .moduller { display: flex; flex-direction: column; gap: 6px; }
+  .modul {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel2); border: 1px solid var(--cizgi); border-radius: 10px;
+    padding: 9px 12px; font-size: 13px;
+  }
+  .rozet { font-size: 10px; padding: 2.5px 8px; border-radius: 20px; font-weight: 600; }
+  .rozet.aktif { background: rgba(52,211,153,.15); color: var(--basari); }
+  .rozet.plan { background: rgba(139,147,167,.15); color: var(--soluk); }
+  .alt-not { margin-top: auto; font-size: 11px; color: var(--soluk); line-height: 1.5; }
+  .sohbet-oge {
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    background: var(--panel2); border: 1px solid var(--cizgi); border-radius: 10px;
+    padding: 8px 10px; font-size: 12.5px; cursor: pointer; color: var(--soluk);
+  }
+  .sohbet-oge:hover { border-color: var(--vurgu); color: var(--metin); }
+  .sohbet-oge.aktif { background: var(--kullanici); color: var(--metin); border-color: var(--vurgu2); }
+  .sohbet-oge .ad { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sohbet-oge .sil { background: none; border: none; color: var(--soluk); cursor: pointer; font-size: 14px; padding: 0 2px; }
+  .sohbet-oge .sil:hover { color: var(--tehlike); }
+  details.dusunce {
+    background: #0d1117; border: 1px dashed var(--cizgi); border-radius: 8px;
+    padding: 7px 12px; margin-bottom: 8px; color: var(--soluk); font-size: 13px;
+    white-space: pre-wrap;
+  }
+  details.dusunce summary { cursor: pointer; font-size: 12px; user-select: none; }
+  .belge-chip {
+    display: flex; align-items: center; gap: 6px; background: var(--panel2);
+    border: 1px solid var(--cizgi); border-radius: 8px; padding: 5px 10px;
+    font-size: 12px; color: var(--soluk);
+  }
+  .belge-chip.indeksli { border-style: dashed; }
+  .belge-chip button { background: none; border: none; color: var(--soluk); cursor: pointer; font-size: 13px; }
+  .belge-chip button:hover { color: var(--tehlike); }
+
+  /* ── Sohbet alanı ─────────────────────────── */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #sohbet { flex: 1; overflow-y: auto; padding: 28px 8%; scroll-behavior: smooth; }
+  .karsilama { text-align: center; margin-top: 12vh; color: var(--soluk); }
+  .karsilama .logo-buyuk {
+    width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px;
+    background: linear-gradient(135deg, #4f8cff, #9333ea);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 800; color: #fff;
+  }
+  .karsilama h2 { color: var(--metin); font-size: 21px; margin-bottom: 8px; }
+  .karsilama p { font-size: 14px; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+  .mesaj { display: flex; gap: 12px; margin-bottom: 22px; max-width: 100%; }
+  .mesaj .avatar {
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .mesaj.kullanici .avatar { background: var(--kullanici); }
+  .mesaj.asistan .avatar { background: linear-gradient(135deg, #4f8cff, #9333ea); color: #fff; }
+  .balon {
+    background: var(--asistan); border: 1px solid var(--cizgi); border-radius: var(--radius);
+    padding: 13px 16px; font-size: 14.5px; line-height: 1.65; min-width: 0;
+    overflow-wrap: break-word; white-space: pre-wrap;
+  }
+  .mesaj.kullanici .balon { background: var(--kullanici); }
+  .balon img.ek { max-width: 220px; border-radius: 8px; display: block; margin-bottom: 8px; }
+  .balon code {
+    background: #0d1117; border: 1px solid var(--cizgi); border-radius: 5px;
+    padding: 1px 6px; font-family: Consolas, monospace; font-size: 13px;
+  }
+  .balon pre {
+    background: #0d1117; border: 1px solid var(--cizgi); border-radius: 8px;
+    padding: 12px; overflow-x: auto; margin: 8px 0; white-space: pre;
+  }
+  .balon pre code { background: none; border: none; padding: 0; }
+  .istatistik { font-size: 11px; color: var(--soluk); margin-top: 7px; }
+  .yaziyor { display: inline-block; }
+  .yaziyor span {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--soluk); margin-right: 4px; animation: zipla 1.2s infinite;
+  }
+  .yaziyor span:nth-child(2) { animation-delay: .15s; }
+  .yaziyor span:nth-child(3) { animation-delay: .3s; }
+  @keyframes zipla { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+  /* ── Giriş bölgesi ────────────────────────── */
+  #giris-kabuk { padding: 14px 8% 18px; border-top: 1px solid var(--cizgi); background: var(--panel); }
+  #onizleme { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  #onizleme .kucuk { position: relative; }
+  #onizleme img { height: 56px; border-radius: 8px; border: 1px solid var(--cizgi); }
+  #onizleme button {
+    position: absolute; top: -6px; right: -6px; width: 18px; height: 18px;
+    border-radius: 50%; border: none; background: var(--tehlike); color: #fff;
+    font-size: 11px; cursor: pointer; line-height: 1;
+  }
+  #giris {
+    display: flex; gap: 10px; align-items: flex-end; background: var(--panel2);
+    border: 1px solid var(--cizgi); border-radius: 16px; padding: 10px 12px;
+  }
+  #giris:focus-within { border-color: var(--vurgu); }
+  textarea {
+    flex: 1; background: none; border: none; color: var(--metin); resize: none;
+    font-size: 14.5px; font-family: inherit; line-height: 1.5; max-height: 160px; outline: none;
+  }
+  .ikon-btn {
+    background: none; border: none; color: var(--soluk); font-size: 19px;
+    cursor: pointer; padding: 4px 6px; border-radius: 8px; flex-shrink: 0;
+  }
+  .ikon-btn:hover { color: var(--metin); background: var(--cizgi); }
+  #gonder {
+    background: var(--vurgu2); color: #fff; border: none; border-radius: 10px;
+    padding: 9px 18px; font-size: 14px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  }
+  #gonder:disabled { opacity: .45; cursor: not-allowed; }
+  #gonder.durdur { background: var(--tehlike); }
+  .uyari { text-align: center; font-size: 11px; color: var(--soluk); margin-top: 9px; }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="marka">
+    <div class="logo">M</div>
+    <h1>MORALİTE<small>İstihbarat Modülü v0.1</small></h1>
+  </div>
+
+  <div class="durum"><div class="nokta" id="nokta"></div><span id="durum-metin">Ollama denetleniyor…</span></div>
+
+  <div class="blok">
+    <label>Model</label>
+    <select id="model-sec"></select>
+  </div>
+
+  <button class="btn birincil" id="yeni-sohbet">+ Yeni Sohbet</button>
+
+  <div class="blok" style="flex:1 1 0; min-height:60px; display:flex; flex-direction:column;">
+    <label>Sohbetler</label>
+    <div id="sohbet-liste" style="overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+  </div>
+
+  <button class="btn" id="disa-aktar" title="Aktif sohbeti Markdown dosyası olarak indir">⬇ Sohbeti Dışa Aktar</button>
+  <button class="btn" id="rapor-btn" title="Son Web İstihbarat/KAP çalışmasını biçimli Excel raporuna döker">📊 Excel Raporu</button>
+  <button class="btn" id="brifing-btn" title="Dün + bugün KAP bildirimlerini tarar, özetler ve Excel raporu üretir">🗞 Günlük KAP Brifingi</button>
+
+  <div class="blok">
+    <label>Modüller</label>
+    <div class="moduller">
+      <div class="modul">Sohbet + Görüntü <span class="rozet aktif">AKTİF</span></div>
+      <div class="modul" id="web-modul" style="cursor:pointer" title="Tıkla: aç/kapat — açıkken sorular önce web'de aranır">🌐 Web İstihbarat <span class="rozet plan" id="web-rozet">KAPALI</span></div>
+      <div class="modul" id="derin-modul" style="cursor:pointer" title="Açıkken model cevaptan önce içinden akıl yürütür — daha isabetli ama daha yavaş">🧠 Derin Düşünme <span class="rozet plan" id="derin-rozet">KAPALI</span></div>
+      <div class="modul" title="Web modu açıkken KAP bildirimi soruları otomatik olarak resmi KAP verisinden cevaplanır">📋 KAP Analiz <span class="rozet aktif">AKTİF</span></div>
+      <div class="modul">Rapor Motoru <span class="rozet plan">PLANLI</span></div>
+    </div>
+  </div>
+
+  <div class="alt-not">Tüm işlem yerel makinede döner; veri dışarı çıkmaz.<br>Yatırım tavsiyesi değildir.</div>
+</aside>
+
+<main>
+  <div id="sohbet">
+    <div class="karsilama" id="karsilama">
+      <div class="logo-buyuk">M</div>
+      <h2>Moralite İstihbarat Modülü</h2>
+      <p>Yerel modelinle sohbet et, görsel yükle, belge metni yapıştır.
+      Görüntü analizi için model seçicide <b>vl</b> içeren bir model seçili olmalı.</p>
+    </div>
+  </div>
+
+  <div id="giris-kabuk">
+    <div id="belge-cubuk" style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;"></div>
+    <div id="onizleme"></div>
+    <div id="giris">
+      <button class="ikon-btn" id="ek-btn" title="Görsel ekle">📎</button>
+      <input type="file" id="dosya" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+      <button class="ikon-btn" id="belge-btn" title="Belge ekle (PDF/TXT/MD) — sohbete bağlam olarak eklenir">📄</button>
+      <input type="file" id="belge-dosya" accept=".pdf,.txt,.md" multiple hidden>
+      <textarea id="metin" rows="1" placeholder="Mesajını yaz… (Enter: gönder, Shift+Enter: satır)"></textarea>
+      <button id="gonder">Gönder</button>
+    </div>
+    <div class="uyari">Moralite yereldeki açık modelleri kullanır; hatalı bilgi üretebilir, kritik veriyi doğrulayın.</div>
+  </div>
+</main>
+
+<script>
+"use strict";
+const sohbetEl = document.getElementById("sohbet");
+const metinEl = document.getElementById("metin");
+const gonderBtn = document.getElementById("gonder");
+const modelSec = document.getElementById("model-sec");
+const onizlemeEl = document.getElementById("onizleme");
+const dosyaEl = document.getElementById("dosya");
+
+let mesajlar = [];      // {role, content, images?}
+let ekler = [];         // bekleyen görseller: {b64, dataUrl}
+let akisIptal = null;   // AbortController
+let bekleyenOkuma = Promise.resolve(); // dosya okumaları bitmeden gönderim yapılmaz
+let webModu = false;    // açıkken /api/istihbarat kullanılır (web araması + atıflı cevap)
+let derinModu = false;  // açıkken think:true gönderilir, düşünme katlanabilir blokta gösterilir
+let ekliBelgeler = [];  // aktif sohbete bağlı belgeler: {id, ad, sayfa, karakter, indeksli}
+let belgeYukleniyor = 0;
+
+/* ── yardımcılar ── */
+function kacir(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function guvenliB64(b) {
+  // localStorage/geçmişten gelen değer HTML'e gömülmeden önce doğrulanır
+  return typeof b === "string" && /^[A-Za-z0-9+/=]+$/.test(b);
+}
+/* ── kaynak güvenilirlik rozetleri ── */
+const RESMI_ALANLAR = ["kap.org.tr", "tcmb.gov.tr", "spk.gov.tr", "borsaistanbul.com",
+  "resmigazete.gov.tr", "mkk.com.tr", "tuik.gov.tr"];
+const HABER_ALANLAR = ["hurriyet", "haberturk", "ntv", "cnnturk", "sozcu", "sabah",
+  "milliyet", "dunya.com", "bloomberght", "reuters", "aa.com.tr", "bigpara",
+  "doviz.com", "investing.com", "foreks", "tradingview", "ekonomim", "parafesto"];
+function guvenRozet(url) {
+  let d = "";
+  try { d = new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch {}
+  if (d.endsWith(".gov.tr") || RESMI_ALANLAR.some(r => d === r || d.endsWith("." + r)))
+    return ["RESMÎ", "var(--basari)"];
+  if (HABER_ALANLAR.some(h => d.includes(h))) return ["HABER", "var(--vurgu)"];
+  return ["DİĞER", "var(--soluk)"];
+}
+function kaynakcaHtml(liste) {
+  return `<div class="istatistik">Kaynaklar: ${liste.map(k => {
+    const [etiket, renk] = guvenRozet(k.url);
+    return `<a href="${kacir(k.url)}" target="_blank" rel="noopener" style="color:var(--vurgu)">[${k.no}] ${kacir(k.baslik)}</a>` +
+      ` <span class="rozet" style="background:rgba(255,255,255,.07); color:${renk}">${etiket}</span>`;
+  }).join(" · ")}</div>`;
+}
+function bicimle(s) {
+  // mini markdown: ```blok```, `kod`, **kalın**, *eğik*
+  let h = kacir(s);
+  h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, dil, kod) => `<pre><code>${kod}</code></pre>`);
+  h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  h = h.replace(/(^|\s)\*([^*\n]+)\*/g, "$1<i>$2</i>");
+  return h;
+}
+function kaydir() { sohbetEl.scrollTop = sohbetEl.scrollHeight; }
+function karsilamaGizle() {
+  const k = document.getElementById("karsilama");
+  if (k) k.remove();
+}
+function balonEkle(rol, icerikHtml) {
+  karsilamaGizle();
+  const kap = document.createElement("div");
+  kap.className = "mesaj " + (rol === "user" ? "kullanici" : "asistan");
+  kap.innerHTML = `<div class="avatar">${rol === "user" ? "S" : "M"}</div><div class="balon">${icerikHtml}</div>`;
+  sohbetEl.appendChild(kap);
+  kaydir();
+  return kap.querySelector(".balon");
+}
+
+/* ── durum & modeller ── */
+async function durumYenile() {
+  const nokta = document.getElementById("nokta");
+  const dm = document.getElementById("durum-metin");
+  try {
+    const d = await (await fetch("/api/durum")).json();
+    nokta.classList.toggle("acik", d.cevrimici);
+    dm.textContent = d.cevrimici
+      ? "Ollama v" + d.surum + (d.yuklu_modeller.length ? " · bellekte: " + d.yuklu_modeller[0] : "")
+      : "Ollama kapalı — uygulamayı başlatın";
+  } catch { nokta.classList.remove("acik"); dm.textContent = "Sunucuya ulaşılamıyor"; }
+}
+async function modelleriYukle() {
+  try {
+    const d = await (await fetch("/api/modeller")).json();
+    modelSec.innerHTML = "";
+    for (const m of d.modeller) {
+      const o = document.createElement("option");
+      o.value = m.ad;
+      o.textContent = `${m.gorur ? "👁 " : ""}${m.ad} (${m.boyut_gb} GB)`;
+      if (m.ad === d.varsayilan) o.selected = true;
+      modelSec.appendChild(o);
+    }
+  } catch {
+    modelSec.innerHTML = "<option>model listesi alınamadı</option>";
+  }
+}
+
+/* ── görsel ekleme ── */
+document.getElementById("ek-btn").onclick = () => dosyaEl.click();
+
+function dosyalariEkle(dosyalar) {
+  // Tüm okumalar sırayla Promise zincirine eklenir; gonder() bu zinciri bekler.
+  const okuma = Promise.all([...dosyalar].map(f => new Promise((coz) => {
+    const r = new FileReader();
+    r.onload = () => coz(r.result);
+    r.onerror = () => coz(null);
+    r.readAsDataURL(f);
+  }))).then(sonuclar => {
+    for (const dataUrl of sonuclar) {
+      if (!dataUrl) continue;
+      ekler.push({ b64: dataUrl.split(",")[1], dataUrl }); // dataUrl orijinal MIME'ı korur
+    }
+    onizlemeCiz();
+  });
+  bekleyenOkuma = bekleyenOkuma.then(() => okuma);
+}
+
+dosyaEl.onchange = () => {
+  dosyalariEkle([...dosyaEl.files].filter(f => f.type !== "image/svg+xml"));
+  dosyaEl.value = "";
+};
+
+/* ── belge ekleme ── */
+const belgeDosyaEl = document.getElementById("belge-dosya");
+document.getElementById("belge-btn").onclick = () => belgeDosyaEl.click();
+
+function belgeleriKaydet() {
+  try { localStorage.setItem("moralite_belgeler_" + indeks.aktifId, JSON.stringify(ekliBelgeler)); } catch {}
+}
+function belgeCiz() {
+  const kap = document.getElementById("belge-cubuk");
+  kap.innerHTML = "";
+  for (let i = 0; i < ekliBelgeler.length; i++) {
+    const b = ekliBelgeler[i];
+    const chip = document.createElement("div");
+    chip.className = "belge-chip" + (b.indeksli ? " indeksli" : "");
+    chip.title = b.indeksli
+      ? "Büyük belge: sorulara en yakın bölümler otomatik bulunur"
+      : "Küçük belge: tamamı bağlama eklenir";
+    const ad = document.createElement("span");
+    ad.textContent = `📄 ${b.ad} (${b.sayfa} sf, ${(b.karakter / 1000).toFixed(0)}k)`;
+    const sil = document.createElement("button");
+    sil.textContent = "×"; sil.title = "Belgeyi sohbetten çıkar";
+    sil.onclick = () => { ekliBelgeler.splice(i, 1); belgeleriKaydet(); belgeCiz(); };
+    chip.append(ad, sil);
+    kap.appendChild(chip);
+  }
+  if (belgeYukleniyor > 0) {
+    const y = document.createElement("div");
+    y.className = "belge-chip";
+    y.textContent = "⏳ belge işleniyor…";
+    kap.appendChild(y);
+  }
+}
+belgeDosyaEl.onchange = async () => {
+  const dosyalar = [...belgeDosyaEl.files];
+  belgeDosyaEl.value = "";
+  for (const f of dosyalar) {
+    belgeYukleniyor++; belgeCiz();
+    try {
+      const fd = new FormData();
+      fd.append("dosya", f);
+      const r = await fetch("/api/belge", { method: "POST", body: fd });
+      const j = await r.json();
+      if (!r.ok || j.hata) throw new Error(j.hata || ("HTTP " + r.status));
+      ekliBelgeler.push(j);
+      belgeleriKaydet();
+    } catch (e) {
+      alert("Belge yüklenemedi: " + e.message);
+    } finally {
+      belgeYukleniyor--; belgeCiz();
+    }
+  }
+};
+
+// Ctrl+V ile pano görseli yapıştırma (metin yapıştırma normal işler)
+metinEl.addEventListener("paste", (e) => {
+  const resimler = [...(e.clipboardData ? e.clipboardData.items : [])]
+    .filter(i => i.type.startsWith("image/") && i.type !== "image/svg+xml")
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  if (!resimler.length) return;
+  e.preventDefault();
+  dosyalariEkle(resimler);
+});
+function onizlemeCiz() {
+  onizlemeEl.innerHTML = "";
+  ekler.forEach((ek, i) => {
+    const kut = document.createElement("div");
+    kut.className = "kucuk";
+    const img = document.createElement("img");
+    img.src = ek.dataUrl;
+    const sil = document.createElement("button");
+    sil.textContent = "×";
+    sil.onclick = () => { ekler.splice(i, 1); onizlemeCiz(); };
+    kut.append(img, sil);
+    onizlemeEl.appendChild(kut);
+  });
+}
+
+/* ── gönderme & akış ── */
+async function gonder(ozel) {
+  // ozel: {uc, metin} — brifing gibi hazır akışlar için
+  if (akisIptal) { akisIptal.abort(); return; } // durdur modu (sadece buton)
+  await bekleyenOkuma; // seçilen görsellerin okunması bitmeden gönderme
+  const icerik = (ozel && ozel.metin) ? ozel.metin : metinEl.value.trim();
+  if (!icerik && ekler.length === 0) return;
+
+  const kullaniciMesaj = { role: "user", content: icerik || "(görsel)" };
+  if (ekler.length) kullaniciMesaj.images = ekler.map(e => e.b64);
+
+  const kap = document.createElement("div");
+  ekler.forEach(e => {
+    const img = document.createElement("img");
+    img.className = "ek"; img.src = e.dataUrl;
+    kap.appendChild(img);
+  });
+  kap.insertAdjacentHTML("beforeend", bicimle(icerik));
+  balonEkle("user", kap.innerHTML);
+
+  mesajlar.push(kullaniciMesaj);
+  if (!ozel) { metinEl.value = ""; metinEl.style.height = "auto"; }
+  ekler = []; onizlemeCiz();
+
+  const balon = balonEkle("assistant", '<div class="yaziyor"><span></span><span></span><span></span></div>');
+  gonderBtn.textContent = "Durdur"; gonderBtn.classList.add("durdur");
+  akisIptal = new AbortController();
+
+  let toplanan = "", hataMetni = "", olayHtml = "", kaynakca = null, dusunce = "";
+  let raporUrl = null, durduruldu = false, sonChunk = null, basla = performance.now();
+  const parcaIsle = (satir) => {
+    let p;
+    try { p = JSON.parse(satir); } catch { return; }
+    if (p.olay) { // web istihbarat ilerleme olayları
+      const o = p.olay;
+      if (o.tip === "sorgular") olayHtml += `🔍 Arama: ${o.sorgular.map(kacir).join(" · ")}<br>`;
+      if (o.tip === "kaynak") olayHtml += `📄 [${o.no}] ${kacir(o.baslik)}<br>`;
+      if (o.tip === "tur2") olayHtml += `🔁 2. tur arama: ${o.sorgular.map(kacir).join(" · ")}<br>`;
+      if (o.tip === "sentez") olayHtml += `🧠 ${o.kaynak_sayisi} kaynakla sentezleniyor…<br>`;
+      if (o.tip === "kaynakca") kaynakca = o.kaynaklar;
+      if (o.tip === "rapor") { raporUrl = o.url; olayHtml += "📊 Excel raporu hazırlandı<br>"; }
+      return;
+    }
+    if (p.hata || p.error) hataMetni += (hataMetni ? "\n" : "") + (p.hata || p.error);
+    if (p.message && p.message.thinking) dusunce += p.message.thinking;
+    if (p.message && p.message.content) toplanan += p.message.content;
+    if (p.done) sonChunk = p;
+  };
+  const olayBlok = () => olayHtml
+    ? `<div class="istatistik" style="margin-bottom:8px">${olayHtml}</div>` : "";
+  const dusunceBlok = (acik) => dusunce
+    ? `<details class="dusunce"${acik ? " open" : ""}><summary>🧠 Düşünme süreci</summary>${kacir(dusunce)}</details>` : "";
+  try {
+    const yanit = await fetch(
+      (ozel && ozel.uc) ? ozel.uc : (webModu ? "/api/istihbarat" : "/api/sohbet"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: modelSec.value,
+        // kaynakca/raporUrl alanları yalnızca arayüz içindir, modele gitmez
+        messages: mesajlar.map(({ kaynakca, raporUrl, ...m }) => m),
+        think: derinModu,
+        belgeler: ekliBelgeler.map(b => b.id),
+      }),
+      signal: akisIptal.signal,
+    });
+    const okuyucu = yanit.body.getReader();
+    const coz = new TextDecoder();
+    let kuyruk = "";
+    while (true) {
+      const { done, value } = await okuyucu.read();
+      if (done) break;
+      kuyruk += coz.decode(value, { stream: true });
+      const satirlar = kuyruk.split("\n");
+      kuyruk = satirlar.pop();
+      for (const satir of satirlar) {
+        if (!satir.trim()) continue;
+        parcaIsle(satir);
+        balon.innerHTML = olayBlok() + dusunceBlok(!toplanan) +
+          (bicimle(toplanan) || '<div class="yaziyor"><span></span><span></span><span></span></div>');
+        kaydir();
+      }
+    }
+    if (kuyruk.trim()) parcaIsle(kuyruk); // satır sonu olmadan biten gövde (örn. 4xx yanıtı)
+  } catch (e) {
+    if (e.name === "AbortError") durduruldu = true;
+    else hataMetni += (hataMetni ? "\n" : "") + "Bağlantı hatası: " + e.message;
+  }
+
+  const nihai = toplanan.trim();
+  balon.innerHTML = olayBlok() + dusunceBlok(false) + (nihai
+    ? bicimle(nihai)
+    : `<span style="color:var(--soluk)">${durduruldu ? "⏹ Üretim durduruldu" : "(yanıt alınamadı)"}</span>`);
+  if (kaynakca && kaynakca.length) {
+    balon.insertAdjacentHTML("beforeend", kaynakcaHtml(kaynakca));
+  }
+  if (raporUrl) {
+    balon.insertAdjacentHTML("beforeend",
+      `<div class="istatistik"><a href="${kacir(raporUrl)}" target="_blank" style="color:var(--basari)">📊 Excel raporunu indir</a></div>`);
+  }
+  if (hataMetni) {
+    balon.insertAdjacentHTML("beforeend",
+      `<div class="istatistik" style="color:var(--tehlike)">⚠ ${kacir(hataMetni)}</div>`);
+  }
+  if (sonChunk && sonChunk.eval_count) {
+    const hiz = (sonChunk.eval_count / (sonChunk.eval_duration / 1e9)).toFixed(1);
+    const sure = ((performance.now() - basla) / 1000).toFixed(1);
+    balon.insertAdjacentHTML("beforeend",
+      `<div class="istatistik">${sonChunk.eval_count} token · ${hiz} token/sn · ${sure} sn</div>`);
+  }
+  // Hata/durdurma metinleri geçmişe yazılmaz; yalnızca gerçek yanıt kaydedilir
+  if (nihai) {
+    const asistanMesaj = { role: "assistant", content: nihai };
+    if (kaynakca && kaynakca.length) asistanMesaj.kaynakca = kaynakca;
+    if (raporUrl) asistanMesaj.raporUrl = raporUrl;
+    mesajlar.push(asistanMesaj);
+  }
+  kaydet();
+  akisIptal = null;
+  gonderBtn.textContent = "Gönder"; gonderBtn.classList.remove("durdur");
+  durumYenile();
+  kaydir();
+}
+
+/* ── kalıcılık ── */
+/* ── çoklu sohbet kalıcılığı ── */
+const INDEKS_ANAHTAR = "moralite_indeks";
+const KARSILAMA_HTML = document.getElementById("karsilama").outerHTML;
+let indeks = { aktifId: null, sohbetler: [] }; // sohbetler: [{id, baslik, ts}]
+const sohbetAnahtar = id => "moralite_sohbet_" + id;
+const yeniId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function indeksKaydet() { try { localStorage.setItem(INDEKS_ANAHTAR, JSON.stringify(indeks)); } catch {} }
+
+function kaydet() {
+  // Görseller kotayı (~5 MB) tek başına aşabildiğinden kalıcı kayda yazılmaz;
+  // kota yine de aşılırsa geçmiş budanarak yeniden denenir.
+  const hafif = mesajlar.map(({ images, ...m }) => m);
+  const anahtar = sohbetAnahtar(indeks.aktifId);
+  try { localStorage.setItem(anahtar, JSON.stringify(hafif)); }
+  catch { try { localStorage.setItem(anahtar, JSON.stringify(hafif.slice(-20))); } catch {} }
+  const oge = indeks.sohbetler.find(s => s.id === indeks.aktifId);
+  if (oge) {
+    if (!oge.baslik) {
+      const ilk = mesajlar.find(m => m.role === "user");
+      if (ilk) oge.baslik = ilk.content.slice(0, 34) + (ilk.content.length > 34 ? "…" : "");
+    }
+    oge.ts = Date.now();
+  }
+  indeksKaydet();
+  listeCiz();
+}
+
+function mesajlariCiz() {
+  sohbetEl.innerHTML = mesajlar.length ? "" : KARSILAMA_HTML;
+  for (const m of mesajlar) {
+    let html = "";
+    (m.images || []).filter(guvenliB64).forEach(b => html += `<img class="ek" src="data:image/png;base64,${b}">`);
+    html += bicimle(m.content);
+    if (m.kaynakca && m.kaynakca.length) {
+      html += kaynakcaHtml(m.kaynakca);
+    }
+    if (m.raporUrl) {
+      html += `<div class="istatistik"><a href="${kacir(m.raporUrl)}" target="_blank" style="color:var(--basari)">📊 Excel raporunu indir</a></div>`;
+    }
+    balonEkle(m.role === "user" ? "user" : "assistant", html);
+  }
+}
+
+/* ── dışa aktarma ── */
+function sohbetMarkdown() {
+  const oge = indeks.sohbetler.find(s => s.id === indeks.aktifId);
+  const satirlar = [
+    `# Moralite Sohbeti — ${oge && oge.baslik ? oge.baslik : "Adsız"}`,
+    `> Dışa aktarım: ${new Date().toLocaleString("tr-TR")} · Model: ${modelSec.value}`,
+    "",
+  ];
+  for (const m of mesajlar) {
+    satirlar.push(m.role === "user" ? "## 👤 Kullanıcı" : "## 🤖 Moralite", "");
+    satirlar.push(m.content);
+    if (m.images && m.images.length) satirlar.push("", `*(${m.images.length} görsel ek — dışa aktarıma dahil edilmez)*`);
+    if (m.kaynakca && m.kaynakca.length) {
+      satirlar.push("", "**Kaynaklar:**");
+      m.kaynakca.forEach(k => satirlar.push(`- [${k.no}] ${k.baslik} — ${k.url}`));
+    }
+    satirlar.push("");
+  }
+  return satirlar.join("\n");
+}
+document.getElementById("disa-aktar").onclick = () => {
+  if (!mesajlar.length) return;
+  const blob = new Blob([sohbetMarkdown()], { type: "text/markdown;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `moralite-sohbet-${new Date().toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+function listeCiz() {
+  const kap = document.getElementById("sohbet-liste");
+  kap.innerHTML = "";
+  for (const s of [...indeks.sohbetler].sort((a, b) => b.ts - a.ts)) {
+    const el = document.createElement("div");
+    el.className = "sohbet-oge" + (s.id === indeks.aktifId ? " aktif" : "");
+    const ad = document.createElement("span");
+    ad.className = "ad";
+    ad.textContent = s.baslik || "Yeni sohbet";
+    const sil = document.createElement("button");
+    sil.className = "sil"; sil.textContent = "×"; sil.title = "Sohbeti sil";
+    sil.onclick = (ev) => sohbetSil(s.id, ev);
+    el.onclick = () => sohbetSec(s.id);
+    el.append(ad, sil);
+    kap.appendChild(el);
+  }
+}
+
+function sohbetYukle(id) {
+  indeks.aktifId = id;
+  indeksKaydet();
+  try { mesajlar = JSON.parse(localStorage.getItem(sohbetAnahtar(id)) || "[]"); } catch { mesajlar = []; }
+  try { ekliBelgeler = JSON.parse(localStorage.getItem("moralite_belgeler_" + id) || "[]"); } catch { ekliBelgeler = []; }
+  mesajlariCiz();
+  listeCiz();
+  belgeCiz();
+}
+
+function sohbetSec(id) {
+  if (akisIptal || id === indeks.aktifId) return; // üretim sürerken geçiş yok
+  sohbetYukle(id);
+}
+
+function sohbetSil(id, ev) {
+  ev.stopPropagation();
+  if (akisIptal) return;
+  if (!confirm("Bu sohbet kalıcı olarak silinsin mi?")) return;
+  localStorage.removeItem(sohbetAnahtar(id));
+  localStorage.removeItem("moralite_belgeler_" + id);
+  indeks.sohbetler = indeks.sohbetler.filter(s => s.id !== id);
+  if (indeks.aktifId === id) {
+    if (!indeks.sohbetler.length) indeks.sohbetler.push({ id: yeniId(), baslik: "", ts: Date.now() });
+    sohbetYukle([...indeks.sohbetler].sort((a, b) => b.ts - a.ts)[0].id);
+  } else { indeksKaydet(); listeCiz(); }
+}
+
+function baslat() {
+  try { indeks = JSON.parse(localStorage.getItem(INDEKS_ANAHTAR)) || indeks; } catch {}
+  if (!Array.isArray(indeks.sohbetler)) indeks.sohbetler = [];
+  // Eski tek-sohbet düzeninden geçiş
+  const eski = localStorage.getItem("moralite_sohbet");
+  if (eski && !indeks.sohbetler.length) {
+    const id = yeniId();
+    try { localStorage.setItem(sohbetAnahtar(id), eski); } catch {}
+    indeks.sohbetler.push({ id, baslik: "Önceki sohbet", ts: Date.now() });
+    localStorage.removeItem("moralite_sohbet");
+  }
+  if (!indeks.sohbetler.length) indeks.sohbetler.push({ id: yeniId(), baslik: "", ts: Date.now() });
+  if (!indeks.sohbetler.find(s => s.id === indeks.aktifId)) {
+    indeks.aktifId = [...indeks.sohbetler].sort((a, b) => b.ts - a.ts)[0].id;
+  }
+  sohbetYukle(indeks.aktifId);
+}
+
+/* ── olaylar ── */
+gonderBtn.onclick = gonder;
+metinEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (akisIptal) return; // akış sürerken Enter üretimi durdurmaz; Durdur sadece butondadır
+    gonder();
+  }
+});
+metinEl.addEventListener("input", () => {
+  metinEl.style.height = "auto";
+  metinEl.style.height = Math.min(metinEl.scrollHeight, 160) + "px";
+});
+document.getElementById("yeni-sohbet").onclick = () => {
+  if (akisIptal) return;
+  if (!mesajlar.length) return; // zaten boş bir sohbetteyiz
+  const id = yeniId();
+  indeks.sohbetler.push({ id, baslik: "", ts: Date.now() });
+  sohbetYukle(id);
+};
+document.getElementById("brifing-btn").onclick = () => {
+  if (akisIptal) return; // akış sürerken brifing başlatma
+  gonder({ uc: "/api/brifing", metin: "🗞 Günlük KAP Brifingi (dün + bugün)" });
+};
+document.getElementById("rapor-btn").onclick = async () => {
+  const dugme = document.getElementById("rapor-btn");
+  dugme.disabled = true; dugme.textContent = "📊 Rapor üretiliyor…";
+  try {
+    const r = await fetch("/api/rapor", { method: "POST" });
+    const j = await r.json();
+    if (!r.ok || j.hata) throw new Error(j.hata || ("HTTP " + r.status));
+    window.open(j.url, "_blank");
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    dugme.disabled = false; dugme.textContent = "📊 Excel Raporu";
+  }
+};
+document.getElementById("derin-modul").onclick = () => {
+  derinModu = !derinModu;
+  const rozet = document.getElementById("derin-rozet");
+  rozet.textContent = derinModu ? "AKTİF" : "KAPALI";
+  rozet.className = "rozet " + (derinModu ? "aktif" : "plan");
+};
+document.getElementById("web-modul").onclick = () => {
+  webModu = !webModu;
+  const rozet = document.getElementById("web-rozet");
+  rozet.textContent = webModu ? "AKTİF" : "KAPALI";
+  rozet.className = "rozet " + (webModu ? "aktif" : "plan");
+  metinEl.placeholder = webModu
+    ? "Güncel sorunu yaz — önce web'de aranacak… (Enter: gönder)"
+    : "Mesajını yaz… (Enter: gönder, Shift+Enter: satır)";
+};
+
+durumYenile(); modelleriYukle(); baslat();
+setInterval(durumYenile, 15000);
+</script>
+</body>
+</html>
