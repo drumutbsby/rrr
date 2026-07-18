@@ -171,12 +171,27 @@ function ddgAra(soru) { // Instant Answer API yalnız JSONP ile tarayıcıdan ç
     document.head.appendChild(s);
   });
 }
+function aramaSorgusu(s) {
+  // Tam soru cümlesi ("X kimdir? İki cümleyle anlat.") aramada sonuç vermez;
+  // soru/talimat kalıpları ayıklanıp çekirdek konu bırakılır.
+  const gereksiz = new Set(["kimdir","nedir","neresidir","neresi","nerede","anlat",
+    "açıkla","acikla","özetle","ozetle","kısaca","kisaca","cümleyle","cumleyle",
+    "cümle","cumle","bir","iki","üç","uç","lütfen","lutfen","hakkında","hakkinda",
+    "bilgi","ver","nasıl","nasil","ne","kim","kaç","kac","midir","mıdır","mudur",
+    "müdür","mi","mı","mu","mü","ile","ve","için","icin"]);
+  const kelimeler = s.replace(/[?!.,;:"']/g, " ").split(/\s+/)
+    .filter(k => k && !gereksiz.has(k.toLocaleLowerCase("tr")));
+  const sorgu = kelimeler.join(" ").trim();
+  return sorgu.length >= 2 ? sorgu : s;
+}
 async function webdeAra(soru) {
   const kaynaklar = [];
+  const sorgu = aramaSorgusu(soru);
   try {
-    let basliklar = await vikiAra("tr", soru);
+    let basliklar = await vikiAra("tr", sorgu);
     let dil = "tr";
-    if (!basliklar.length) { basliklar = await vikiAra("en", soru); dil = "en"; }
+    if (!basliklar.length && sorgu !== soru) basliklar = await vikiAra("tr", soru);
+    if (!basliklar.length) { basliklar = await vikiAra("en", sorgu); dil = "en"; }
     for (const b of basliklar.slice(0, 2)) {
       const o = await vikiOzet(dil, b).catch(() => null);
       if (o) kaynaklar.push({ ad: "Vikipedi (" + dil + "): " + o.baslik,
@@ -184,7 +199,7 @@ async function webdeAra(soru) {
     }
   } catch {}
   try {
-    const d = await ddgAra(soru);
+    const d = await ddgAra(sorgu);
     if (d && d.AbstractText) {
       kaynaklar.push({ ad: "DuckDuckGo: " + (d.Heading || "özet"),
                        metin: d.AbstractText.slice(0, 1200), url: d.AbstractURL || "" });
