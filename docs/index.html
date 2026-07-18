@@ -207,14 +207,13 @@ async function webdeAra(soru) {
   } catch {}
   return kaynaklar.slice(0, 3);
 }
-function aramaBaglami(kaynaklar) {
-  return {
-    role: "system",
-    content: "Az önce kullanıcının sorusu için web araması yapıldı. Aşağıdaki KAYNAK " +
-      "metinleri günceldir; cevabını öncelikle bunlara dayandır ve [1], [2] gibi atıf ver. " +
-      "Kaynaklar soruyu karşılamıyorsa bunu açıkça söyle, uydurma.\n\n" +
-      kaynaklar.map((k, i) => `[KAYNAK ${i + 1}] ${k.ad}\n${k.metin}`).join("\n\n"),
-  };
+function aramaMetni(kaynaklar) {
+  // WebLLM yalnızca TEK ve İLK sistem mesajına izin verir; bu metin ana sistem
+  // mesajının içine eklenir (ayrı system mesajı GÖNDERME — üretim hatası verir).
+  return "Az önce kullanıcının sorusu için web araması yapıldı. Aşağıdaki KAYNAK " +
+    "metinleri günceldir; cevabını öncelikle bunlara dayandır ve [1], [2] gibi atıf ver. " +
+    "Kaynaklar soruyu karşılamıyorsa bunu açıkça söyle, uydurma.\n\n" +
+    kaynaklar.map((k, i) => `[KAYNAK ${i + 1}] ${k.ad}\n${k.metin}`).join("\n\n");
 }
 
 function durum(metin, ilerleme) {
@@ -336,9 +335,10 @@ async function gonder() {
       b.textContent = kaynaklar.length
         ? "🧠 " + kaynaklar.length + " kaynakla cevap hazırlanıyor…" : "…";
     }
-    const ekBaglam = kaynaklar.length ? [aramaBaglami(kaynaklar)] : [];
+    const sistem = sistemMesaji();
+    if (kaynaklar.length) sistem.content += "\n\n" + aramaMetni(kaynaklar);
     const akis = await motor.chat.completions.create({
-      messages: [sistemMesaji(), ...ekBaglam, ...pencere(gecmis)],
+      messages: [sistem, ...pencere(gecmis)],
       stream: true,
       temperature: 0.4,
       max_tokens: 600,
