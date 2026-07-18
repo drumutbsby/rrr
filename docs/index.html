@@ -184,6 +184,15 @@ function aramaSorgusu(s) {
   const sorgu = kelimeler.join(" ").trim();
   return sorgu.length >= 2 ? sorgu : s;
 }
+function ilgiliMi(kaynak, sorgu) {
+  // Yalnız yıl/sayı eşleşmesiyle gelen alakasız kaynaklar elenir:
+  // sorgudaki en az bir HARFLİ anlamlı kelime kaynakta geçmeli.
+  const kelimeler = sorgu.toLocaleLowerCase("tr").split(/\s+/)
+    .filter(k => k.length >= 3 && !/^\d+$/.test(k));
+  if (!kelimeler.length) return true;
+  const metin = (kaynak.ad + " " + kaynak.metin.slice(0, 300)).toLocaleLowerCase("tr");
+  return kelimeler.some(k => metin.includes(k));
+}
 async function webdeAra(soru) {
   const kaynaklar = [];
   const sorgu = aramaSorgusu(soru);
@@ -205,7 +214,7 @@ async function webdeAra(soru) {
                        metin: d.AbstractText.slice(0, 1200), url: d.AbstractURL || "" });
     }
   } catch {}
-  return kaynaklar.slice(0, 3);
+  return kaynaklar.filter(k => ilgiliMi(k, sorgu)).slice(0, 3);
 }
 function aramaMetni(kaynaklar) {
   // WebLLM yalnızca TEK ve İLK sistem mesajına izin verir; bu metin ana sistem
@@ -332,12 +341,27 @@ async function gonder() {
   try {
     if (webAramasi) {
       b.textContent = "🔍 Web'de aranıyor (Vikipedi + DuckDuckGo)…";
-      kaynaklar = await webdeAra(icerik).catch(() => []);
+      // Takip soruları ("2026 itibari ile kimdir" gibi) tek başına aranamaz:
+      // çekirdek sorgu 2 anlamlı kelimenin altındaysa önceki soruyla birleştirilir.
+      let aramaGirdisi = icerik;
+      const harfli = aramaSorgusu(icerik).split(/\s+/)
+        .filter(k => /[a-zçğıöşü]/i.test(k) && !/^\d+$/.test(k));
+      if (harfli.length < 2) {
+        const onceki = [...gecmis].reverse()
+          .find(m => m.role === "user" && m.content !== icerik);
+        if (onceki) aramaGirdisi = onceki.content + " " + icerik;
+      }
+      kaynaklar = await webdeAra(aramaGirdisi).catch(() => []);
       b.textContent = kaynaklar.length
         ? "🧠 " + kaynaklar.length + " kaynakla cevap hazırlanıyor…" : "…";
     }
     const sistem = sistemMesaji();
     if (kaynaklar.length) sistem.content += "\n\n" + aramaMetni(kaynaklar);
+    else if (webAramasi) {
+      sistem.content += "\n\nWeb araması bu soru için kaynak BULAMADI. Kişi adı, " +
+        "unvan, rakam, tarih gibi doğrulanamayan özel bilgileri KESİNLİKLE uydurma; " +
+        "açıkça 'bu bilgiyi doğrulayamıyorum' de ve soruyu netleştirmesini öner.";
+    }
     const akis = await motor.chat.completions.create({
       messages: [sistem, ...pencere(gecmis)],
       stream: true,
