@@ -33,6 +33,13 @@
     border-radius: 8px; padding: 7px 10px; font-size: 13px; margin-left: auto;
     max-width: 100%; text-overflow: ellipsis;
   }
+  #web-dugme {
+    background: var(--panel2); color: var(--soluk); border: 1px solid var(--cizgi);
+    border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+  }
+  #web-dugme[aria-pressed="true"] { color: var(--basari); border-color: var(--basari); }
+  .kaynaklar { margin-top: 8px; font-size: 11.5px; color: var(--soluk); }
+  .kaynaklar a { color: var(--vurgu); }
   #durum {
     padding: 7px 18px; font-size: 12px; color: var(--soluk);
     background: var(--panel); border-bottom: 1px solid var(--cizgi);
@@ -85,7 +92,9 @@
 
 <header>
   <div class="logo" aria-hidden="true">M</div>
-  <h1>MORALİTE — Web Demo<small>Model tamamen tarayıcınızda çalışır; sohbetiniz sunucuya gitmez</small></h1>
+  <h1>MORALİTE — Web Demo<small>Model tarayıcınızda çalışır; sohbet sunucuya gitmez (web araması açıkken yalnızca arama sorgusu Vikipedi/DuckDuckGo'ya gider)</small></h1>
+  <button id="web-dugme" aria-pressed="false"
+    title="Açıkken sorunuz Vikipedi ve DuckDuckGo'da aranır (sorgu bu servislere gider), model kaynaklarla cevaplar">🌐 Web Araması: Kapalı</button>
   <select id="model-sec" aria-label="Model seçimi" title="Model (büyüğü daha kaliteli, indirme süresi uzar)">
     <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" selected>Qwen2.5 1.5B — hızlı (~950 MB)</option>
     <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B — kaliteli (~1.9 GB)</option>
@@ -131,6 +140,67 @@ let mesajlar = [];         // aktif sohbet geçmişi
 let uretimde = false;
 let yukleniyor = false;
 let yuklemeJetonu = 0;     // yarış koruması: yalnızca en güncel yükleme motor'a yazar
+let webAramasi = false;    // açıkken soru Vikipedi + DuckDuckGo'da aranır
+
+/* ── tarayıcıdan web araması (sunucusuz: yalnız CORS/JSONP dostu kaynaklar) ── */
+async function vikiAra(dil, soru) {
+  const u = `https://${dil}.wikipedia.org/w/api.php?action=query&list=search&srlimit=3&format=json&origin=*&srsearch=${encodeURIComponent(soru)}`;
+  const r = await fetch(u);
+  if (!r.ok) return [];
+  const j = await r.json();
+  return (j.query && j.query.search) ? j.query.search.map(s => s.title) : [];
+}
+async function vikiOzet(dil, baslik) {
+  const r = await fetch(`https://${dil}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(baslik)}`);
+  if (!r.ok) return null;
+  const j = await r.json();
+  if (!j.extract) return null;
+  return { baslik: j.title, metin: j.extract,
+           url: (j.content_urls && j.content_urls.desktop) ? j.content_urls.desktop.page : "" };
+}
+function ddgAra(soru) { // Instant Answer API yalnız JSONP ile tarayıcıdan çağrılabilir
+  return new Promise((coz) => {
+    const cb = "ddg_cb_" + Math.random().toString(36).slice(2);
+    const s = document.createElement("script");
+    const bitir = (v) => { delete window[cb]; s.remove(); coz(v); };
+    window[cb] = bitir;
+    s.onerror = () => bitir(null);
+    setTimeout(() => { if (window[cb]) bitir(null); }, 6000);
+    s.src = "https://api.duckduckgo.com/?q=" + encodeURIComponent(soru) +
+            "&format=json&no_html=1&skip_disambig=1&callback=" + cb;
+    document.head.appendChild(s);
+  });
+}
+async function webdeAra(soru) {
+  const kaynaklar = [];
+  try {
+    let basliklar = await vikiAra("tr", soru);
+    let dil = "tr";
+    if (!basliklar.length) { basliklar = await vikiAra("en", soru); dil = "en"; }
+    for (const b of basliklar.slice(0, 2)) {
+      const o = await vikiOzet(dil, b).catch(() => null);
+      if (o) kaynaklar.push({ ad: "Vikipedi (" + dil + "): " + o.baslik,
+                              metin: o.metin.slice(0, 1200), url: o.url });
+    }
+  } catch {}
+  try {
+    const d = await ddgAra(soru);
+    if (d && d.AbstractText) {
+      kaynaklar.push({ ad: "DuckDuckGo: " + (d.Heading || "özet"),
+                       metin: d.AbstractText.slice(0, 1200), url: d.AbstractURL || "" });
+    }
+  } catch {}
+  return kaynaklar.slice(0, 3);
+}
+function aramaBaglami(kaynaklar) {
+  return {
+    role: "system",
+    content: "Az önce kullanıcının sorusu için web araması yapıldı. Aşağıdaki KAYNAK " +
+      "metinleri günceldir; cevabını öncelikle bunlara dayandır ve [1], [2] gibi atıf ver. " +
+      "Kaynaklar soruyu karşılamıyorsa bunu açıkça söyle, uydurma.\n\n" +
+      kaynaklar.map((k, i) => `[KAYNAK ${i + 1}] ${k.ad}\n${k.metin}`).join("\n\n"),
+  };
+}
 
 function durum(metin, ilerleme) {
   durumEl.firstChild.textContent = metin;
@@ -243,9 +313,17 @@ async function gonder() {
   uretimde = true;
   gonderBtn.disabled = true;
   let toplam = "";
+  let kaynaklar = [];
   try {
+    if (webAramasi) {
+      b.textContent = "🔍 Web'de aranıyor (Vikipedi + DuckDuckGo)…";
+      kaynaklar = await webdeAra(icerik).catch(() => []);
+      b.textContent = kaynaklar.length
+        ? "🧠 " + kaynaklar.length + " kaynakla cevap hazırlanıyor…" : "…";
+    }
+    const ekBaglam = kaynaklar.length ? [aramaBaglami(kaynaklar)] : [];
     const akis = await motor.chat.completions.create({
-      messages: [sistemMesaji(), ...pencere(gecmis)],
+      messages: [sistemMesaji(), ...ekBaglam, ...pencere(gecmis)],
       stream: true,
       temperature: 0.4,
       max_tokens: 600,
@@ -260,6 +338,24 @@ async function gonder() {
   } finally {
     if (toplam.trim()) {
       gecmis.push({ role: "assistant", content: toplam });
+      if (kaynaklar.length) { // kaynak bağlantıları (XSS'e karşı DOM API ile kurulur)
+        const kd = document.createElement("div");
+        kd.className = "kaynaklar";
+        kd.append("Kaynaklar: ");
+        kaynaklar.forEach((k, i) => {
+          if (i) kd.append(" · ");
+          const a = document.createElement("a");
+          a.href = k.url || "#"; a.target = "_blank"; a.rel = "noopener";
+          a.textContent = "[" + (i + 1) + "] " + k.ad;
+          kd.appendChild(a);
+        });
+        b.appendChild(kd);
+      } else if (webAramasi) {
+        const kd = document.createElement("div");
+        kd.className = "kaynaklar";
+        kd.textContent = "Web araması sonuç vermedi — cevap modelin kendi bilgisine dayanıyor.";
+        b.appendChild(kd);
+      }
     } else {
       gecmis.pop(); // cevapsız user mesajı geçmişte kalmasın (rol dizilimi korunur)
     }
@@ -268,6 +364,13 @@ async function gonder() {
     metinEl.focus();
   }
 }
+
+document.getElementById("web-dugme").onclick = () => {
+  webAramasi = !webAramasi;
+  const d = document.getElementById("web-dugme");
+  d.setAttribute("aria-pressed", String(webAramasi));
+  d.textContent = "🌐 Web Araması: " + (webAramasi ? "Açık" : "Kapalı");
+};
 
 gonderBtn.onclick = motoruYukle; // ilk tıklama indirme onayıdır; başarıyla yüklenince gonder olur
 metinEl.addEventListener("keydown", (e) => {
