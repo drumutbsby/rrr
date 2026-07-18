@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moralite Web Demo — Tarayıcı İçi LLM</title>
+<style>
+  :root {
+    --arka: #0d1117; --panel: #161b22; --panel2: #1c2333; --cizgi: #2d3548;
+    --metin: #e6e8ee; --soluk: #8b93a7; --vurgu: #4f8cff; --vurgu2: #2563eb;
+    --kullanici: #1e3a5f; --asistan: #1a2030; --tehlike: #f87171; --basari: #34d399;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--arka); color: var(--metin); height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+    background: var(--panel); border-bottom: 1px solid var(--cizgi); flex-wrap: wrap;
+  }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, #4f8cff, #9333ea);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  header h1 { font-size: 16px; }
+  header h1 small { display: block; font-size: 11px; color: var(--soluk); font-weight: 400; }
+  select {
+    background: var(--panel2); color: var(--metin); border: 1px solid var(--cizgi);
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; margin-left: auto;
+  }
+  #durum {
+    padding: 7px 18px; font-size: 12px; color: var(--soluk);
+    background: var(--panel); border-bottom: 1px solid var(--cizgi);
+  }
+  #durum .cubuk {
+    height: 4px; background: var(--panel2); border-radius: 2px; margin-top: 5px;
+    overflow: hidden; display: none;
+  }
+  #durum .cubuk span { display: block; height: 100%; width: 0%; background: var(--vurgu); transition: width .3s; }
+  #sohbet { flex: 1; overflow-y: auto; padding: 20px 8%; }
+  .karsilama { text-align: center; margin-top: 8vh; color: var(--soluk); font-size: 14px; line-height: 1.7; }
+  .karsilama b { color: var(--metin); }
+  .mesaj { display: flex; gap: 10px; margin-bottom: 18px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .mesaj.k .avatar { background: var(--kullanici); }
+  .mesaj.a .avatar { background: linear-gradient(135deg, #4f8cff, #9333ea); color: #fff; }
+  .balon {
+    background: var(--asistan); border: 1px solid var(--cizgi); border-radius: 12px;
+    padding: 11px 14px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+    overflow-wrap: break-word; min-width: 0;
+  }
+  .mesaj.k .balon { background: var(--kullanici); }
+  footer { padding: 12px 8% 16px; background: var(--panel); border-top: 1px solid var(--cizgi); }
+  #giris {
+    display: flex; gap: 10px; align-items: flex-end; background: var(--panel2);
+    border: 1px solid var(--cizgi); border-radius: 14px; padding: 9px 12px;
+  }
+  #giris:focus-within { border-color: var(--vurgu); }
+  textarea {
+    flex: 1; background: none; border: none; color: var(--metin); resize: none;
+    font-size: 14px; font-family: inherit; line-height: 1.5; max-height: 140px; outline: none;
+  }
+  #gonder {
+    background: var(--vurgu2); color: #fff; border: none; border-radius: 9px;
+    padding: 8px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  #gonder:disabled { opacity: .45; cursor: not-allowed; }
+  .uyari { text-align: center; font-size: 11px; color: var(--soluk); margin-top: 8px; }
+  .uyari a { color: var(--vurgu); }
+  .hata-kutu {
+    margin: 10vh auto; max-width: 520px; background: var(--panel);
+    border: 1px solid var(--tehlike); border-radius: 12px; padding: 22px; line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">M</div>
+  <h1>MORALİTE — Web Demo<small>Model tamamen tarayıcınızda çalışır; hiçbir veri sunucuya gitmez</small></h1>
+  <select id="model-sec" title="Model (büyüğü daha kaliteli, indirme süresi uzar)">
+    <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" selected>Qwen2.5 1.5B — hızlı (~950 MB)</option>
+    <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B — kaliteli (~1.9 GB)</option>
+    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B — en küçük (~700 MB)</option>
+  </select>
+</header>
+
+<div id="durum">Hazırlanıyor…<div class="cubuk"><span id="cubuk-ic"></span></div></div>
+
+<div id="sohbet">
+  <div class="karsilama" id="karsilama">
+    <b>Moralite Web Demo</b>'ya hoş geldiniz.<br>
+    İlk mesajınızla birlikte seçili model tarayıcınıza indirilir (bir kez; sonra önbellekten açılır).<br>
+    Bu, küçük bir demo modeldir — tam sürüm (9B model + KAP analizi + belge zekâsı + web istihbaratı)
+    <a href="https://github.com/drumutbsby/rrr" style="color:var(--vurgu)">GitHub deposundaki</a> yerel kurulumdadır.
+  </div>
+</div>
+
+<footer>
+  <div id="giris">
+    <textarea id="metin" rows="1" placeholder="Mesajınızı yazın… (Enter: gönder)"></textarea>
+    <button id="gonder" disabled>Yükleniyor…</button>
+  </div>
+  <div class="uyari">Yapay zekâ hata yapabilir; kritik bilgiyi doğrulayın. Yatırım tavsiyesi değildir.
+    · <a href="https://github.com/drumutbsby/rrr">Kaynak kodu</a></div>
+</footer>
+
+<script type="module">
+const durumEl = document.getElementById("durum");
+const cubuk = durumEl.querySelector(".cubuk");
+const cubukIc = document.getElementById("cubuk-ic");
+const sohbetEl = document.getElementById("sohbet");
+const metinEl = document.getElementById("metin");
+const gonderBtn = document.getElementById("gonder");
+const modelSec = document.getElementById("model-sec");
+
+let motor = null, mesajlar = [], uretimde = false;
+
+function durum(metin, ilerleme) {
+  durumEl.firstChild.textContent = metin;
+  if (typeof ilerleme === "number") {
+    cubuk.style.display = "block";
+    cubukIc.style.width = Math.round(ilerleme * 100) + "%";
+  } else { cubuk.style.display = "none"; }
+}
+
+function balon(rol, metin) {
+  const k = document.getElementById("karsilama");
+  if (k) k.remove();
+  const kap = document.createElement("div");
+  kap.className = "mesaj " + (rol === "user" ? "k" : "a");
+  const av = document.createElement("div");
+  av.className = "avatar"; av.textContent = rol === "user" ? "S" : "M";
+  const b = document.createElement("div");
+  b.className = "balon"; b.textContent = metin;
+  kap.append(av, b);
+  sohbetEl.appendChild(kap);
+  sohbetEl.scrollTop = sohbetEl.scrollHeight;
+  return b;
+}
+
+function sistemMesaji() {
+  return {
+    role: "system",
+    content: "Sen Moralite'nin web demo asistanısın; ziyaretçinin tarayıcısında çalışan küçük, " +
+      "açık bir dil modelisin (WebLLM). Türkçe, kısa ve net cevap ver. Güncel olaylara ve " +
+      "internete erişimin yok; emin olmadığını uydurma. Bugünün tarihi: " +
+      new Date().toLocaleDateString("tr-TR") + ". Yatırım tavsiyesi verme.",
+  };
+}
+
+async function motoruYukle() {
+  gonderBtn.disabled = true;
+  gonderBtn.textContent = "Yükleniyor…";
+  try {
+    if (!navigator.gpu) throw new Error("WEBGPU_YOK");
+    const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+    durum("Model indiriliyor / hazırlanıyor…", 0);
+    motor = await webllm.CreateMLCEngine(modelSec.value, {
+      initProgressCallback: (p) => durum(p.text || "Hazırlanıyor…", p.progress || 0),
+    });
+    durum("Hazır — " + modelSec.options[modelSec.selectedIndex].text);
+    gonderBtn.disabled = false;
+    gonderBtn.textContent = "Gönder";
+    metinEl.focus();
+  } catch (e) {
+    if (e && e.message === "WEBGPU_YOK") {
+      sohbetEl.innerHTML = '<div class="hata-kutu"><b>Tarayıcınız WebGPU desteklemiyor.</b><br>' +
+        "Bu demo, modeli tarayıcı içinde çalıştırmak için WebGPU kullanır. Güncel Chrome veya " +
+        "Edge ile açmayı deneyin. Tam sürüm için GitHub deposundaki yerel kurulumu kullanın.</div>";
+      durum("WebGPU yok — demo bu tarayıcıda çalışamaz");
+    } else {
+      durum("Model yüklenemedi: " + (e && e.message ? e.message : e));
+      gonderBtn.textContent = "Tekrar dene";
+      gonderBtn.disabled = false;
+      gonderBtn.onclick = () => { gonderBtn.onclick = gonder; motoruYukle(); };
+    }
+  }
+}
+
+async function gonder() {
+  if (uretimde || !motor) return;
+  const icerik = metinEl.value.trim();
+  if (!icerik) return;
+  metinEl.value = "";
+  balon("user", icerik);
+  mesajlar.push({ role: "user", content: icerik });
+  const b = balon("assistant", "…");
+  uretimde = true;
+  gonderBtn.disabled = true;
+  let toplam = "";
+  try {
+    const akis = await motor.chat.completions.create({
+      messages: [sistemMesaji(), ...mesajlar.slice(-12)],
+      stream: true,
+      temperature: 0.4,
+      max_tokens: 600,
+    });
+    for await (const parca of akis) {
+      toplam += (parca.choices[0] && parca.choices[0].delta.content) || "";
+      b.textContent = toplam || "…";
+      sohbetEl.scrollTop = sohbetEl.scrollHeight;
+    }
+    mesajlar.push({ role: "assistant", content: toplam });
+  } catch (e) {
+    b.textContent = "⚠ Üretim hatası: " + (e && e.message ? e.message : e);
+  } finally {
+    uretimde = false;
+    gonderBtn.disabled = false;
+    metinEl.focus();
+  }
+}
+
+gonderBtn.onclick = gonder;
+metinEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); gonder(); }
+});
+metinEl.addEventListener("input", () => {
+  metinEl.style.height = "auto";
+  metinEl.style.height = Math.min(metinEl.scrollHeight, 140) + "px";
+});
+modelSec.onchange = () => {
+  mesajlar = [];
+  motor = null;
+  motoruYukle();
+};
+
+motoruYukle();
+</script>
+</body>
+</html>
