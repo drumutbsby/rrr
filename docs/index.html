@@ -31,6 +31,7 @@
   select {
     background: var(--panel2); color: var(--metin); border: 1px solid var(--cizgi);
     border-radius: 8px; padding: 7px 10px; font-size: 13px; margin-left: auto;
+    max-width: 100%; text-overflow: ellipsis;
   }
   #durum {
     padding: 7px 18px; font-size: 12px; color: var(--soluk);
@@ -65,11 +66,11 @@
   #giris:focus-within { border-color: var(--vurgu); }
   textarea {
     flex: 1; background: none; border: none; color: var(--metin); resize: none;
-    font-size: 14px; font-family: inherit; line-height: 1.5; max-height: 140px; outline: none;
+    font-size: 16px; font-family: inherit; line-height: 1.5; max-height: 140px; outline: none;
   }
   #gonder {
     background: var(--vurgu2); color: #fff; border: none; border-radius: 9px;
-    padding: 8px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    padding: 8px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; flex-shrink: 0;
   }
   #gonder:disabled { opacity: .45; cursor: not-allowed; }
   .uyari { text-align: center; font-size: 11px; color: var(--soluk); margin-top: 8px; }
@@ -83,21 +84,22 @@
 <body>
 
 <header>
-  <div class="logo">M</div>
-  <h1>MORALİTE — Web Demo<small>Model tamamen tarayıcınızda çalışır; hiçbir veri sunucuya gitmez</small></h1>
-  <select id="model-sec" title="Model (büyüğü daha kaliteli, indirme süresi uzar)">
+  <div class="logo" aria-hidden="true">M</div>
+  <h1>MORALİTE — Web Demo<small>Model tamamen tarayıcınızda çalışır; sohbetiniz sunucuya gitmez</small></h1>
+  <select id="model-sec" aria-label="Model seçimi" title="Model (büyüğü daha kaliteli, indirme süresi uzar)">
     <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC" selected>Qwen2.5 1.5B — hızlı (~950 MB)</option>
     <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B — kaliteli (~1.9 GB)</option>
     <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B — en küçük (~700 MB)</option>
   </select>
 </header>
 
-<div id="durum">Hazırlanıyor…<div class="cubuk"><span id="cubuk-ic"></span></div></div>
+<div id="durum" role="status" aria-live="polite">Hazır — başlamak için "Modeli İndir &amp; Başlat"a tıklayın<div class="cubuk"><span id="cubuk-ic"></span></div></div>
 
 <div id="sohbet">
   <div class="karsilama" id="karsilama">
     <b>Moralite Web Demo</b>'ya hoş geldiniz.<br>
-    İlk mesajınızla birlikte seçili model tarayıcınıza indirilir (bir kez; sonra önbellekten açılır).<br>
+    <b>Modeli İndir &amp; Başlat</b>'a tıkladığınızda seçili model tarayıcınıza indirilir
+    (boyut üstteki seçicide yazar; bir kez iner, sonra önbellekten açılır — mobil veride dikkat).<br>
     Bu, küçük bir demo modeldir — tam sürüm (9B model + KAP analizi + belge zekâsı + web istihbaratı)
     <a href="https://github.com/drumutbsby/rrr" style="color:var(--vurgu)">GitHub deposundaki</a> yerel kurulumdadır.
   </div>
@@ -105,8 +107,8 @@
 
 <footer>
   <div id="giris">
-    <textarea id="metin" rows="1" placeholder="Mesajınızı yazın… (Enter: gönder)"></textarea>
-    <button id="gonder" disabled>Yükleniyor…</button>
+    <textarea id="metin" rows="1" aria-label="Mesajınız" placeholder="Önce modeli başlatın…"></textarea>
+    <button id="gonder">Modeli İndir &amp; Başlat</button>
   </div>
   <div class="uyari">Yapay zekâ hata yapabilir; kritik bilgiyi doğrulayın. Yatırım tavsiyesi değildir.
     · <a href="https://github.com/drumutbsby/rrr">Kaynak kodu</a></div>
@@ -121,7 +123,14 @@ const metinEl = document.getElementById("metin");
 const gonderBtn = document.getElementById("gonder");
 const modelSec = document.getElementById("model-sec");
 
-let motor = null, mesajlar = [], uretimde = false;
+// Sürüm sabit: canlıda test edilen web-llm sürümü (kendiliğinden güncellenmesin)
+const WEBLLM_URL = "https://esm.run/@mlc-ai/web-llm@0.2.84";
+
+let motor = null;          // aktif WebLLM motoru
+let mesajlar = [];         // aktif sohbet geçmişi
+let uretimde = false;
+let yukleniyor = false;
+let yuklemeJetonu = 0;     // yarış koruması: yalnızca en güncel yükleme motor'a yazar
 
 function durum(metin, ilerleme) {
   durumEl.firstChild.textContent = metin;
@@ -157,18 +166,40 @@ function sistemMesaji() {
 }
 
 async function motoruYukle() {
+  if (yukleniyor) return;
+  yukleniyor = true;
+  const jeton = ++yuklemeJetonu;
+  const secilenModel = modelSec.value;
+  const secilenAd = modelSec.options[modelSec.selectedIndex].text;
   gonderBtn.disabled = true;
   gonderBtn.textContent = "Yükleniyor…";
+  modelSec.disabled = true; // yükleme sürerken model geçişi kapalı (yarışı kökten önler)
   try {
-    if (!navigator.gpu) throw new Error("WEBGPU_YOK");
-    const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+    // WebGPU: API varlığı yetmez, adaptör de gerekir (engelli sürücü/VM durumları)
+    let adaptor = null;
+    if (navigator.gpu) { try { adaptor = await navigator.gpu.requestAdapter(); } catch {} }
+    if (!adaptor) throw new Error("WEBGPU_YOK");
+
+    const webllm = await import(WEBLLM_URL);
     durum("Model indiriliyor / hazırlanıyor…", 0);
-    motor = await webllm.CreateMLCEngine(modelSec.value, {
-      initProgressCallback: (p) => durum(p.text || "Hazırlanıyor…", p.progress || 0),
+    if (motor) { // eski motorun GPU belleği serbest bırakılmadan yenisi kurulmaz
+      const eski = motor; motor = null;
+      try { await eski.unload(); } catch {}
+    }
+    const yeni = await webllm.CreateMLCEngine(secilenModel, {
+      initProgressCallback: (p) => {
+        if (jeton === yuklemeJetonu) durum(p.text || "Hazırlanıyor…", p.progress || 0);
+      },
     });
-    durum("Hazır — " + modelSec.options[modelSec.selectedIndex].text);
-    gonderBtn.disabled = false;
+    if (jeton !== yuklemeJetonu) { // bu arada yeni bir yükleme başladıysa geri çekil
+      try { yeni.unload(); } catch {}
+      return;
+    }
+    motor = yeni;
+    durum("Hazır — " + secilenAd);
     gonderBtn.textContent = "Gönder";
+    gonderBtn.onclick = gonder; // olası "tekrar dene" kalıntısını temizle
+    metinEl.placeholder = "Mesajınızı yazın… (Enter: gönder)";
     metinEl.focus();
   } catch (e) {
     if (e && e.message === "WEBGPU_YOK") {
@@ -176,29 +207,45 @@ async function motoruYukle() {
         "Bu demo, modeli tarayıcı içinde çalıştırmak için WebGPU kullanır. Güncel Chrome veya " +
         "Edge ile açmayı deneyin. Tam sürüm için GitHub deposundaki yerel kurulumu kullanın.</div>";
       durum("WebGPU yok — demo bu tarayıcıda çalışamaz");
-    } else {
-      durum("Model yüklenemedi: " + (e && e.message ? e.message : e));
-      gonderBtn.textContent = "Tekrar dene";
-      gonderBtn.disabled = false;
-      gonderBtn.onclick = () => { gonderBtn.onclick = gonder; motoruYukle(); };
+      gonderBtn.textContent = "Kullanılamıyor";
+      yukleniyor = false;
+      modelSec.disabled = false;
+      return; // düğme devre dışı kalır; sonsuz "Yükleniyor…" gösterilmez
     }
+    durum("Model yüklenemedi: " + (e && e.message ? e.message : e));
+    gonderBtn.textContent = "Tekrar dene";
+    gonderBtn.onclick = motoruYukle;
+  } finally {
+    yukleniyor = false;
+    modelSec.disabled = false;
+    gonderBtn.disabled = gonderBtn.textContent === "Kullanılamıyor";
+    if (gonderBtn.textContent === "Yükleniyor…") gonderBtn.textContent = "Gönder";
   }
 }
 
+function pencere(gecmis) {
+  // Son 12 mesaj; pencere her zaman bir user mesajıyla başlasın (rol dizilimi bozulmasın)
+  const p = gecmis.slice(-12);
+  while (p.length && p[0].role !== "user") p.shift();
+  return p;
+}
+
 async function gonder() {
-  if (uretimde || !motor) return;
+  if (uretimde || yukleniyor) return;
+  if (!motor) { motoruYukle(); return; }
   const icerik = metinEl.value.trim();
   if (!icerik) return;
   metinEl.value = "";
+  const gecmis = mesajlar; // model değişirse yeni geçmişe yazmayalım diye referans sabitlenir
   balon("user", icerik);
-  mesajlar.push({ role: "user", content: icerik });
+  gecmis.push({ role: "user", content: icerik });
   const b = balon("assistant", "…");
   uretimde = true;
   gonderBtn.disabled = true;
   let toplam = "";
   try {
     const akis = await motor.chat.completions.create({
-      messages: [sistemMesaji(), ...mesajlar.slice(-12)],
+      messages: [sistemMesaji(), ...pencere(gecmis)],
       stream: true,
       temperature: 0.4,
       max_tokens: 600,
@@ -208,17 +255,21 @@ async function gonder() {
       b.textContent = toplam || "…";
       sohbetEl.scrollTop = sohbetEl.scrollHeight;
     }
-    mesajlar.push({ role: "assistant", content: toplam });
   } catch (e) {
     b.textContent = "⚠ Üretim hatası: " + (e && e.message ? e.message : e);
   } finally {
+    if (toplam.trim()) {
+      gecmis.push({ role: "assistant", content: toplam });
+    } else {
+      gecmis.pop(); // cevapsız user mesajı geçmişte kalmasın (rol dizilimi korunur)
+    }
     uretimde = false;
-    gonderBtn.disabled = false;
+    gonderBtn.disabled = !motor || yukleniyor;
     metinEl.focus();
   }
 }
 
-gonderBtn.onclick = gonder;
+gonderBtn.onclick = motoruYukle; // ilk tıklama indirme onayıdır; başarıyla yüklenince gonder olur
 metinEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); gonder(); }
 });
@@ -227,12 +278,11 @@ metinEl.addEventListener("input", () => {
   metinEl.style.height = Math.min(metinEl.scrollHeight, 140) + "px";
 });
 modelSec.onchange = () => {
+  if (uretimde && motor) { try { motor.interruptGenerate(); } catch {} }
   mesajlar = [];
-  motor = null;
-  motoruYukle();
+  if (motor || yukleniyor) motoruYukle(); // henüz hiç başlatılmadıysa indirme kullanıcı onayını bekler
+  else durum('Hazır — başlamak için "Modeli İndir & Başlat"a tıklayın');
 };
-
-motoruYukle();
 </script>
 </body>
 </html>
