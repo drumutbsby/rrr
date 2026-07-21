@@ -283,6 +283,8 @@ function seed(){
   {id:"FND-0003",modelId:"MDL-0003",baslik:"Özellik drift (PSI) çeyreklik raporlanmıyor",kaynak:"İzleme",onem:"Orta",durum:"Planlanıyor",sahip:"S. Kaya"},
   {id:"FND-0004",modelId:"MDL-0007",baslik:"Revalidasyon gecikmesi (frekans aşımı)",kaynak:"İzleme",onem:"Orta",durum:"Devam Ediyor",sahip:"N. Arslan"},
  ];
+ const setF=(id,off)=>{const f=state.findings.find(x=>x.id===id);if(f){f.hedefTarih=addDays(todayStr(),off);f.olusturma=addDays(f.hedefTarih,-(SLA_DAYS[f.onem]||60));}};
+ setF("FND-0001",8);setF("FND-0002",-28);setF("FND-0003",42);setF("FND-0004",-9);
  const aug={
   "MDL-0003":{algoAile:"GBM",ogrenmeTipi:"Gözetimli",ozellikSayisi:120,aciklanabilirlikYontem:"SHAP",reasonCode:false,modelKarti:true,korumaliGruplar:"—",disparateImpact:0.86,fairnessMetrikler:["Disparate Impact"],yanlilikAzaltim:false,egitimVeriVintage:"2024-12-31",veriLineage:"Kart işlem ambarı",temsil:"Temsil Ediyor",pii:true,piiKontrol:"Tokenizasyon",robustlukTest:true,adversarialTest:false,reproducibility:true,driftMetrik:["PSI","CSI"],psiEsik:0.25,psiSon:0.12,performansMetrik:"AUC 0.94",override:3,retrainFrekans:"Çeyreklik",sonRetrain:"2025-04-01",retrainTetik:"Drift",championChallenger:true,insanGozetim:true,insanRol:"Fraud Analisti",euAiKategori:"Sınırlı"},
   "MDL-0006":{algoAile:"Transformer/LLM",ogrenmeTipi:"Öz-gözetimli",aciklanabilirlikYontem:"Behavioral",reasonCode:false,modelKarti:false,disparateImpact:"",temsil:"Kısmen",pii:false,robustlukTest:false,adversarialTest:true,reproducibility:false,driftMetrik:["Kavram Drift"],psiSon:"",insanGozetim:true,insanRol:"Çağrı Merkezi Süpervizörü",euAiKategori:"Sınırlı",retrainFrekans:"—",temelModel:"Bulut LLM",temelVersiyon:"v2",saglayici:"Bulut LLM Sağlayıcısı",barindirmaTipi:"Bulut",ozellestirme:"Fine-tuned",lisans:"Ticari",saticiRisk:"Tek sağlayıcı; yerel yedek yok",guardrailModeller:"Toksisite + PII filtresi",halusinasyonMetrik:"SelfCheckGPT",halusinasyonEsik:0.15,halusinasyonSon:0.22,toksisiteEsik:0.10},
@@ -743,15 +745,44 @@ window.saveVal=function(id){
 window.delVal=function(id){if(!confirm("Validasyon kaydı silinsin mi?"))return;state.validations=state.validations.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ BULGULAR ============ */
+const SLA_DAYS={"Yüksek":30,"Orta":60,"Düşük":90};
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function addDays(ds,n){const d=ds?new Date(ds):new Date();d.setDate(d.getDate()+ +n);return d.toISOString().slice(0,10);}
+function findingSla(f){
+ if(f.durum==="Kapandı")return{t:"Kapandı",c:"good"};
+ if(!f.hedefTarih)return{t:"—",c:"muted"};
+ const days=(new Date(f.hedefTarih)-new Date())/86400000;
+ if(days<0)return{t:"Gecikmiş",c:"crit"};if(days<14)return{t:"Yaklaşan",c:"warn"};return{t:"Zamanında",c:"good"};
+}
+let bulFilter="";
 function viewBulgular(v){
- v.innerHTML=`<p class="vlead">Validasyon ve izlemeden doğan bulgular; mevcut Archer <code class="k">Bulgular (Issues Management)</code> uygulamasına karşılık gelir.</p>
-  <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newFind">+ Yeni Bulgu</button></div>
-  <div class="tablewrap"><table><thead><tr><th>Bulgu</th><th>Model</th><th>Kaynak</th><th>Önem</th><th>Durum</th><th>Sahip</th></tr></thead><tbody>
-   ${state.findings.map(f=>{const m=state.models.find(x=>x.id===f.modelId);return `<tr onclick="findForm('${f.id}')">
-     <td><div class="tname">${esc(f.baslik)}</div><div class="id">${f.id}</div></td><td class="tsub">${esc(m?m.ad:"—")}</td>
+ const F=state.findings;const openF=F.filter(f=>f.durum!=="Kapandı");
+ const overdueN=openF.filter(f=>findingSla(f).c==="crit");const soon=openF.filter(f=>findingSla(f).c==="warn");
+ let rows=F.slice();
+ if(bulFilter==="acik")rows=openF.slice();
+ else if(bulFilter==="gecikmis")rows=F.filter(f=>findingSla(f).c==="crit");
+ else if(bulFilter==="yaklasan")rows=F.filter(f=>findingSla(f).c==="warn");
+ const ord={crit:0,warn:1,muted:2,good:3};
+ rows.sort((a,b)=>(ord[findingSla(a).c]-ord[findingSla(b).c])||(new Date(a.hedefTarih||"2100-01-01")-new Date(b.hedefTarih||"2100-01-01")));
+ v.innerHTML=`<p class="vlead">Validasyon, izleme ve AI/ML boşluklarından doğan bulgular ve <b>remediation takvimi</b>. SLA önem seviyesine göre türetilir: Yüksek 30 gün · Orta 60 · Düşük 90. Mevcut Archer <code class="k">Bulgular (Issues Management)</code> karşılığı.</p>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    ${kpi("Açık Bulgu",openF.length,"Remediation izleniyor","")}
+    ${kpi("SLA Gecikmiş",overdueN.length,"Hedef tarih aşıldı","crit")}
+    ${kpi("Yaklaşan (14 gün)",soon.length,"Öncelik verilmeli","warn")}
+    ${kpi("Kapanan",F.length-openF.length,"Tamamlandı","good")}
+  </div>
+  <div class="toolbar">
+   <select id="bul-f"><option value="">Tüm bulgular</option><option value="acik" ${bulFilter==="acik"?"selected":""}>Açık</option><option value="gecikmis" ${bulFilter==="gecikmis"?"selected":""}>SLA gecikmiş</option><option value="yaklasan" ${bulFilter==="yaklasan"?"selected":""}>Yaklaşan</option></select>
+   <div class="sp"></div><button class="tbtn primary" id="newFind">+ Yeni Bulgu</button>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Bulgu</th><th>Model</th><th>Kaynak</th><th>Önem</th><th>Durum</th><th>Hedef</th><th>SLA</th><th>Sahip</th></tr></thead><tbody>
+   ${rows.map(f=>{const m=state.models.find(x=>x.id===f.modelId);const s=findingSla(f);return `<tr onclick="findForm('${f.id}')">
+     <td><div class="tname" style="white-space:normal">${esc(f.baslik)}</div><div class="id">${f.id}</div></td><td class="tsub">${esc(m?m.ad:"—")}</td>
      <td>${esc(f.kaynak)}</td><td><span class="chip ${f.onem==='Yüksek'?'crit':f.onem==='Orta'?'warn':'muted'}">${esc(f.onem)}</span></td>
-     <td><span class="chip ${f.durum==='Kapandı'?'good':f.durum==='Devam Ediyor'?'info':'warn'}">${esc(f.durum)}</span></td><td>${esc(f.sahip||"—")}</td></tr>`;}).join("")||`<tr><td colspan="6"><div class="empty">Bulgu yok.</div></td></tr>`}
+     <td><span class="chip ${f.durum==='Kapandı'?'good':f.durum==='Devam Ediyor'?'info':'warn'}">${esc(f.durum)}</span></td>
+     <td>${f.hedefTarih||"—"}</td><td><span class="chip ${s.c}" style="padding:0 8px">${s.t}</span></td><td>${esc(f.sahip||"—")}</td></tr>`;}).join("")||`<tr><td colspan="8"><div class="empty">Kayıt yok.</div></td></tr>`}
   </tbody></table></div>`;
+ document.getElementById("bul-f").onchange=e=>{bulFilter=e.target.value;render();};
  document.getElementById("newFind").onclick=()=>findForm(null);
 }
 window.findForm=function(id){
@@ -761,16 +792,21 @@ window.findForm=function(id){
     ${fld("Başlık","baslik",f.baslik,"text",true,true)}
     <div class="field"><label>Model</label><select data-f="modelId"><option value="">—</option>${state.models.map(m=>`<option value="${m.id}" ${f.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
     ${fldSel("Kaynak","kaynak",f.kaynak,["Model Validasyonu","İzleme","İç Denetim","Kritiklik Değerlendirmesi","AI/ML Değerlendirme"])}
-    ${fldSel("Önem","onem",f.onem,["Yüksek","Orta","Düşük"])}
+    ${fldSel("Önem (SLA'yı belirler)","onem",f.onem,["Yüksek","Orta","Düşük"])}
     ${fldSel("Durum","durum",f.durum,["Planlanıyor","Devam Ediyor","Kapandı"])}
+    ${fld("Oluşturma Tarihi","olusturma",f.olusturma,"date")}
+    ${fld("Hedef Tarih (boşsa SLA'dan)","hedefTarih",f.hedefTarih,"date")}
     ${fld("Sahip","sahip",f.sahip,"text")}
    </div>
+   <div class="callout" style="margin-top:12px">Hedef tarih boş bırakılırsa oluşturma tarihine önem SLA’sı (Yüksek 30 · Orta 60 · Düşük 90 gün) eklenerek hesaplanır.</div>
    <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delFind('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveFind('${id||""}')">Kaydet</button></div>`);
 };
 window.saveFind=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const baslik=g("baslik");if(!baslik){alert("Başlık zorunludur.");return;}
- const obj={id:id||uid("FND-"),baslik,modelId:g("modelId"),kaynak:g("kaynak"),onem:g("onem"),durum:g("durum"),sahip:g("sahip")};
+ const onem=g("onem");const olusturma=g("olusturma")||todayStr();
+ const hedefTarih=g("hedefTarih")||addDays(olusturma,SLA_DAYS[onem]||60);
+ const obj={id:id||uid("FND-"),baslik,modelId:g("modelId"),kaynak:g("kaynak"),onem,durum:g("durum"),sahip:g("sahip"),olusturma,hedefTarih};
  if(id){const i=state.findings.findIndex(x=>x.id===id);state.findings[i]=obj;}else state.findings.push(obj);
  save();closeDrawer();render();
 };
@@ -1018,7 +1054,7 @@ function aimlGaps(){
  gaps.forEach(g=>{
    const title="[AI/ML] "+g.label;
    if(state.findings.some(f=>f.modelId===m.id&&f.baslik===title))return;
-   state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"AI/ML Değerlendirme",onem:g.status==="crit"?"Yüksek":"Orta",durum:"Planlanıyor",sahip:m.sahip||""});n++;
+   const onem=g.status==="crit"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"AI/ML Değerlendirme",onem,durum:"Planlanıyor",sahip:m.sahip||"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem])});n++;
  });
  save();buildNav();
  alert(n?`${n} bulgu oluşturuldu (Bulgular ekranında).`:"Bu boşluklar için bulgu zaten mevcut.");
@@ -1108,7 +1144,7 @@ function izlGaps(){
  modelMetricTypes(m.id).forEach(t=>{const l=latestMetric(m.id,t);if(l&&isBreach(t,l.deger,l.esik)){
    const title="[İzleme] "+t+" eşik aşımı";
    if(state.findings.some(f=>f.modelId===m.id&&f.baslik===title))return;
-   state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"İzleme",onem:t==="PSI"||t==="CSI"?"Yüksek":"Orta",durum:"Planlanıyor",sahip:m.sahip||""});n++;
+   const onem=t==="PSI"||t==="CSI"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"İzleme",onem,durum:"Planlanıyor",sahip:m.sahip||"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem])});n++;
  }});
  save();buildNav();alert(n?`${n} bulgu oluşturuldu.`:"Eşik aşımı yok ya da bulgular zaten mevcut.");
 }
