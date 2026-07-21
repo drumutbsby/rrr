@@ -281,6 +281,13 @@ function seed(){
   {id:"FND-0003",modelId:"MDL-0003",baslik:"Özellik drift (PSI) çeyreklik raporlanmıyor",kaynak:"İzleme",onem:"Orta",durum:"Planlanıyor",sahip:"S. Kaya"},
   {id:"FND-0004",modelId:"MDL-0007",baslik:"Revalidasyon gecikmesi (frekans aşımı)",kaynak:"İzleme",onem:"Orta",durum:"Devam Ediyor",sahip:"N. Arslan"},
  ];
+ const aug={
+  "MDL-0003":{algoAile:"GBM",ogrenmeTipi:"Gözetimli",ozellikSayisi:120,aciklanabilirlikYontem:"SHAP",reasonCode:false,modelKarti:true,korumaliGruplar:"—",disparateImpact:0.86,fairnessMetrikler:["Disparate Impact"],yanlilikAzaltim:false,egitimVeriVintage:"2024-12-31",veriLineage:"Kart işlem ambarı",temsil:"Temsil Ediyor",pii:true,piiKontrol:"Tokenizasyon",robustlukTest:true,adversarialTest:false,reproducibility:true,driftMetrik:["PSI","CSI"],psiEsik:0.25,psiSon:0.12,performansMetrik:"AUC 0.94",override:3,retrainFrekans:"Çeyreklik",sonRetrain:"2025-04-01",retrainTetik:"Drift",championChallenger:true,insanGozetim:true,insanRol:"Fraud Analisti",euAiKategori:"Sınırlı"},
+  "MDL-0006":{algoAile:"Transformer/LLM",ogrenmeTipi:"Öz-gözetimli",aciklanabilirlikYontem:"Behavioral",reasonCode:false,modelKarti:false,disparateImpact:"",temsil:"Kısmen",pii:false,robustlukTest:false,adversarialTest:true,reproducibility:false,driftMetrik:["Kavram Drift"],psiSon:"",insanGozetim:true,insanRol:"Çağrı Merkezi Süpervizörü",euAiKategori:"Sınırlı",retrainFrekans:"—",temelModel:"Bulut LLM",temelVersiyon:"v2",saglayici:"Bulut LLM Sağlayıcısı",barindirmaTipi:"Bulut",ozellestirme:"Fine-tuned",lisans:"Ticari",saticiRisk:"Tek sağlayıcı; yerel yedek yok",guardrailModeller:"Toksisite + PII filtresi",halusinasyonMetrik:"SelfCheckGPT",halusinasyonEsik:0.15,halusinasyonSon:0.22,toksisiteEsik:0.10},
+  "MDL-0007":{algoAile:"Lojistik Reg.",ogrenmeTipi:"Gözetimli",aciklanabilirlikYontem:"Doğal Yorumlanabilir",disparateImpact:0.83,fairnessMetrikler:["Disparate Impact","Statistical Parity"],temsil:"Temsil Ediyor",pii:true,piiKontrol:"Maskeleme",robustlukTest:true,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.08,retrainFrekans:"Yıllık",sonRetrain:"2024-11-01",insanGozetim:true,insanRol:"Uyum Uzmanı",euAiKategori:"Sınırlı"},
+  "MDL-0009":{algoAile:"Random Forest",ogrenmeTipi:"Gözetimli",aciklanabilirlikYontem:"SHAP",disparateImpact:0.78,temsil:"Temsil Ediyor",pii:false,robustlukTest:false,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.18,retrainFrekans:"Olay-Tetikli",insanGozetim:false,euAiKategori:"Minimal"},
+ };
+ state.models.forEach(m=>{if(aug[m.id])m.aimlEk=aug[m.id];});
  save();
 }
 
@@ -291,6 +298,7 @@ const NAV=[
  {grp:"MRM Uygulamaları"},
  {id:"envanter",t:"Model Envanteri",ic:"▤",sub:"Tüm modeller ve algoritmalar"},
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
+ {id:"aiml",t:"AI/ML Ek Değerlendirme",ic:"◆",sub:"AI/ML & GenAI ek kontrolleri"},
  {id:"validasyon",t:"Model Validasyonu",ic:"✓",sub:"Bağımsız validasyon kayıtları"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
  {grp:"Referans"},
@@ -305,6 +313,7 @@ function buildNav(){
   const a=document.createElement("a");a.dataset.id=n.id;
   let badge="";
   if(n.id==="envanter")badge=state.models.length;
+  if(n.id==="aiml")badge=state.models.filter(m=>m.aiml).length;
   if(n.id==="validasyon")badge=state.validations.length;
   if(n.id==="bulgular")badge=state.findings.filter(f=>f.durum!=="Kapandı").length;
   a.innerHTML=`<span class="ic">${n.ic}</span><span>${n.t}</span>${badge!==""?`<span class="badge">${badge}</span>`:""}`;
@@ -322,7 +331,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,validasyon:viewValidasyon,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -448,6 +457,7 @@ window.modelDetail=function(id){
   </div>
   <div class="mtab" data-i="0">
     ${dl({"Amaç":m.amac,"Model Tipi":m.tip,"Kategori":(m.kategori||[]).join(", "),"Öncelik":m.oncelik||"—","Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
+    ${m.aiml?`<div style="margin-top:14px"><button class="tbtn" onclick="closeDrawer();go('aiml');setTimeout(()=>{aimlSel='${m.id}';render();},60)">◆ AI/ML Ek Değerlendirmeyi aç →</button></div>`:""}
   </div>
   <div class="mtab" data-i="1" hidden>
     <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:10px"><span class="tag-tier ${'c-'+tierClass(m.tier)}" style="color:var(--${tierClass(m.tier)})">${m.tier}</span><span class="chip ${m.derece==='Yüksek'?'crit':m.derece==='Orta'?'warn':'good'}">Risk: ${m.derece}</span></div>
@@ -703,7 +713,7 @@ window.findForm=function(id){
    <div class="form-grid">
     ${fld("Başlık","baslik",f.baslik,"text",true,true)}
     <div class="field"><label>Model</label><select data-f="modelId"><option value="">—</option>${state.models.map(m=>`<option value="${m.id}" ${f.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
-    ${fldSel("Kaynak","kaynak",f.kaynak,["Model Validasyonu","İzleme","İç Denetim","Kritiklik Değerlendirmesi"])}
+    ${fldSel("Kaynak","kaynak",f.kaynak,["Model Validasyonu","İzleme","İç Denetim","Kritiklik Değerlendirmesi","AI/ML Değerlendirme"])}
     ${fldSel("Önem","onem",f.onem,["Yüksek","Orta","Düşük"])}
     ${fldSel("Durum","durum",f.durum,["Planlanıyor","Devam Ediyor","Kapandı"])}
     ${fld("Sahip","sahip",f.sahip,"text")}
@@ -771,15 +781,196 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
-    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","Bulgu & remediation kaydı","Gereklilik matrisi ve regülasyon eşlemesi","Model riski panosu (tier dağılımı, gecikmiş validasyon, açık bulgu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","Bulgu & remediation kaydı (AI/ML boşluk → bulgu)","Gereklilik matrisi ve regülasyon eşlemesi","Model riski panosu (tier dağılımı, gecikmiş validasyon, açık bulgu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Sıradaki geliştirmeler</h3><div class="list">
-    ${["AI/ML Ek Değerlendirmesi ekranı (drift, fairness, guardrail)","İzleme metrikleri (PSI/CSI, AUC/Gini) ve eşik-aşımı → bulgu","PMA / İstisna ve Model Değişiklik uygulamaları","Yaşam döngüsü iş akışı (Advanced Workflow) görselleştirmesi","Veri dışa/içe aktarma (JSON/CSV) ve raporlar","Rol bazlı görünüm (üç savunma hattı)"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["İzleme metrikleri zaman serisi (PSI/CSI, AUC/Gini) ve eşik-aşımı → otomatik bulgu","PMA / İstisna ve Model Değişiklik uygulamaları","Yaşam döngüsü iş akışı (Advanced Workflow) görselleştirmesi","Veri dışa/içe aktarma (JSON/CSV) ve raporlar","Rol bazlı görünüm (üç savunma hattı)"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
   </div>
   <div class="card panel" style="margin-top:14px"><h3>Referans çerçeveler</h3>
    <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 11-7</b> · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>TRIM</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BDDK <b>İç Sistemler/İSEDES</b>, IRB-AMA validasyon rehberi (Dok.1041), TFRS 9 BKZ.</div></div>
   <div class="footnote">Veriler yalnızca bu tarayıcıda (localStorage) saklanır; sunucuya gönderilmez. “Örnek Veri” düğmesi tüm veriyi örnek setine sıfırlar.</div>`;
+}
+
+/* ============ AI/ML EK DEGERLENDIRME ============ */
+let aimlSel="";
+const AIML_SECTIONS=[
+ {h:"Model & Teknik",fields:[
+   {k:"algoAile",l:"Algoritma Ailesi",t:"sel",o:["—","GBM","Random Forest","Sinir Ağı","Transformer/LLM","Ensemble","Lojistik Reg.","Diğer"]},
+   {k:"ogrenmeTipi",l:"Öğrenme Tipi",t:"sel",o:["—","Gözetimli","Gözetimsiz","Pekiştirmeli","Öz-gözetimli"]},
+   {k:"ozellikSayisi",l:"Özellik Sayısı",t:"num"},
+ ]},
+ {h:"Açıklanabilirlik & Şeffaflık",fields:[
+   {k:"aciklanabilirlikYontem",l:"Açıklanabilirlik Yöntemi",t:"sel",o:["—","SHAP","LIME","Surrogate","Behavioral","Doğal Yorumlanabilir"]},
+   {k:"reasonCode",l:"Reason-code / Red gerekçesi yeteneği",t:"chk"},
+   {k:"modelKarti",l:"Model Kartı / Teknik Dosya (EU AI Act Annex IV)",t:"chk"},
+ ]},
+ {h:"Yanlılık & Adalet (Fairness)",fields:[
+   {k:"korumaliGruplar",l:"Korumalı Gruplar (test)",t:"text"},
+   {k:"disparateImpact",l:"Disparate Impact Oranı (0–1)",t:"num",step:"0.01",hint:"4/5 (0.80) kuralı"},
+   {k:"fairnessMetrikler",l:"İzlenen Fairness Metrikleri",t:"multi",o:["Disparate Impact","Statistical Parity","Equal Opportunity","Equalized Odds"]},
+   {k:"yanlilikAzaltim",l:"Yanlılık azaltımı uygulandı",t:"chk"},
+ ]},
+ {h:"Veri: Lineage, Temsil, Gizlilik",fields:[
+   {k:"egitimVeriVintage",l:"Eğitim Veri Vintage",t:"date"},
+   {k:"veriLineage",l:"Veri Lineage / Kaynak Sicili",t:"text"},
+   {k:"temsil",l:"Temsil (Representativeness)",t:"sel",o:["—","Temsil Ediyor","Kısmen","Temsil Etmiyor"]},
+   {k:"pii",l:"PII içeriyor",t:"chk"},
+   {k:"piiKontrol",l:"PII maskeleme / kontrol",t:"text"},
+ ]},
+ {h:"Robustluk, Güvenlik, Tekrarüretilebilirlik",fields:[
+   {k:"robustlukTest",l:"Robustluk (pertürbasyon) testi",t:"chk"},
+   {k:"adversarialTest",l:"Adversarial / jailbreak testi",t:"chk"},
+   {k:"reproducibility",l:"Reproducibility manifestosu (seed/ortam/versiyon)",t:"chk"},
+ ]},
+ {h:"İzleme & Drift",fields:[
+   {k:"driftMetrik",l:"İzlenen drift metrikleri",t:"multi",o:["PSI","CSI","KL/JS","Kavram Drift"]},
+   {k:"psiEsik",l:"PSI eşiği",t:"num",step:"0.01",ph:"0.25"},
+   {k:"psiSon",l:"Son PSI değeri",t:"num",step:"0.01"},
+   {k:"performansMetrik",l:"Performans metrikleri (AUC/Gini/KS)",t:"text"},
+   {k:"override",l:"Override / istisna oranı (%)",t:"num"},
+ ]},
+ {h:"Retraining & İnsan Gözetimi",fields:[
+   {k:"retrainFrekans",l:"Retraining frekansı",t:"sel",o:["—","Aylık","Çeyreklik","Yıllık","Olay-Tetikli"]},
+   {k:"sonRetrain",l:"Son retrain tarihi",t:"date"},
+   {k:"retrainTetik",l:"Retrain tetik tipi",t:"sel",o:["—","Takvim","Drift","Performans","Karma"]},
+   {k:"championChallenger",l:"Champion / challenger",t:"chk"},
+   {k:"insanGozetim",l:"İnsan gözetimi (human-in-the-loop)",t:"chk"},
+   {k:"insanRol",l:"İnsan gözetim rolü",t:"text"},
+ ]},
+ {h:"Etik & Regülasyon",fields:[
+   {k:"euAiKategori",l:"EU AI Act risk kategorisi",t:"sel",o:["—","Yüksek Risk","Sınırlı","Minimal","Yasak"]},
+   {k:"etikFRIA",l:"Etik inceleme / FRIA referansı",t:"text"},
+   {k:"kullanimOnay",l:"Kullanım amacı onayı / kapsam",t:"text"},
+ ]},
+ {h:"GenAI: Temel Model & 3. Taraf",genai:true,fields:[
+   {k:"temelModel",l:"Temel model adı",t:"text"},
+   {k:"temelVersiyon",l:"Versiyon",t:"text"},
+   {k:"saglayici",l:"Sağlayıcı",t:"text"},
+   {k:"barindirmaTipi",l:"Barındırma tipi",t:"sel",o:["—","İç","Satıcı","Bulut"]},
+   {k:"ozellestirme",l:"Özelleştirme",t:"sel",o:["—","Hazır Prompt","Fine-tuned","RAG"]},
+   {k:"lisans",l:"Lisans / IP / telif",t:"text"},
+   {k:"saticiRisk",l:"Satıcı risk notu / çıkış planı",t:"text"},
+ ]},
+ {h:"GenAI: Guardrail & Halüsinasyon İzleme",genai:true,fields:[
+   {k:"guardrailModeller",l:"Guardrail modelleri",t:"text"},
+   {k:"halusinasyonMetrik",l:"Halüsinasyon metriği",t:"sel",o:["—","NLI","SelfCheckGPT","Chain-of-Verification"]},
+   {k:"halusinasyonEsik",l:"Halüsinasyon eşiği",t:"num",step:"0.01"},
+   {k:"halusinasyonSon",l:"Son halüsinasyon skoru",t:"num",step:"0.01"},
+   {k:"toksisiteEsik",l:"Toksisite eşiği",t:"num",step:"0.01"},
+ ]},
+];
+function viewAiml(v){
+ const models=state.models.filter(m=>m.aiml);
+ if(!models.length){v.innerHTML=`<div class="card empty">AI/ML olarak işaretli model yok. Model Envanteri’nde bir modeli “AI/ML” bayrağıyla işaretleyin.</div>`;return;}
+ if(!aimlSel||!models.find(m=>m.id===aimlSel))aimlSel=models[0].id;
+ v.innerHTML=`
+  <p class="vlead">AI/ML ve GenAI modellerine, standart validasyona <b>ek</b> kontroller — açıklanabilirlik, yanlılık/adalet, veri lineage, robustluk, drift, retraining, insan gözetimi ve GenAI guardrail. Kaynak: <b>EU AI Act</b> (Art.9–15, 27), <b>NIST AI RMF</b>, WF GenAI çerçevesi.</p>
+  <div class="toolbar">
+   <label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
+   <select id="aiml-model" style="min-width:320px">${models.map(m=>`<option value="${m.id}" ${aimlSel===m.id?"selected":""}>${esc(m.ad)}${m.genai?" · GenAI":""}</option>`).join("")}</select>
+   <div class="sp"></div>
+   <button class="tbtn" id="aiml-gap">⚑ Boşlukları bulguya çevir</button>
+  </div>
+  <div class="calc"><div id="aiml-form"></div><div class="result" id="aiml-ind"></div></div>`;
+ document.getElementById("aiml-model").onchange=e=>{aimlSel=e.target.value;renderAiml();};
+ document.getElementById("aiml-gap").onclick=aimlGaps;
+ renderAiml();
+}
+function aimlInput(f,a){
+ const v=a[f.k];
+ if(f.t==="chk")return `<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" data-a="${f.k}" ${v?"checked":""}> ${f.l}</label></div>`;
+ if(f.t==="sel")return `<div class="field"><label>${f.l}</label><select data-a="${f.k}">${f.o.map(o=>`<option ${(v||"—")===o?"selected":""}>${o}</option>`).join("")}</select></div>`;
+ if(f.t==="multi")return `<div class="field full"><label>${f.l}</label><div class="checks">${f.o.map(o=>`<label style="font-weight:500;color:var(--ink)"><input type="checkbox" data-a="${f.k}" data-multi="1" value="${o}" ${(v||[]).includes(o)?"checked":""}> ${o}</label>`).join("")}</div></div>`;
+ if(f.t==="num")return `<div class="field"><label>${f.l}</label><input type="number" ${f.step?`step="${f.step}"`:""} data-a="${f.k}" value="${v==null?"":v}" placeholder="${f.ph||""}">${f.hint?`<span class="hint">${f.hint}</span>`:""}</div>`;
+ if(f.t==="date")return `<div class="field"><label>${f.l}</label><input type="date" data-a="${f.k}" value="${v||""}"></div>`;
+ return `<div class="field"><label>${f.l}</label><input type="text" data-a="${f.k}" value="${esc(v||"")}"></div>`;
+}
+function renderAiml(){
+ const m=state.models.find(x=>x.id===aimlSel);const a=m.aimlEk=m.aimlEk||{};const genai=!!m.genai;
+ document.getElementById("aiml-form").innerHTML=AIML_SECTIONS.filter(s=>!s.genai||genai).map(s=>`
+   <div class="card panel" style="margin-bottom:14px"><div class="section-h" style="margin-top:0">${s.h}${s.genai?` <span class="chip ai" style="margin-left:6px">GenAI</span>`:""}</div>
+   <div class="form-grid">${s.fields.map(f=>aimlInput(f,a)).join("")}</div></div>`).join("");
+ document.querySelectorAll("#aiml-form [data-a]").forEach(e=>{
+   e.onchange=()=>{const k=e.dataset.a;
+     if(e.dataset.multi){const arr=a[k]||[];const val=e.value;const i=arr.indexOf(val);if(e.checked){if(i<0)arr.push(val);}else if(i>=0)arr.splice(i,1);a[k]=arr;}
+     else if(e.type==="checkbox")a[k]=e.checked;
+     else a[k]=e.value;
+     if(k==="euAiKategori"||k==="disparateImpact"){}
+     save();renderAimlInd();};
+ });
+ renderAimlInd();
+}
+function aimlChecks(m){
+ const a=m.aimlEk||{};const genai=!!m.genai;
+ const credit=(m.kategori||[]).some(k=>/Kredi|IRB|BKZ/.test(k))||m.duzenleyici;
+ const set=x=>x!=null&&x!==""&&x!=="—";
+ const out=[];
+ out.push({label:"Açıklanabilirlik yöntemi",status:set(a.aciklanabilirlikYontem)?(credit&&!a.reasonCode?"warn":"good"):"crit",note:set(a.aciklanabilirlikYontem)?(credit&&!a.reasonCode?"Kredi kullanımı için reason-code yeteneği gerekli":a.aciklanabilirlikYontem):"Yöntem seçilmemiş (SHAP/LIME…)"});
+ const di=parseFloat(a.disparateImpact);let fs,fn;
+ if(isNaN(di)){fs="crit";fn="Disparate impact test edilmemiş";}
+ else if(di>=0.8){fs="good";fn="4/5 kuralı sağlanıyor ("+di+")";}
+ else if(di>=0.7){fs="warn";fn="4/5 sınırında ("+di+")";}
+ else{fs="crit";fn="4/5 kuralı ihlali ("+di+")";}
+ out.push({label:"Yanlılık / adalet (disparate impact)",status:fs,note:fn});
+ let ds=a.temsil==="Temsil Ediyor"?"good":a.temsil==="Kısmen"?"warn":"crit";
+ let dn=set(a.temsil)?"Temsil: "+a.temsil:"Temsil değerlendirilmemiş";
+ if(a.pii&&!set(a.piiKontrol)){if(ds==="good")ds="warn";dn+=" · PII kontrolü eksik";}
+ out.push({label:"Veri temsili & gizlilik",status:ds,note:dn});
+ const psi=parseFloat(a.psiSon);let gs,gn;
+ if(isNaN(psi)){gs="crit";gn="Drift (PSI) izlenmiyor";}
+ else if(psi<0.10){gs="good";gn="PSI "+psi+" (stabil)";}
+ else if(psi<0.25){gs="warn";gn="PSI "+psi+" (izle)";}
+ else{gs="crit";gn="PSI "+psi+" — drift! aksiyon";}
+ out.push({label:"Drift izleme (PSI)",status:gs,note:gn});
+ out.push({label:"Robustluk & güvenlik testi",status:a.robustlukTest?(genai&&!a.adversarialTest?"warn":"good"):"warn",note:a.robustlukTest?(genai&&!a.adversarialTest?"GenAI için adversarial/jailbreak testi eksik":""):"Robustluk testi yapılmamış"});
+ out.push({label:"Tekrarüretilebilirlik",status:a.reproducibility?"good":"warn",note:a.reproducibility?"":"Reproducibility manifestosu eksik"});
+ out.push({label:"Retraining yönetişimi",status:set(a.retrainFrekans)?"good":"warn",note:set(a.retrainFrekans)?"Frekans: "+a.retrainFrekans:"Retraining frekansı tanımsız"});
+ out.push({label:"İnsan gözetimi",status:a.insanGozetim?"good":(credit?"crit":"warn"),note:a.insanGozetim?(a.insanRol||""):"İnsan gözetimi işaretli değil"});
+ let es=a.euAiKategori==="Yüksek Risk"?(set(a.etikFRIA)?"good":"warn"):set(a.euAiKategori)?"good":"warn";
+ out.push({label:"Etik / EU AI Act",status:es,note:set(a.euAiKategori)?("Kategori: "+a.euAiKategori+(a.euAiKategori==="Yüksek Risk"&&!set(a.etikFRIA)?" · FRIA gerekli":"")):"EU AI Act kategorisi belirlenmemiş"});
+ if(genai){
+   const he=parseFloat(a.halusinasyonEsik),hs2=parseFloat(a.halusinasyonSon);let hs,hn;
+   if(!set(a.guardrailModeller)||isNaN(he)){hs="crit";hn="Guardrail/halüsinasyon eşiği tanımsız";}
+   else if(!isNaN(hs2)&&hs2>he){hs="warn";hn="Halüsinasyon skoru eşiği aşıyor ("+hs2+" > "+he+")";}
+   else{hs="good";hn="Guardrail aktif, eşik içinde";}
+   out.push({label:"GenAI guardrail & halüsinasyon",status:hs,note:hn});
+   const tm=set(a.temelModel)&&set(a.saglayici)&&set(a.lisans);
+   out.push({label:"GenAI temel model / 3. taraf",status:tm?"good":"warn",note:tm?(a.saglayici):"Temel model/sağlayıcı/lisans bilgisi eksik"});
+ }else{
+   out.push({label:"GenAI guardrail & halüsinasyon",status:"na",note:"GenAI değil"});
+ }
+ return out;
+}
+function renderAimlInd(){
+ const m=state.models.find(x=>x.id===aimlSel);const checks=aimlChecks(m);
+ const scored=checks.filter(c=>c.status!=="na");
+ const pass=scored.filter(c=>c.status==="good").length;
+ const warnN=scored.filter(c=>c.status==="warn").length;
+ const critN=scored.filter(c=>c.status==="crit").length;
+ const pct=scored.length?Math.round(pass/scored.length*100):0;
+ const col=pct>=80?"good":pct>=50?"warn":"crit";
+ const ico={good:"✓",warn:"!",crit:"✕",na:"–"};
+ document.getElementById("aiml-ind").innerHTML=`
+   <div class="card panel" style="position:sticky;top:78px">
+   <div class="gauge"><div class="big" style="color:var(--${col})">${pct}%</div><div class="cap">AI/ML Hazırlık</div></div>
+   <div style="display:flex;gap:6px;justify-content:center;margin:-4px 0 12px;flex-wrap:wrap"><span class="chip good">${pass} geçti</span><span class="chip warn">${warnN} uyarı</span><span class="chip crit">${critN} kritik</span></div>
+   <div class="list">${checks.map(c=>`<div class="li-row" style="padding:8px 2px"><span class="chip ${c.status==='na'?'muted':c.status}" style="padding:0 8px;min-width:22px;justify-content:center">${ico[c.status]}</span><div class="grow"><div class="t" style="white-space:normal;font-size:12.5px">${esc(c.label)}</div>${c.note?`<div class="s" style="white-space:normal">${esc(c.note)}</div>`:""}</div></div>`).join("")}</div>
+   <button class="tbtn primary" style="width:100%;justify-content:center;margin-top:14px" onclick="aimlGaps()">Boşlukları bulguya çevir</button>
+   </div>`;
+}
+function aimlGaps(){
+ const m=state.models.find(x=>x.id===aimlSel);
+ const gaps=aimlChecks(m).filter(c=>c.status==="warn"||c.status==="crit");
+ if(!gaps.length){alert("Açık AI/ML boşluğu yok — tüm kontroller geçti.");return;}
+ let n=0;
+ gaps.forEach(g=>{
+   const title="[AI/ML] "+g.label;
+   if(state.findings.some(f=>f.modelId===m.id&&f.baslik===title))return;
+   state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"AI/ML Değerlendirme",onem:g.status==="crit"?"Yüksek":"Orta",durum:"Planlanıyor",sahip:m.sahip||""});n++;
+ });
+ save();buildNav();
+ alert(n?`${n} bulgu oluşturuldu (Bulgular ekranında).`:"Bu boşluklar için bulgu zaten mevcut.");
 }
 
 /* ============ DRAWER ============ */
