@@ -362,6 +362,7 @@ const NAV=[
  {id:"envanter",t:"Model Envanteri",ic:"▤",sub:"Tüm modeller ve algoritmalar"},
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
  {id:"aiml",t:"AI/ML Ek Değerlendirme",ic:"◆",sub:"AI/ML & GenAI ek kontrolleri"},
+ {id:"euai",t:"EU AI Act Uyum",ic:"§",sub:"Yüksek-risk yükümlülük izleyici"},
  {id:"validasyon",t:"Model Validasyonu",ic:"✓",sub:"Bağımsız validasyon kayıtları"},
  {id:"izleme",t:"İzleme & Metrikler",ic:"◎",sub:"Performans/drift metrikleri, eşikler"},
  {id:"degisiklik",t:"Model Değişiklik",ic:"⇄",sub:"Değişiklik & revalidasyon tetiği"},
@@ -408,7 +409,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1591,6 +1592,58 @@ function viewBaglanti(v){
     </tbody></table></div></div>`;
  document.getElementById("dep-model").onchange=e=>{depSel=e.target.value;render();};
 }
+
+/* ============ EU AI ACT UYUM IZLEYICI ============ */
+const EUAI_ARTS=[
+ {k:"art9",l:"Madde 9 — Risk yönetim sistemi",auto:null},
+ {k:"art10",l:"Madde 10 — Veri & veri yönetişimi",auto:m=>{const a=m.aimlEk||{};return a.temsil==="Temsil Ediyor"&&(!a.pii||!!a.piiKontrol);}},
+ {k:"art11",l:"Madde 11 — Teknik dokümantasyon (Annex IV)",auto:m=>!!(m.aimlEk||{}).modelKarti},
+ {k:"art12",l:"Madde 12 — Kayıt tutma / loglama",auto:null},
+ {k:"art13",l:"Madde 13 — Şeffaflık & kullanım talimatı",auto:m=>{const a=m.aimlEk||{};return !!a.aciklanabilirlikYontem&&a.aciklanabilirlikYontem!=="—";}},
+ {k:"art14",l:"Madde 14 — İnsan gözetimi",auto:m=>!!(m.aimlEk||{}).insanGozetim},
+ {k:"art15",l:"Madde 15 — Doğruluk, robustluk, güvenlik",auto:m=>!!(m.aimlEk||{}).robustlukTest},
+ {k:"art17",l:"Madde 17 — Kalite yönetim sistemi",auto:null},
+ {k:"art27",l:"Madde 27 — Temel Haklar Etki Değ. (FRIA)",auto:m=>{const a=m.aimlEk||{};return !!(a.etikFRIA&&String(a.etikFRIA).trim());}}
+];
+function euaiStatus(m,art){if(art.auto)return art.auto(m)?"ok":"gap";return (m.euai||{})[art.k]?"ok":"gap";}
+function euaiPct(m){const s=EUAI_ARTS.map(a=>euaiStatus(m,a));return Math.round(s.filter(x=>x==="ok").length/EUAI_ARTS.length*100);}
+window.euaiToggle=function(id,key){const m=state.models.find(x=>x.id===id);if(!m)return;m.euai=m.euai||{};m.euai[key]=!m.euai[key];logAudit("EU AI Act kontrolü","MDL "+id,key+": "+(m.euai[key]?"uygun":"boşluk"));save();render();};
+let euaiSel="";
+function viewEuai(v){
+ const models=state.models.filter(m=>m.aiml);
+ if(!models.length){v.innerHTML=`<div class="card empty">AI/ML olarak işaretli model yok.</div>`;return;}
+ if(!euaiSel||!models.find(m=>m.id===euaiSel))euaiSel=models[0].id;
+ const m=models.find(x=>x.id===euaiSel);const kat=(m.aimlEk||{}).euAiKategori||"—";
+ const highRisk=kat==="Yüksek Risk";const pct=euaiPct(m);const col=pct>=80?"good":pct>=50?"warn":"crit";
+ v.innerHTML=`
+  <p class="vlead">EU AI Act (2024/1689) yüksek-risk yükümlülük izleyici. Kredi değerliliği/skorlama AI’ı Annex III’e göre yüksek-risktir; yükümlülükler 2 Ağustos 2026’dan itibaren. Kontroller AI/ML değerlendirmesinden otomatik türetilir; kalanlar elle işaretlenir.</p>
+  <div class="toolbar"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
+   <select id="euai-model" style="min-width:320px">${models.map(x=>`<option value="${x.id}" ${euaiSel===x.id?"selected":""}>${esc(x.ad)}${x.genai?" · GenAI":""}</option>`).join("")}</select>
+   <div class="sp"></div><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
+  <div class="calc">
+   <div class="card panel">
+     <h3>Yükümlülük Kontrol Listesi ${highRisk?'':'<span class="cnt">yüksek-risk değil: yükümlülükler sınırlı</span>'}</h3>
+     <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Yükümlülük</th><th style="width:120px">Durum</th><th style="width:150px">Kaynak</th></tr></thead><tbody>
+      ${EUAI_ARTS.map(a=>{const st=euaiStatus(m,a);const auto=!!a.auto;return `<tr style="cursor:default"><td>${a.l}</td>
+        <td>${auto?`<span class="chip ${st==='ok'?'good':'crit'}">${st==='ok'?'Uygun':'Boşluk'}</span>`:`<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" onchange="euaiToggle('${m.id}','${a.k}')" ${st==='ok'?'checked':''}> ${st==='ok'?'Uygun':'Boşluk'}</label>`}</td>
+        <td class="tsub">${auto?'AI/ML değerlendirmesi':'Manuel beyan'}</td></tr>`;}).join("")}
+     </tbody></table></div>
+   </div>
+   <div class="result"><div class="card panel" style="position:sticky;top:78px">
+     <div class="gauge"><div class="big" style="color:var(--${col})">${pct}%</div><div class="cap">EU AI Act Uyum</div></div>
+     <div style="text-align:center;margin:-4px 0 10px"><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
+     ${highRisk&&pct<100?`<div class="rule-note">Yüksek-risk model: eksik yükümlülükler 2 Ağu 2026’dan önce kapatılmalı${euaiStatus(m,EUAI_ARTS[8])==='gap'?'; FRIA (Madde 27) gerekli':''}.</div>`:""}
+     <button class="tbtn" style="width:100%;justify-content:center;margin-top:12px" onclick="euaiGaps('${m.id}')">Boşlukları bulguya çevir</button>
+   </div></div>
+  </div>
+  <div class="card panel" style="margin-top:16px"><h3>Tüm AI/ML Modelleri — Uyum Özeti</h3>
+    <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Model</th><th>EU AI Kategorisi</th><th class="num">Uyum</th><th>Durum</th></tr></thead><tbody>
+     ${models.map(x=>{const pc=euaiPct(x);const hr=(x.aimlEk||{}).euAiKategori==="Yüksek Risk";return `<tr onclick="euaiSelSet('${x.id}')"><td class="tname">${esc(x.ad)}</td><td>${esc((x.aimlEk||{}).euAiKategori||"—")}</td><td class="num">${pc}%</td><td><span class="chip ${pc>=80?'good':pc>=50?'warn':'crit'}">${pc>=80?'Uyumlu':pc>=50?'Kısmi':'Yetersiz'}</span>${hr?' <span class="chip crit" style="padding:0 6px">HR</span>':''}</td></tr>`;}).join("")}
+    </tbody></table></div></div>`;
+ document.getElementById("euai-model").onchange=e=>{euaiSel=e.target.value;render();};
+}
+window.euaiSelSet=function(id){euaiSel=id;go("euai");};
+window.euaiGaps=function(id){const m=state.models.find(x=>x.id===id);let n=0;EUAI_ARTS.forEach(a=>{if(euaiStatus(m,a)==="gap"){const title="[EU AI Act] "+a.l;if(state.findings.some(f=>f.modelId===id&&f.baslik===title))return;state.findings.push({id:uid("FND-"),modelId:id,baslik:title,kaynak:"AI/ML Değerlendirme",onem:"Orta",durum:"Planlanıyor",sahip:m.sahip||"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS["Orta"])});n++;}});save();buildNav();alert(n?`${n} bulgu oluşturuldu.`:"Boşluk yok ya da bulgular mevcut.");};
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
