@@ -187,6 +187,9 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .footnote{font-size:11.5px;color:var(--muted);margin-top:24px;line-height:1.5;border-top:1px solid var(--line);padding-top:14px}
 @media(max-width:720px){.app{grid-template-columns:1fr}.sidebar{position:fixed;left:-240px;transition:left .2s;z-index:60}.sidebar.open{left:0}.menu-btn{display:grid!important}}
 .menu-btn{display:none}
+.ro-note{display:none}
+:root[data-ro="1"] .ro-note{display:flex}
+:root[data-ro="1"] .tbtn.primary{opacity:.4;pointer-events:none}
 </style>
 
 <div class="app">
@@ -209,6 +212,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
       <button class="tbtn ghost" id="themeBtn" title="Tema">◐ Tema</button>
       <button class="tbtn" id="seedBtn" title="Örnek veriyi yükle">↺ Örnek Veri</button>
     </header>
+    <div class="ro-note" style="align-items:center;gap:8px;background:var(--warn-bg);color:var(--warn);padding:8px 22px;font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line)">🔒 3. Hat – İç Denetim: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim.</div>
     <div class="view" id="view"></div>
   </div>
 </div>
@@ -218,8 +222,23 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 "use strict";
 /* ============ DURUM / KALICILIK ============ */
 const KEY="mrm_sim_v1";
-const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[]};
-["metrics","pmas","changes"].forEach(k=>{if(!state[k])state[k]=[];});
+const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[],audit:[]};
+["metrics","pmas","changes","audit"].forEach(k=>{if(!state[k])state[k]=[];});
+function logAudit(action,entity,detail){state.audit=state.audit||[];state.audit.unshift({ts:new Date().toISOString(),role:window.activeRole||"—",action,entity,detail:detail||""});if(state.audit.length>500)state.audit.length=500;}
+const PERMS={
+ "Yeni/Düzenle model":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
+ "Model sil":["2. Hat – MRM Programı"],
+ "Kritiklik/tier belirle":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
+ "Nihai tier teyidi":["2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı"],
+ "Validasyon önerisi/test":["2. Hat – Bağımsız Validasyon","Model Risk Komitesi"],
+ "Onay kararı":["Model Risk Komitesi"],
+ "İzleme ölçümü gir":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
+ "Model değişikliği":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
+ "PMA/istisna onayı":["Model Risk Komitesi","2. Hat – MRM Programı"],
+ "Yaşam döngüsü geçişi":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı","2. Hat – Bağımsız Validasyon","Model Risk Komitesi"],
+ "Bulgu / remediation":["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı"],
+ "Salt-okur (denetim)":["3. Hat – İç Denetim"]
+};
 function save(){localStorage.setItem(KEY,JSON.stringify(state));}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.models){Object.assign(state,d);return true;}}catch(e){}return false;}
 function uid(p){let n=0;[...state.models,...state.validations,...state.findings].forEach(x=>{const m=(x.id||"").match(/(\d+)$/);if(m)n=Math.max(n,+m[1]);});return p+String(n+1).padStart(4,"0");}
@@ -313,6 +332,7 @@ function seed(){
   {id:"CHG-0001",modelId:"MDL-0003",versiyon:"v2.1",tur:"Retraining",aciklama:"Çeyreklik retraining; yeni özellikler eklendi.",materyalite:"Materyal Değil",revalidasyon:"Hayır",onay:"Onaylandı",tarih:"2026-04-01"},
   {id:"CHG-0002",modelId:"MDL-0001",versiyon:"v3.0",tur:"Rekalibrasyon",aciklama:"PSI artışı nedeniyle rekalibrasyon önerisi.",materyalite:"Materyal",revalidasyon:"Evet",onay:"Beklemede",tarih:""},
  ];
+ state.audit=[];logAudit("Örnek veri yüklendi","sistem",state.models.length+" model");
  save();
 }
 /* ============ IZLEME / METRIK ============ */
@@ -345,6 +365,10 @@ const NAV=[
  {id:"pma",t:"PMA / İstisna",ic:"⊘",sub:"Azaltıcılar: overlay, kısıt, istisna"},
  {id:"yasam",t:"Yaşam Döngüsü",ic:"⧉",sub:"İş akışı ve durum panosu"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
+ {grp:"Yönetişim"},
+ {id:"yetki",t:"Yetki Matrisi",ic:"⊞",sub:"Rol × işlem (FLS)"},
+ {id:"denetim",t:"Denetim İzi",ic:"❑",sub:"İşlem / audit kaydı"},
+ {id:"feed",t:"Veri Feed / API",ic:"⇅",sub:"Archer entegrasyonu (simülasyon)"},
  {grp:"Referans"},
  {id:"gereklilik",t:"Gereklilik Matrisi",ic:"☰",sub:"MRM gereklilikleri → Archer"},
  {id:"regulasyon",t:"Regülasyon Eşleme",ic:"⚖",sub:"Çerçeve izlenebilirliği"},
@@ -363,6 +387,7 @@ function buildNav(){
   if(n.id==="degisiklik")badge=(state.changes||[]).length;
   if(n.id==="pma")badge=(state.pmas||[]).length;
   if(n.id==="bulgular")badge=state.findings.filter(f=>f.durum!=="Kapandı").length;
+  if(n.id==="denetim"){const b=(state.audit||[]).length;badge=b||"";}
   a.innerHTML=`<span class="ic">${n.ic}</span><span>${n.t}</span>${badge!==""?`<span class="badge">${badge}</span>`:""}`;
   a.onclick=()=>go(n.id);
   nav.appendChild(a);
@@ -371,6 +396,7 @@ function buildNav(){
 let current="dashboard";
 function go(id){current=id;location.hash=id;render();}
 function render(){
+ document.documentElement.setAttribute("data-ro",window.activeRole==="3. Hat – İç Denetim"?"1":"0");
  const n=NAV.find(x=>x.id===current)||NAV[1];
  document.getElementById("pgtitle").textContent=n.t;
  document.getElementById("pgsub").textContent=n.sub||"";
@@ -378,7 +404,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -600,9 +626,10 @@ window.saveModel=function(id){
  obj.crit=Object.assign({},obj.crit,{duzenleyici:obj.duzenleyici,genai:obj.genai});
  const s=scoreCrit(obj.crit);Object.assign(obj,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
  if(id){const i=state.models.findIndex(x=>x.id===id);state.models[i]=obj;}else state.models.push(obj);
+ logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier);
  save();closeDrawer();render();
 };
-window.delModel=function(id){if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delModel=function(id){if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
 
 /* ============ KRITIKLIK HESAPLAYICI ============ */
 let critState={modelId:"",c:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K6:3,K7:3,B1:1,O1:0,duzenleyici:false,genai:false}};
@@ -669,6 +696,7 @@ window.applyCrit=function(){
  m.crit=Object.assign({},critState.c);m.duzenleyici=!!critState.c.duzenleyici;m.genai=!!critState.c.genai;if(m.genai)m.aiml=true;
  const s=scoreCrit(m.crit);Object.assign(m,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
  if(!m.valFrekans)m.valFrekans=tierFreq(s.tier);
+ logAudit("Kritiklik/tier belirle","MDL "+m.id,esc(m.ad)+" → "+s.tier);
  save();
  const el=document.getElementById("crit-result");el.insertAdjacentHTML("afterbegin",`<div class="chip good" style="display:block;text-align:center;margin-bottom:10px">✓ ${esc(m.ad)} güncellendi → ${s.tier}</div>`);
  buildNav();
@@ -740,6 +768,7 @@ window.saveVal=function(id){
    const m=state.models.find(x=>x.id===obj.modelId);
    if(m){m.sonValidasyon=obj.raporTarihi;if(m.durum==="Revalidasyonda"||m.durum==="Validasyonda"||m.durum==="Onayda")m.durum=obj.onayKarar==="Koşullu Onaylandı"?"Koşullu Onaylı":"İzlemede";}
  }
+ logAudit(id?"Validasyon güncelle":"Validasyon oluştur","VAL "+obj.id,"Öneri: "+(obj.oneri||"—")+" · Onay: "+(obj.onayKarar||"—"));
  save();closeDrawer();render();
 };
 window.delVal=function(id){if(!confirm("Validasyon kaydı silinsin mi?"))return;state.validations=state.validations.filter(x=>x.id!==id);save();closeDrawer();render();};
@@ -808,6 +837,7 @@ window.saveFind=function(id){
  const hedefTarih=g("hedefTarih")||addDays(olusturma,SLA_DAYS[onem]||60);
  const obj={id:id||uid("FND-"),baslik,modelId:g("modelId"),kaynak:g("kaynak"),onem,durum:g("durum"),sahip:g("sahip"),olusturma,hedefTarih};
  if(id){const i=state.findings.findIndex(x=>x.id===id);state.findings[i]=obj;}else state.findings.push(obj);
+ logAudit(id?"Bulgu güncelle":"Bulgu oluştur","FND "+obj.id,obj.onem+" · "+obj.durum);
  save();closeDrawer();render();
 };
 window.delFind=function(id){if(!confirm("Bulgu silinsin mi?"))return;state.findings=state.findings.filter(x=>x.id!==id);save();closeDrawer();render();};
@@ -1184,6 +1214,7 @@ window.saveChg=function(id){
    id:id||uid("CHG-"),modelId:g("modelId"),versiyon:g("versiyon"),tur:g("tur"),aciklama:g("aciklama"),
    materyalite:g("materyalite"),revalidasyon:g("revalidasyon"),onay:g("onay"),tarih:g("tarih")});
  if(id){const i=state.changes.findIndex(x=>x.id===id);state.changes[i]=obj;}else state.changes.push(obj);
+ logAudit(id?"Değişiklik güncelle":"Değişiklik oluştur","CHG "+obj.id,obj.tur+" · "+obj.materyalite+" · "+obj.onay);
  let msg="";
  if(obj.materyalite==="Materyal"&&obj.revalidasyon==="Evet"&&obj.onay==="Onaylandı"&&!obj.valOlusturuldu){
    const m=state.models.find(x=>x.id===obj.modelId);
@@ -1229,6 +1260,7 @@ window.savePma=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozden:g("bagimsizGozden"),durum:g("durum")};
  if(id){const i=state.pmas.findIndex(x=>x.id===id);state.pmas[i]=obj;}else state.pmas.push(obj);
+ logAudit(id?"PMA/istisna güncelle":"PMA/istisna oluştur","PMA "+obj.id,obj.tur+" · "+obj.durum);
  save();closeDrawer();render();
 };
 window.delPma=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
@@ -1292,7 +1324,7 @@ function renderWfFlow(){
      ${trans.length?trans.map(t=>`<button class="tbtn ${t[2]==="f"?"primary":""}" onclick="wfDo('${m.id}','${t[1]}')">${t[0]}</button>`).join(""):`<span class="chip good">Son durum (Emekli)</span>`}
    </div>`;
 }
-window.wfDo=function(id,to){const m=state.models.find(x=>x.id===id);if(!m)return;m.durum=to;save();render();};
+window.wfDo=function(id,to){const m=state.models.find(x=>x.id===id);if(!m)return;m.durum=to;logAudit("Yaşam döngüsü geçişi","MDL "+id,esc(m.ad)+" → "+to);save();render();};
 
 /* ============ RISK PANOSU & BOARD ============ */
 function riskZone(p){return p>=15?"t1":p>=8?"t2":p>=3?"t3":"t0";}
@@ -1369,6 +1401,29 @@ window.riskCell=function(y,x){
   `<div class="list">${ms.map(m=>`<div class="li-row"><span class="grow"><div class="t">${esc(m.ad)}</div><div class="s">İçsel risk ${m.icsel} · ${esc(m.durum)}</div></span>${tierChip(m.tier)}<button class="tbtn ghost" onclick="closeDrawer();modelDetail('${m.id}')">Aç</button></div>`).join("")}</div>`);
 };
 
+/* ============ YETKI MATRISI ============ */
+function viewYetki(v){
+ const roles=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı","Model Risk Komitesi","3. Hat – İç Denetim"];
+ const actions=Object.keys(PERMS).filter(a=>a!=="Salt-okur (denetim)");
+ v.innerHTML=`<p class="vlead">Rol × işlem yetki matrisi (üç savunma hattı) — Archer <b>Access Roles</b> ve alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstten değişir; onay yalnız Model Risk Komitesi, validasyon önerisi yalnız 2. hat; 3. Hat – İç Denetim salt-okur.</p>
+  <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b>. Bu rolde yetkili işlemler yeşil satırlarda ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri (ör. onay) ilgili ekranlarda pasifleşir.</div>
+  <div class="tablewrap"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:96px">${esc(r).replace(" – ","<br>")}</th>`).join("")}</tr></thead><tbody>
+   ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
+  </tbody></table></div>
+  <div class="footnote">Validasyon bağımsızlığı (ÖNERİ ≠ ONAY) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
+}
+/* ============ DENETIM IZI ============ */
+function fmtTs(ts){try{return new Date(ts).toLocaleString("tr-TR");}catch(e){return ts;}}
+function viewDenetim(v){
+ const A=state.audit||[];
+ v.innerHTML=`<p class="vlead">Denetim izi — oluşturma/güncelleme/geçiş/onay işlemleri zaman, rol ve nesne ile kaydedilir (Archer <b>History Log / Access History</b> karşılığı).</p>
+  <div class="toolbar"><span class="tsub">${A.length} kayıt (son 200 gösterilir)</span><div class="sp"></div><button class="tbtn" onclick="clearAudit()">Denetim izini temizle</button></div>
+  <div class="tablewrap"><table><thead><tr><th>Zaman</th><th>Rol</th><th>İşlem</th><th>Nesne</th><th>Detay</th></tr></thead><tbody>
+   ${A.slice(0,200).map(a=>`<tr style="cursor:default"><td class="tsub" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtTs(a.ts)}</td><td class="tsub">${esc(a.role)}</td><td>${esc(a.action)}</td><td class="id">${esc(a.entity)}</td><td class="tsub" style="white-space:normal">${esc(a.detail)}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Henüz işlem kaydı yok. Bir model oluşturun, validasyon onaylayın ya da yaşam döngüsü geçişi yapın.</div></td></tr>`}
+  </tbody></table></div>`;
+}
+window.clearAudit=function(){if(!confirm("Denetim izi temizlensin mi?"))return;state.audit=[];save();render();};
+
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
  const r=document.getElementById("modal-root");
@@ -1393,7 +1448,8 @@ window.importJSON=function(file){
  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.models))throw 0;
    const base={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[]};
    Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,base,d);
-   ["metrics","pmas","changes"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+   ["metrics","pmas","changes","audit"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+   logAudit("Veri içe aktar","sistem",state.models.length+" model");
    save();buildNav();render();alert("Veri içe aktarıldı.");
  }catch(e){alert("Geçersiz veya bozuk JSON dosyası.");}};
  r.readAsText(file);
