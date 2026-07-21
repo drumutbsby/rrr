@@ -292,9 +292,9 @@ function seed(){
   mk({id:"MDL-0009",ad:"Erken Uyarı Sistemi (EWS)",tip:"AI/ML",kategori:["Kredi/IRB"],aiml:true,duzenleyici:false,amac:"Kredilerde bozulma sinyalleri için erken uyarı skoru.",sahipBirim:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",gelistirici:"Veri Bilimi Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"Risk Analitik Platformu",metodoloji:"Random Forest",algoritma:"Random Forest",crit:{M1:2,M2:3,M3:3,M4:1,M5:2,K1:3,K2:3,K3:2,K4:3,K5:3,K6:2,K7:2,B1:1,O1:1,duzenleyici:false},durum:"Onaylı/Prod",gelistirmeTarihi:"2024-04-01",prodTarihi:"2024-09-01",sonValidasyon:"2025-09-10"}),
  ];
  state.validations=[
-  {id:"VAL-0001",baslik:"IRB PD Kurumsal – Periyodik Revalidasyon 2025",modelId:"MDL-0001",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",backtest:"Boşluk testi geçti; kalibrasyon hafif muhafazakâr",ayrimGucu:"Gini 0.62 (kabul üstü)",eskSorgu:"Segment bazında ayrım gücü sorgulandı; kabul edilebilir.",oneri:"Onay Önerilir",rating:"Tatmin Edici",onayKarar:"Onaylandı",onayMakam:"Model Risk Komitesi",raporTarihi:"2025-09-20",durum:"Tamamlandı"},
+  {id:"VAL-0001",baslik:"IRB PD Kurumsal – Periyodik Revalidasyon 2025",modelId:"MDL-0001",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",backtest:"Boşluk testi geçti; kalibrasyon hafif muhafazakâr",ayrimGucu:"Gini 0.62 (kabul üstü)",eskSorgu:"Segment bazında ayrım gücü sorgulandı; kabul edilebilir.",oneri:"Onay Önerilir",rating:"Tatmin Edici",onayKarar:"Onaylandı",onayMakam:"Model Risk Komitesi",raporTarihi:"2025-09-20",durum:"Tamamlandı",tests:{kavramsal:"Geçti",surec:"Geçti",backtest:"Geçti",ayrim:"Geçti",temsil:"Geçti",override:"Geçti",stabilite:"Geçti",benchmark:"Geçti",paralel:"Geçti"}},
   {id:"VAL-0002",baslik:"TFRS9 BKZ Bireysel – Revalidasyon (gecikmiş)",modelId:"MDL-0002",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",backtest:"Makro senaryo duyarlılığı yüksek",ayrimGucu:"—",eskSorgu:"SICR eşiği ve makro overlay sorgulandı.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Onayda"},
-  {id:"VAL-0003",baslik:"GenAI Çağrı Özeti – İlk Validasyon",modelId:"MDL-0006",tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Aynı Birim-Ayrı Personel",backtest:"Halüsinasyon oranı eşik üstünde örneklemde",ayrimGucu:"—",eskSorgu:"Guardrail kapsamı ve insan gözetimi sorgulandı; kısıtla onay.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Koşullu Onaylandı",onayMakam:"Model Risk Komitesi",raporTarihi:"2025-06-01",durum:"Tamamlandı"},
+  {id:"VAL-0003",baslik:"GenAI Çağrı Özeti – İlk Validasyon",modelId:"MDL-0006",tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Aynı Birim-Ayrı Personel",backtest:"Halüsinasyon oranı eşik üstünde örneklemde",ayrimGucu:"—",eskSorgu:"Guardrail kapsamı ve insan gözetimi sorgulandı; kısıtla onay.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Koşullu Onaylandı",onayMakam:"Model Risk Komitesi",raporTarihi:"2025-06-01",durum:"Tamamlandı",tests:{kavramsal:"Geçti",surec:"Geçti",backtest:"Kaldı",ayrim:"Uygun Değil",paralel:"Geçti",replikasyon:"Geçti",kodqa:"Geçti"}},
  ];
  state.findings=[
   {id:"FND-0001",modelId:"MDL-0002",baslik:"Makro overlay dokümantasyonu yetersiz",kaynak:"Model Validasyonu",onem:"Yüksek",durum:"Devam Ediyor",sahip:"M. Demir"},
@@ -719,11 +719,30 @@ function viewValidasyon(v){
  document.getElementById("newVal").onclick=()=>valForm(null);
 }
 function statusChip2(s){const c={"Planlandı":"muted","Devam Ediyor":"info","Bulgu Gözden Geçirme":"warn","Onayda":"warn","Tamamlandı":"good","İptal":"muted"}[s]||"muted";return `<span class="chip ${c}">${esc(s)}</span>`;}
+const VAL_TESTS=[
+ {k:"kavramsal",l:"Kavramsal sağlamlık"},{k:"surec",l:"Süreç doğrulama"},
+ {k:"backtest",l:"Backtesting / geriye dönük test"},{k:"ayrim",l:"Ayrım gücü (AUC/Gini/KS)"},
+ {k:"temsil",l:"Temsil (representativeness)"},{k:"override",l:"Override analizi"},
+ {k:"stabilite",l:"Stabilite analizi"},{k:"benchmark",l:"Benchmarking / kıyaslama"},
+ {k:"paralel",l:"Paralel çıktı analizi"},
+ {k:"replikasyon",l:"Model geliştirme replikasyonu",initOnly:true},{k:"kodqa",l:"Kod QA / IT birebir üretim teyidi",initOnly:true}];
+function valTestCatalog(vv){
+ vv.tests=vv.tests||{};const initRel=/İlk|Hedefli/.test(vv.tur||"");
+ const rows=VAL_TESTS.filter(t=>!t.initOnly||initRel);
+ const pass=rows.filter(t=>vv.tests[t.k]==="Geçti").length;
+ const opts=["Uygulanmadı","Geçti","Kaldı","Uygun Değil"];
+ return `<div class="section-h">Validasyon Test Kataloğu <span class="cnt">${pass}/${rows.length} geçti · ECB TRIM / SR 11-7</span></div>
+  <div class="tablewrap" style="box-shadow:none;margin-bottom:6px"><table><thead><tr><th>Test / Görev</th><th style="width:210px">Sonuç</th></tr></thead><tbody>
+   ${rows.map(t=>{const s=vv.tests[t.k]||"Uygulanmadı";const c=s==="Geçti"?"good":s==="Kaldı"?"crit":s==="Uygun Değil"?"muted":"warn";return `<tr style="cursor:default"><td>${t.l}${t.initOnly?' <span class="chip muted" style="padding:0 6px">ilk-only</span>':''}</td><td><select onchange="valTestSet('${vv.id}','${t.k}',this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px;margin-right:6px">${opts.map(o=>`<option ${s===o?"selected":""}>${o}</option>`).join("")}</select><span class="chip ${c}" style="padding:0 7px">${s}</span></td></tr>`;}).join("")}
+  </tbody></table></div>`;
+}
+window.valTestSet=function(valId,key,status){const vv=state.validations.find(x=>x.id===valId);if(!vv)return;vv.tests=vv.tests||{};vv.tests[key]=status;logAudit("Validasyon testi","VAL "+valId,key+": "+status);save();valDetail(valId);};
 window.valDetail=function(id){
  const vv=state.validations.find(x=>x.id===id);if(!vv)return;const m=state.models.find(x=>x.id===vv.modelId);
  openDrawer(`<div style="flex:1"><div style="display:flex;gap:8px;flex-wrap:wrap">${statusChip2(vv.durum)}<span class="chip ${vv.oneri==='Onay Önerilir'?'good':vv.oneri==='Ret Önerilir'?'crit':'warn'}">${esc(vv.oneri||"—")}</span></div><h2 style="margin:8px 0 2px;font-size:18px">${esc(vv.baslik)}</h2><div class="id">${vv.id} · ${esc(m?m.ad:"")}</div></div><button class="tbtn" onclick="valForm('${vv.id}')">Düzenle</button><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
    <div class="section-h">Bağlam</div>${dl({"Model":m?m.ad:"—","Validasyon Türü":vv.tur,"Tetik":vv.tetik||"—","Validatör":vv.validator||"—","Bağımsızlık Teyidi":vv.bagimsizlik||"—"})}
    <div class="section-h">Çıktı Analizi & Testler</div>${dl({"Backtesting":vv.backtest||"—","Ayrım Gücü (AUC/Gini/KS)":vv.ayrimGucu||"—"})}
+   ${valTestCatalog(vv)}
    <div class="section-h">Etkin Sorgulama & Sonuç</div>${dl({"Etkin Sorgulama Notları":vv.eskSorgu||"—","Validasyon Sonucu (ÖNERİ)":vv.oneri||"—","Rating":vv.rating||"—","Rapor Tarihi":vv.raporTarihi||"—"})}
    <div class="section-h">Onay (Onay Makamı — ayrı)</div>${dl({"Onay Kararı":vv.onayKarar||"—","Onay Makamı":vv.onayMakam||"—"})}
  `);
