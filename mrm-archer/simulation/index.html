@@ -217,7 +217,8 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 "use strict";
 /* ============ DURUM / KALICILIK ============ */
 const KEY="mrm_sim_v1";
-const state={models:[],validations:[],findings:[]};
+const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[]};
+["metrics","pmas","changes"].forEach(k=>{if(!state[k])state[k]=[];});
 function save(){localStorage.setItem(KEY,JSON.stringify(state));}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.models){Object.assign(state,d);return true;}}catch(e){}return false;}
 function uid(p){let n=0;[...state.models,...state.validations,...state.findings].forEach(x=>{const m=(x.id||"").match(/(\d+)$/);if(m)n=Math.max(n,+m[1]);});return p+String(n+1).padStart(4,"0");}
@@ -288,8 +289,36 @@ function seed(){
   "MDL-0009":{algoAile:"Random Forest",ogrenmeTipi:"Gözetimli",aciklanabilirlikYontem:"SHAP",disparateImpact:0.78,temsil:"Temsil Ediyor",pii:false,robustlukTest:false,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.18,retrainFrekans:"Olay-Tetikli",insanGozetim:false,euAiKategori:"Minimal"},
  };
  state.models.forEach(m=>{if(aug[m.id])m.aimlEk=aug[m.id];});
+ // izleme metrikleri
+ state.metrics=[];
+ const MM=["2025-10-01","2025-11-01","2025-12-01","2026-01-01","2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
+ let mid=0;
+ const ser=(modelId,tur,esik,vals)=>vals.forEach((d,i)=>state.metrics.push({id:"MET-"+String(++mid).padStart(4,"0"),modelId,tarih:MM[i],tur,deger:d,esik}));
+ ser("MDL-0001","PSI",0.25,[0.06,0.07,0.09,0.10,0.12,0.15,0.18,0.21,0.24,0.28]);
+ ser("MDL-0001","Gini",0.40,[0.63,0.62,0.62,0.61,0.61,0.60,0.60,0.59,0.59,0.58]);
+ ser("MDL-0003","PSI",0.25,[0.05,0.06,0.08,0.07,0.09,0.10,0.11,0.12,0.12,0.12]);
+ ser("MDL-0003","AUC",0.70,[0.95,0.94,0.94,0.93,0.93,0.92,0.92,0.91,0.90,0.90]);
+ ser("MDL-0002","PSI",0.25,[0.04,0.05,0.05,0.06,0.06,0.07,0.07,0.08,0.08,0.09]);
+ refreshMonitorStatus();
+ // PMA / istisna
+ state.pmas=[
+  {id:"PMA-0001",modelId:"MDL-0002",tur:"PMA/Overlay",gerekce:"Makroekonomik belirsizlik için ömür boyu ECL üzerine muhafazakâr overlay.",materyalite:"Yüksek",hesaplama:"Senaryo ağırlıklı ek yüzde; komite kararıyla",kaldirma:"Makro göstergeler normalleşince kademeli azalt",onayMakam:"Risk Komitesi",bagimsizGozden:"Yapıldı — gerekçe ve girdi doğrulandı",durum:"Aktif"},
+  {id:"PMA-0002",modelId:"MDL-0006",tur:"Kullanım İstisnası",gerekce:"Halüsinasyon eşiği aşımı nedeniyle yalnız insan onayıyla kullanım.",materyalite:"Orta",hesaplama:"—",kaldirma:"Guardrail eşiği içine dönünce kaldır",onayMakam:"Model Risk Komitesi",bagimsizGozden:"Yapıldı",durum:"Aktif"},
+ ];
+ // model degisiklik
+ state.changes=[
+  {id:"CHG-0001",modelId:"MDL-0003",versiyon:"v2.1",tur:"Retraining",aciklama:"Çeyreklik retraining; yeni özellikler eklendi.",materyalite:"Materyal Değil",revalidasyon:"Hayır",onay:"Onaylandı",tarih:"2026-04-01"},
+  {id:"CHG-0002",modelId:"MDL-0001",versiyon:"v3.0",tur:"Rekalibrasyon",aciklama:"PSI artışı nedeniyle rekalibrasyon önerisi.",materyalite:"Materyal",revalidasyon:"Evet",onay:"Beklemede",tarih:""},
+ ];
  save();
 }
+/* ============ IZLEME / METRIK ============ */
+const METRIC_DEF={PSI:{dir:"low",esik:0.25,lab:"PSI (drift)"},CSI:{dir:"low",esik:0.25,lab:"CSI"},AUC:{dir:"high",esik:0.70,lab:"AUC"},Gini:{dir:"high",esik:0.40,lab:"Gini"},KS:{dir:"high",esik:0.30,lab:"KS"}};
+function isBreach(tur,deger,esik){const d=METRIC_DEF[tur];if(!d)return false;return d.dir==="low"?(+deger>+esik):(+deger<+esik);}
+function latestMetric(modelId,tur){const a=(state.metrics||[]).filter(m=>m.modelId===modelId&&m.tur===tur).sort((x,y)=>new Date(x.tarih)-new Date(y.tarih));return a[a.length-1];}
+function modelMetricTypes(modelId){return [...new Set((state.metrics||[]).filter(m=>m.modelId===modelId).map(m=>m.tur))];}
+function modelBreaching(modelId){return modelMetricTypes(modelId).some(t=>{const l=latestMetric(modelId,t);return l&&isBreach(t,l.deger,l.esik);});}
+function refreshMonitorStatus(){state.models.forEach(m=>{const types=modelMetricTypes(m.id);if(!types.length)return;m.izlemeDurumu=modelBreaching(m.id)?"Eşik Aşımı":"Normal";});}
 
 /* ============ ROUTER ============ */
 const NAV=[
@@ -300,6 +329,9 @@ const NAV=[
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
  {id:"aiml",t:"AI/ML Ek Değerlendirme",ic:"◆",sub:"AI/ML & GenAI ek kontrolleri"},
  {id:"validasyon",t:"Model Validasyonu",ic:"✓",sub:"Bağımsız validasyon kayıtları"},
+ {id:"izleme",t:"İzleme & Metrikler",ic:"◎",sub:"Performans/drift metrikleri, eşikler"},
+ {id:"degisiklik",t:"Model Değişiklik",ic:"⇄",sub:"Değişiklik & revalidasyon tetiği"},
+ {id:"pma",t:"PMA / İstisna",ic:"⊘",sub:"Azaltıcılar: overlay, kısıt, istisna"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
  {grp:"Referans"},
  {id:"gereklilik",t:"Gereklilik Matrisi",ic:"☰",sub:"MRM gereklilikleri → Archer"},
@@ -315,6 +347,9 @@ function buildNav(){
   if(n.id==="envanter")badge=state.models.length;
   if(n.id==="aiml")badge=state.models.filter(m=>m.aiml).length;
   if(n.id==="validasyon")badge=state.validations.length;
+  if(n.id==="izleme"){const b=state.models.filter(m=>modelBreaching(m.id)).length;badge=b||"";}
+  if(n.id==="degisiklik")badge=(state.changes||[]).length;
+  if(n.id==="pma")badge=(state.pmas||[]).length;
   if(n.id==="bulgular")badge=state.findings.filter(f=>f.durum!=="Kapandı").length;
   a.innerHTML=`<span class="ic">${n.ic}</span><span>${n.t}</span>${badge!==""?`<span class="badge">${badge}</span>`:""}`;
   a.onclick=()=>go(n.id);
@@ -331,7 +366,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -972,6 +1007,178 @@ function aimlGaps(){
  save();buildNav();
  alert(n?`${n} bulgu oluşturuldu (Bulgular ekranında).`:"Bu boşluklar için bulgu zaten mevcut.");
 }
+
+/* ============ IZLEME EKRANI ============ */
+let izlSel="";
+function sparkline(vals,esik,dir,w=280,h=56){
+ if(!vals.length)return "";
+ const all=vals.concat([esik]);let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*0.15||0.05;lo-=pad;hi+=pad;
+ const X=i=>vals.length>1?(i/(vals.length-1))*(w-8)+4:w/2;
+ const Y=x=>h-5-((x-lo)/(hi-lo))*(h-10);
+ const pts=vals.map((x,i)=>`${X(i).toFixed(1)},${Y(x).toFixed(1)}`).join(" ");
+ const ty=Y(esik).toFixed(1);const last=vals[vals.length-1];
+ const breach=dir==="low"?last>esik:last<esik;const col=breach?"var(--crit)":"var(--good)";
+ const area=`4,${(h-4)} ${pts} ${X(vals.length-1).toFixed(1)},${(h-4)}`;
+ return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="display:block">
+   <polygon points="${area}" fill="${col}" opacity="0.08"/>
+   <line x1="0" y1="${ty}" x2="${w}" y2="${ty}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>
+   <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+   <circle cx="${X(vals.length-1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="3.2" fill="${col}"/></svg>`;
+}
+function viewIzleme(v){
+ const models=state.models;
+ const withM=models.filter(m=>modelMetricTypes(m.id).length);
+ if(!izlSel||!models.find(m=>m.id===izlSel))izlSel=((withM[0]||models[0])||{}).id||"";
+ v.innerHTML=`
+  <p class="vlead">Model performans ve drift metriklerinin zaman serisi izlenir; eşik aşımı (PSI/CSI için üst, AUC/Gini/KS için alt) <b>otomatik bulguya</b> çevrilebilir. SR 11-7 sürekli izleme · ECB TRIM eşikler · NIST/EU AI Act drift.</p>
+  <div class="toolbar">
+   <label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
+   <select id="izl-model" style="min-width:320px">${models.map(m=>`<option value="${m.id}" ${izlSel===m.id?"selected":""}>${esc(m.ad)}${modelBreaching(m.id)?" · ⚠ aşım":""}</option>`).join("")}</select>
+   <div class="sp"></div>
+   <button class="tbtn" id="izl-gap">⚑ Eşik aşımlarını bulguya çevir</button>
+  </div>
+  <div id="izl-body"></div>`;
+ document.getElementById("izl-model").onchange=e=>{izlSel=e.target.value;renderIzleme();};
+ document.getElementById("izl-gap").onclick=izlGaps;
+ renderIzleme();
+}
+function renderIzleme(){
+ const m=state.models.find(x=>x.id===izlSel);if(!m){document.getElementById("izl-body").innerHTML=`<div class="card empty">Model yok.</div>`;return;}
+ const types=modelMetricTypes(m.id);
+ const cards=types.map(t=>{
+   const d=METRIC_DEF[t]||{dir:"low"};
+   const series=(state.metrics||[]).filter(x=>x.modelId===m.id&&x.tur===t).sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
+   const vals=series.map(s=>+s.deger);const last=series[series.length-1];const esik=last?+last.esik:d.esik;
+   const br=last&&isBreach(t,last.deger,esik);
+   return `<div class="card panel" style="padding:14px 16px">
+     <div style="display:flex;align-items:baseline;gap:8px"><h3 style="margin:0;font-size:14px">${d.lab||t}</h3><span class="chip ${br?'crit':'good'}" style="margin-left:auto">${br?'Eşik Aşımı':'Normal'}</span></div>
+     <div style="display:flex;align-items:baseline;gap:10px;margin:6px 0 8px"><span style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--${br?'crit':'ink'})">${last?(+last.deger).toFixed(2):"—"}</span><span class="tsub">eşik ${esik} · ${d.dir==="low"?"↓ iyi":"↑ iyi"}</span></div>
+     ${sparkline(vals,esik,d.dir)}
+     <div class="tsub" style="margin-top:6px">${series.length} ölçüm · son: ${last?last.tarih:"—"}</div>
+   </div>`;
+ }).join("");
+ const rows=(state.metrics||[]).filter(x=>x.modelId===m.id).sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).slice(0,40);
+ document.getElementById("izl-body").innerHTML=`
+   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">${statusChip2b(m.izlemeDurumu||"Normal")} ${tierChip(m.tier)} <span class="tsub">${esc(m.ad)}</span></div>
+   ${types.length?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:16px">${cards}</div>`:`<div class="card empty" style="margin-bottom:16px">Bu model için metrik yok. Aşağıdan ölçüm ekleyin.</div>`}
+   <div class="card panel">
+     <h3>Ölçüm Ekle</h3>
+     <div class="form-grid">
+       <div class="field"><label>Metrik</label><select id="mt-tur">${Object.keys(METRIC_DEF).map(k=>`<option>${k}</option>`).join("")}</select></div>
+       <div class="field"><label>Tarih</label><input id="mt-tarih" type="date"></div>
+       <div class="field"><label>Değer</label><input id="mt-deger" type="number" step="0.01"></div>
+       <div class="field"><label>Eşik</label><input id="mt-esik" type="number" step="0.01"></div>
+     </div>
+     <div class="formfoot" style="border:none;padding-top:12px"><button class="tbtn primary" id="mt-add">Ölçüm Ekle</button></div>
+   </div>
+   <div class="section-h">Son Ölçümler</div>
+   <div class="tablewrap"><table><thead><tr><th>Tarih</th><th>Metrik</th><th class="num">Değer</th><th class="num">Eşik</th><th>Durum</th></tr></thead><tbody>
+    ${rows.map(r=>{const br=isBreach(r.tur,r.deger,r.esik);return `<tr style="cursor:default"><td>${r.tarih}</td><td>${r.tur}</td><td class="num">${(+r.deger).toFixed(2)}</td><td class="num">${r.esik}</td><td><span class="chip ${br?'crit':'good'}" style="padding:0 7px">${br?'Aşım':'Normal'}</span></td></tr>`;}).join("")||`<tr><td colspan="5"><div class="empty">Ölçüm yok.</div></td></tr>`}
+   </tbody></table></div>`;
+ const turEl=document.getElementById("mt-tur");
+ const fillEsik=()=>{document.getElementById("mt-esik").value=METRIC_DEF[turEl.value].esik;};
+ turEl.onchange=fillEsik;fillEsik();
+ document.getElementById("mt-add").onclick=()=>{
+   const tur=turEl.value,tarih=document.getElementById("mt-tarih").value,deger=document.getElementById("mt-deger").value,esik=document.getElementById("mt-esik").value;
+   if(!tarih||deger===""){alert("Tarih ve değer zorunludur.");return;}
+   state.metrics.push({id:"MET-"+Date.now(),modelId:m.id,tarih,tur,deger:+deger,esik:+(esik||METRIC_DEF[tur].esik)});
+   refreshMonitorStatus();save();renderIzleme();
+ };
+}
+function statusChip2b(s){const c={"Normal":"good","Uyarı":"warn","Eşik Aşımı":"crit","İstisna":"warn"}[s]||"muted";return `<span class="chip dot ${c}">${esc(s)}</span>`;}
+function izlGaps(){
+ const m=state.models.find(x=>x.id===izlSel);let n=0;
+ modelMetricTypes(m.id).forEach(t=>{const l=latestMetric(m.id,t);if(l&&isBreach(t,l.deger,l.esik)){
+   const title="[İzleme] "+t+" eşik aşımı";
+   if(state.findings.some(f=>f.modelId===m.id&&f.baslik===title))return;
+   state.findings.push({id:uid("FND-"),modelId:m.id,baslik:title,kaynak:"İzleme",onem:t==="PSI"||t==="CSI"?"Yüksek":"Orta",durum:"Planlanıyor",sahip:m.sahip||""});n++;
+ }});
+ save();buildNav();alert(n?`${n} bulgu oluşturuldu.`:"Eşik aşımı yok ya da bulgular zaten mevcut.");
+}
+
+/* ============ MODEL DEGISIKLIK ============ */
+function viewDegisiklik(v){
+ v.innerHTML=`<p class="vlead">Model değişiklik/versiyon kayıtları. <b>Materyal</b> değişiklik + revalidasyon gerektiğinde ve onaylandığında, ilgili model <b>Revalidasyonda</b> durumuna alınır ve otomatik bir <b>revalidasyon kaydı</b> açılır (SS1/23 3.3c · OSFI E-23).</p>
+  <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newChg">+ Yeni Değişiklik</button></div>
+  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Model</th><th>Versiyon</th><th>Tür</th><th>Materyalite</th><th>Revalidasyon</th><th>Onay</th><th>Tarih</th></tr></thead><tbody>
+   ${(state.changes||[]).map(c=>{const m=state.models.find(x=>x.id===c.modelId);return `<tr onclick="chgForm('${c.id}')">
+     <td class="id">${c.id}</td><td class="tsub">${esc(m?m.ad:"—")}</td><td>${esc(c.versiyon||"—")}</td><td>${esc(c.tur)}</td>
+     <td><span class="chip ${c.materyalite==='Materyal'?'warn':'muted'}">${esc(c.materyalite)}</span></td>
+     <td>${c.revalidasyon==='Evet'?'<span class="chip info">Evet</span>':'<span class="chip muted">Hayır</span>'}</td>
+     <td><span class="chip ${c.onay==='Onaylandı'?'good':c.onay==='Reddedildi'?'crit':'warn'}">${esc(c.onay)}</span></td><td>${c.tarih||'—'}</td></tr>`;}).join("")||`<tr><td colspan="8"><div class="empty">Değişiklik kaydı yok.</div></td></tr>`}
+  </tbody></table></div>`;
+ document.getElementById("newChg").onclick=()=>chgForm(null);
+}
+window.chgForm=function(id){
+ const c=id?JSON.parse(JSON.stringify((state.changes||[]).find(x=>x.id===id))):{tur:"Rekalibrasyon",materyalite:"Materyal Değil",revalidasyon:"Hayır",onay:"Beklemede"};
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Değişiklik Düzenle":"Yeni Değişiklik"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+   <div class="form-grid">
+    <div class="field full"><label>Model *</label><select data-f="modelId">${state.models.map(m=>`<option value="${m.id}" ${c.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
+    ${fld("Yeni Versiyon","versiyon",c.versiyon,"text")}
+    ${fldSel("Değişiklik Türü","tur",c.tur,["Rekalibrasyon","Yeniden Geliştirme","Metodoloji","Veri Kaynağı","Retraining","Parametre","Kod/Sistem"])}
+    ${fld("Açıklama","aciklama",c.aciklama,"textarea",false,true)}
+    ${fldSel("Materyalite","materyalite",c.materyalite,["Materyal Değil","Materyal"])}
+    ${fldSel("Revalidasyon Gerekli","revalidasyon",c.revalidasyon,["Hayır","Evet"])}
+    ${fldSel("Onay","onay",c.onay,["Beklemede","Onaylandı","Reddedildi"])}
+    ${fld("Tarih","tarih",c.tarih,"date")}
+   </div>
+   <div class="callout" style="margin-top:14px">Materyalite=<b>Materyal</b>, Revalidasyon=<b>Evet</b> ve Onay=<b>Onaylandı</b> olduğunda model Revalidasyonda durumuna alınır ve revalidasyon kaydı açılır.</div>
+   <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delChg('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveChg('${id||""}')">Kaydet</button></div>`);
+};
+window.saveChg=function(id){
+ const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
+ const obj=Object.assign(id?(state.changes.find(x=>x.id===id)):{},{
+   id:id||uid("CHG-"),modelId:g("modelId"),versiyon:g("versiyon"),tur:g("tur"),aciklama:g("aciklama"),
+   materyalite:g("materyalite"),revalidasyon:g("revalidasyon"),onay:g("onay"),tarih:g("tarih")});
+ if(id){const i=state.changes.findIndex(x=>x.id===id);state.changes[i]=obj;}else state.changes.push(obj);
+ let msg="";
+ if(obj.materyalite==="Materyal"&&obj.revalidasyon==="Evet"&&obj.onay==="Onaylandı"&&!obj.valOlusturuldu){
+   const m=state.models.find(x=>x.id===obj.modelId);
+   if(m){m.durum="Revalidasyonda";
+     state.validations.push({id:uid("VAL-"),baslik:m.ad+" – Revalidasyon (değişiklik tetikli)",modelId:m.id,tur:"Hedefli (Materyal Değişiklik)",tetik:"Materyal Değişiklik",validator:m.validator||"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",oneri:"",rating:"",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",durum:"Planlandı"});
+     obj.valOlusturuldu=true;msg="Model 'Revalidasyonda' durumuna alındı ve revalidasyon kaydı açıldı.";
+   }
+ }
+ save();closeDrawer();render();if(msg)setTimeout(()=>alert(msg),50);
+};
+window.delChg=function(id){if(!confirm("Değişiklik kaydı silinsin mi?"))return;state.changes=state.changes.filter(x=>x.id!==id);save();closeDrawer();render();};
+
+/* ============ PMA / ISTISNA ============ */
+function viewPma(v){
+ v.innerHTML=`<p class="vlead">Model riski azaltıcıları — model sonrası düzeltme (PMA/overlay), kullanım kısıtı ve istisna. Materyal PMA’lar üst yönetim/komite onayına ve <b>bağımsız gözden geçirmeye</b> tabidir; PMA’lı/PMA’sız raporlanır (SS1/23 P5).</p>
+  <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newPma">+ Yeni PMA / İstisna</button></div>
+  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Model</th><th>Tür</th><th>Materyalite</th><th>Onay Makamı</th><th>Bağımsız Gözden Geçirme</th><th>Durum</th></tr></thead><tbody>
+   ${(state.pmas||[]).map(p=>{const m=state.models.find(x=>x.id===p.modelId);return `<tr onclick="pmaForm('${p.id}')">
+     <td class="id">${p.id}</td><td class="tsub">${esc(m?m.ad:"—")}</td><td>${esc(p.tur)}</td>
+     <td><span class="chip ${p.materyalite==='Yüksek'?'crit':p.materyalite==='Orta'?'warn':'muted'}">${esc(p.materyalite)}</span></td>
+     <td class="tsub">${esc(p.onayMakam||"—")}</td><td class="tsub">${esc(p.bagimsizGozden||"—")}</td>
+     <td><span class="chip ${p.durum==='Aktif'?'info':p.durum==='Kaldırıldı'?'good':'warn'}">${esc(p.durum)}</span></td></tr>`;}).join("")||`<tr><td colspan="7"><div class="empty">PMA / istisna kaydı yok.</div></td></tr>`}
+  </tbody></table></div>`;
+ document.getElementById("newPma").onclick=()=>pmaForm(null);
+}
+window.pmaForm=function(id){
+ const p=id?JSON.parse(JSON.stringify((state.pmas||[]).find(x=>x.id===id))):{tur:"PMA/Overlay",materyalite:"Orta",durum:"Aktif"};
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"PMA / İstisna Düzenle":"Yeni PMA / İstisna"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+   <div class="form-grid">
+    <div class="field full"><label>Model / Portföy *</label><select data-f="modelId">${state.models.map(m=>`<option value="${m.id}" ${p.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
+    ${fldSel("Tür","tur",p.tur,["PMA/Overlay","Yönetim Overlay'i","Override","Kullanım İstisnası","Performans İstisnası"])}
+    ${fldSel("Materyalite","materyalite",p.materyalite,["Yüksek","Orta","Düşük"])}
+    ${fld("Gerekçe / Justifikasyon","gerekce",p.gerekce,"textarea",false,true)}
+    ${fld("Hesaplama Metodolojisi","hesaplama",p.hesaplama,"textarea",false,true)}
+    ${fld("Azaltma / Kaldırma Kriteri","kaldirma",p.kaldirma,"textarea",false,true)}
+    ${fldSel("Onay Makamı","onayMakam",p.onayMakam,["Model Risk Komitesi","Risk Komitesi","Üst Yönetim","Denetim Komitesi"])}
+    ${fld("Bağımsız Gözden Geçirme","bagimsizGozden",p.bagimsizGozden,"text")}
+    ${fldSel("Durum","durum",p.durum,["Aktif","Beklemede","Kaldırıldı"])}
+   </div>
+   <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delPma('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="savePma('${id||""}')">Kaydet</button></div>`);
+};
+window.savePma=function(id){
+ const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
+ const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozden:g("bagimsizGozden"),durum:g("durum")};
+ if(id){const i=state.pmas.findIndex(x=>x.id===id);state.pmas[i]=obj;}else state.pmas.push(obj);
+ save();closeDrawer();render();
+};
+window.delPma=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
