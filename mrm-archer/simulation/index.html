@@ -358,6 +358,7 @@ const NAV=[
  {id:"dashboard",t:"Genel Bakış",ic:"◉",sub:"Model riski panosu"},
  {id:"risk",t:"Risk Panosu & Board",ic:"▦",sub:"Toplulaştırılmış risk, ısı haritası"},
  {id:"govern",t:"İştah & Öz-Değerlendirme",ic:"⬢",sub:"Risk iştahı ve MRM attestasyonu"},
+ {id:"bildirim",t:"Bildirim & Eskalasyon",ic:"◔",sub:"Kural motoru, görev üretimi"},
  {grp:"MRM Uygulamaları"},
  {id:"envanter",t:"Model Envanteri",ic:"▤",sub:"Tüm modeller ve algoritmalar"},
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
@@ -393,6 +394,7 @@ function buildNav(){
   if(n.id==="pma")badge=(state.pmas||[]).length;
   if(n.id==="bulgular")badge=state.findings.filter(f=>f.durum!=="Kapandı").length;
   if(n.id==="denetim"){const b=(state.audit||[]).length;badge=b||"";}
+  if(n.id==="bildirim"){const c=genNotifications().filter(x=>x.sev==="crit").length;badge=c||"";}
   a.innerHTML=`<span class="ic">${n.ic}</span><span>${n.t}</span>${badge!==""?`<span class="badge">${badge}</span>`:""}`;
   a.onclick=()=>go(n.id);
   nav.appendChild(a);
@@ -409,7 +411,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -920,7 +922,7 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
-    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Gereklilik matrisi ve regülasyon eşlemesi"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 11-7)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Sıradaki geliştirmeler</h3><div class="list">
     ${["Çok kullanıcılı kalıcı sunucu ve gerçek Archer REST bağlantısı","Otomatik model dokümanı / board raporu (PDF) üretimi","Senaryo & stres testi modülü","Model riski KRI trend ve tahmin analitiği","Bildirim/eskalasyon motoru (e-posta/görev)"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
@@ -1644,6 +1646,37 @@ function viewEuai(v){
 }
 window.euaiSelSet=function(id){euaiSel=id;go("euai");};
 window.euaiGaps=function(id){const m=state.models.find(x=>x.id===id);let n=0;EUAI_ARTS.forEach(a=>{if(euaiStatus(m,a)==="gap"){const title="[EU AI Act] "+a.l;if(state.findings.some(f=>f.modelId===id&&f.baslik===title))return;state.findings.push({id:uid("FND-"),modelId:id,baslik:title,kaynak:"AI/ML Değerlendirme",onem:"Orta",durum:"Planlanıyor",sahip:m.sahip||"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS["Orta"])});n++;}});save();buildNav();alert(n?`${n} bulgu oluşturuldu.`:"Boşluk yok ya da bulgular mevcut.");};
+
+/* ============ BILDIRIM / ESKALASYON MOTORU ============ */
+function genNotifications(){
+ const out=[];const M=state.models;
+ M.forEach(m=>{const o=overdue(nextVal(m));if(o.c==="crit")out.push({sev:"crit",rule:"Gecikmiş validasyon",target:"Model Sahibi / MRM",type:"model",entity:m.id,name:m.ad,detail:"Sonraki validasyon: "+(nextVal(m)||"—")});else if(o.c==="warn")out.push({sev:"warn",rule:"Yaklaşan validasyon",target:"Model Sahibi",type:"model",entity:m.id,name:m.ad,detail:"Sonraki: "+(nextVal(m)||"—")});});
+ M.forEach(m=>{if(modelBreaching(m.id))out.push({sev:"crit",rule:"İzleme eşik aşımı",target:"Model Sahibi / Validasyon",type:"model",entity:m.id,name:m.ad,detail:"Metrik eşiği aşıldı — remediation gerekli"});});
+ M.forEach(m=>{if(m.durum==="Koşullu Onaylı")out.push({sev:"warn",rule:"Koşullu onay — PMA/uzun kullanım tetiği",target:"Bağımsız Validasyon",type:"model",entity:m.id,name:m.ad,detail:"Koşullar izlenmeli, süre dolmadan giderilmeli"});});
+ state.findings.forEach(f=>{if(findingSla(f).c==="crit")out.push({sev:"crit",rule:"Bulgu SLA gecikmesi",target:f.sahip||"Bulgu Sahibi",type:"finding",entity:f.id,name:f.baslik,detail:"Hedef tarih aşıldı: "+(f.hedefTarih||"—")});});
+ state.validations.forEach(vv=>{if(vv.durum==="Onayda"||(vv.onayKarar==="Beklemede"&&vv.oneri)){out.push({sev:"info",rule:"Onay bekliyor",target:"Model Risk Komitesi",type:"val",entity:vv.id,name:vv.baslik,detail:"Öneri: "+(vv.oneri||"—")});}});
+ const sevo={crit:0,warn:1,info:2};out.sort((a,b)=>sevo[a.sev]-sevo[b.sev]);return out;
+}
+function viewBildirim(v){
+ const N=genNotifications();window.__notifs=N;
+ const crit=N.filter(x=>x.sev==="crit").length,warn=N.filter(x=>x.sev==="warn").length,info=N.filter(x=>x.sev==="info").length;
+ v.innerHTML=`
+  <p class="vlead">Bildirim & eskalasyon motoru — mevcut durumdan kural tabanlı bildirim üretir (SLA aşımı, geciken/yaklaşan validasyon, eşik aşımı, koşullu onay, onay bekleyen). “Görev oluştur” ile Bulgular’a düşer ve denetim izine yazılır. (Archer Notifications + Görev Yönetimi karşılığı.)</p>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Kritik",crit,"Anında eskalasyon","crit")}
+   ${kpi("Uyarı",warn,"Öncelik verilmeli","warn")}
+   ${kpi("Bilgi",info,"İzlenmeli","info")}
+   ${kpi("Toplam Bildirim",N.length,"Kural motorundan","")}
+  </div>
+  <div class="toolbar"><div class="sp"></div><button class="tbtn" onclick="notifActAll()">Kritikler için görev oluştur</button></div>
+  <div class="tablewrap"><table><thead><tr><th>Önem</th><th>Kural</th><th>İlgili</th><th>Hedef Rol</th><th>Detay</th><th></th></tr></thead><tbody>
+   ${N.map((x,i)=>`<tr style="cursor:default"><td><span class="chip ${x.sev}">${x.sev==='crit'?'Kritik':x.sev==='warn'?'Uyarı':'Bilgi'}</span></td>
+     <td class="tname" style="white-space:normal">${esc(x.rule)}</td><td class="tsub" style="white-space:normal">${esc(x.name)}</td><td class="tsub">${esc(x.target)}</td><td class="tsub" style="white-space:normal">${esc(x.detail)}</td>
+     <td>${x.type==="model"?`<button class="tbtn ghost" onclick="notifAct(${i})">Görev oluştur</button>`:x.type==="val"?`<button class="tbtn ghost" onclick="closeDrawer();go('validasyon');setTimeout(()=>valDetail('${x.entity}'),60)">Aç</button>`:`<button class="tbtn ghost" onclick="go('bulgular')">Aç</button>`}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty">Aktif bildirim yok — her şey iştah dahilinde.</div></td></tr>`}
+  </tbody></table></div>`;
+}
+window.notifAct=function(i){const x=(window.__notifs||[])[i];if(!x||x.type!=="model")return;const m=state.models.find(y=>y.id===x.entity);const title="[Bildirim] "+x.rule;if(!state.findings.some(f=>f.modelId===x.entity&&f.baslik===title)){const onem=x.sev==="crit"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:x.entity,baslik:title,kaynak:"İzleme",onem,durum:"Planlanıyor",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem])});}logAudit("Bildirim eskalasyonu","MDL "+x.entity,x.rule);save();buildNav();render();};
+window.notifActAll=function(){const N=(window.__notifs||[]).filter(x=>x.type==="model"&&x.sev==="crit");let n=0;N.forEach(x=>{const m=state.models.find(y=>y.id===x.entity);const title="[Bildirim] "+x.rule;if(!state.findings.some(f=>f.modelId===x.entity&&f.baslik===title)){state.findings.push({id:uid("FND-"),modelId:x.entity,baslik:title,kaynak:"İzleme",onem:"Yüksek",durum:"Planlanıyor",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS["Yüksek"])});n++;}});logAudit("Toplu bildirim eskalasyonu","sistem",n+" görev");save();buildNav();render();alert(n+" görev (bulgu) oluşturuldu.");};
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
