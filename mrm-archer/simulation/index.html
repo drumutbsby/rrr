@@ -355,6 +355,7 @@ const NAV=[
  {grp:"İzleme"},
  {id:"dashboard",t:"Genel Bakış",ic:"◉",sub:"Model riski panosu"},
  {id:"risk",t:"Risk Panosu & Board",ic:"▦",sub:"Toplulaştırılmış risk, ısı haritası"},
+ {id:"govern",t:"İştah & Öz-Değerlendirme",ic:"⬢",sub:"Risk iştahı ve MRM attestasyonu"},
  {grp:"MRM Uygulamaları"},
  {id:"envanter",t:"Model Envanteri",ic:"▤",sub:"Tüm modeller ve algoritmalar"},
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
@@ -404,7 +405,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1483,6 +1484,44 @@ window.feedIngest=function(){
    refreshMonitorStatus();logAudit("Veri feed içe alındı","API",a+" kayıt");save();render();alert(a+" kayıt içe alındı.");
  }catch(e){alert("Geçersiz JSON.");}
 };
+
+/* ============ ISTAH & OZ-DEGERLENDIRME ============ */
+function ragChip(actual,limit){const c=actual<=limit?"good":actual<=limit+2?"warn":"crit";const t=actual<=limit?"Dahilinde":actual<=limit+2?"Sınırda":"Aşıldı";return `<span class="chip ${c}">${t}</span>`;}
+function viewGovern(v){
+ const M=state.models;
+ const overdueV=M.filter(m=>overdue(nextVal(m)).c==="crit").length;
+ const breach=M.filter(m=>modelBreaching(m.id)).length;
+ const highF=state.findings.filter(f=>f.onem==="Yüksek"&&f.durum!=="Kapandı").length;
+ const slaOver=state.findings.filter(f=>findingSla(f).c==="crit").length;
+ const kosullu=M.filter(m=>m.durum==="Koşullu Onaylı").length;
+ const APP=[["Gecikmiş validasyon",overdueV,0,"model"],["Eşik aşımı (izleme)",breach,1,"model"],["Açık yüksek öncelikli bulgu",highF,2,"bulgu"],["SLA gecikmiş bulgu",slaOver,0,"bulgu"],["Koşullu onaylı prod model",kosullu,1,"model"]];
+ const withinAll=APP.every(a=>a[1]<=a[2]);
+ const sa=state.selfAssessment=state.selfAssessment||{};
+ const PR=[["P1","Model tanımlama & risk sınıflandırma"],["P2","Yönetişim"],["P3","Geliştirme, uygulama, kullanım"],["P4","Bağımsız validasyon"],["P5","Model riski azaltıcıları"]];
+ const rateOpts=["Yeterli","Kısmi","Yetersiz"];
+ const worst=PR.map(p=>(sa[p[0]]||{}).r).filter(Boolean);
+ const overallR=worst.includes("Yetersiz")?"Yetersiz":worst.includes("Kısmi")?"Kısmi":worst.length?"Yeterli":"—";
+ v.innerHTML=`
+  <p class="vlead">Model risk iştahı (profil vs limit) ve yıllık MRM çerçeve öz-değerlendirmesi / attestasyonu (SS1/23 2.1c & 1.5–1.8).</p>
+  <div class="grid panels">
+   <div class="card panel"><h3>Model Risk İştahı — Profil vs Limit ${withinAll?'<span class="chip good" style="margin-left:auto">Tümü dahilinde</span>':'<span class="chip crit" style="margin-left:auto">Eskalasyon</span>'}</h3>
+     <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>KRI (İştah Göstergesi)</th><th class="num">Limit</th><th class="num">Gerçekleşen</th><th>Durum</th></tr></thead><tbody>
+       ${APP.map(a=>`<tr style="cursor:default"><td>${a[0]}</td><td class="num">${a[2]}</td><td class="num"><b>${a[1]}</b> ${a[3]}</td><td>${ragChip(a[1],a[2])}</td></tr>`).join("")}
+     </tbody></table></div>
+     <div class="footnote" style="border:none">SS1/23 2.1d: board, profili iştaha karşı düzenli izler; limit aşımında eskalasyon gerekir.</div>
+   </div>
+   <div class="card panel"><h3>Yıllık MRM Öz-Değerlendirme <span class="cnt">Genel: ${esc(overallR)}</span></h3>
+     ${PR.map(p=>`<div class="qrow"><div class="q">${p[0]} – ${p[1]}</div><select data-sa="${p[0]}">${["—",...rateOpts].map(o=>`<option ${((sa[p[0]]||{}).r||"—")===o?"selected":""}>${o}</option>`).join("")}</select></div>`).join("")}
+     <div class="field full" style="margin-top:12px"><label>Remediation planı / not</label><textarea data-sa="note">${esc(sa.note||"")}</textarea></div>
+     <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+       <button class="tbtn primary" onclick="attest()">Beyanı onayla (attest)</button>
+       <span class="tsub">${sa.attestDate?`Son beyan: ${sa.attestDate} · ${esc(sa.attestBy||"")}`:"Henüz beyan edilmedi"}</span>
+     </div>
+   </div>
+  </div>`;
+ document.querySelectorAll("[data-sa]").forEach(e=>{e.onchange=()=>{const k=e.dataset.sa;if(k==="note")sa.note=e.value;else sa[k]=Object.assign({},sa[k],{r:e.value});save();if(k!=="note")render();};});
+}
+window.attest=function(){const sa=state.selfAssessment=state.selfAssessment||{};sa.attestDate=todayStr();sa.attestBy=window.activeRole;logAudit("MRM öz-değerlendirme beyanı","govern","Genel değerlendirme onaylandı");save();render();};
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
