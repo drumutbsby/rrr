@@ -205,6 +205,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
       <button class="iconbtn menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Menü">≡</button>
       <div><h1 id="pgtitle">Genel Bakış</h1><div class="sub" id="pgsub"></div></div>
       <div class="sp"></div>
+      <select id="roleSel" title="Aktif rol — üç savunma hattı" style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;color:var(--ink);max-width:220px"></select>
       <button class="tbtn ghost" id="themeBtn" title="Tema">◐ Tema</button>
       <button class="tbtn" id="seedBtn" title="Örnek veriyi yükle">↺ Örnek Veri</button>
     </header>
@@ -332,6 +333,7 @@ const NAV=[
  {id:"izleme",t:"İzleme & Metrikler",ic:"◎",sub:"Performans/drift metrikleri, eşikler"},
  {id:"degisiklik",t:"Model Değişiklik",ic:"⇄",sub:"Değişiklik & revalidasyon tetiği"},
  {id:"pma",t:"PMA / İstisna",ic:"⊘",sub:"Azaltıcılar: overlay, kısıt, istisna"},
+ {id:"yasam",t:"Yaşam Döngüsü",ic:"⧉",sub:"İş akışı ve durum panosu"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
  {grp:"Referans"},
  {id:"gereklilik",t:"Gereklilik Matrisi",ic:"☰",sub:"MRM gereklilikleri → Archer"},
@@ -366,7 +368,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -712,6 +714,8 @@ window.valForm=function(id){
     ${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delVal('${id}')">Sil</button>`:""}
     <div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVal('${id||""}')">Kaydet</button>
    </div>`);
+ if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){["onayKarar","onayMakam"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Onay kararı yalnız 'Model Risk Komitesi' rolünde düzenlenebilir";}});}
+ if(window.activeRole&&!(window.activeRole==="2. Hat – Bağımsız Validasyon"||window.activeRole==="Model Risk Komitesi")){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi yalnız bağımsız validasyon rolünde düzenlenebilir";}});}
 };
 window.saveVal=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
@@ -816,11 +820,15 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
-    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","Bulgu & remediation kaydı (AI/ML boşluk → bulgu)","Gereklilik matrisi ve regülasyon eşlemesi","Model riski panosu (tier dağılımı, gecikmiş validasyon, açık bulgu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Bulgu & remediation kaydı","Gereklilik matrisi, regülasyon eşlemesi ve model riski panosu"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Sıradaki geliştirmeler</h3><div class="list">
-    ${["İzleme metrikleri zaman serisi (PSI/CSI, AUC/Gini) ve eşik-aşımı → otomatik bulgu","PMA / İstisna ve Model Değişiklik uygulamaları","Yaşam döngüsü iş akışı (Advanced Workflow) görselleştirmesi","Veri dışa/içe aktarma (JSON/CSV) ve raporlar","Rol bazlı görünüm (üç savunma hattı)"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Metrik eşiklerinin tier/model bazında otomatik türetilmesi","Toplulaştırılmış model riski ısı haritası ve board raporu","Bulgu SLA ve remediation takvimi","Tam yetki matrisi (alan-seviyesi FLS) ve denetim izi","Gerçek Archer REST API / veri feed entegrasyonu"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
+  </div>
+  <div class="card panel" style="margin-top:14px"><h3>Veri Yönetimi & Rol (Üç Savunma Hattı)</h3>
+   <p class="tsub" style="white-space:normal;margin:0 0 12px;line-height:1.6">Sağ üstteki <b>aktif rol</b> üç savunma hattını temsil eder: <b>onay kararı</b> yalnız <i>Model Risk Komitesi</i>, <b>validasyon önerisi/testleri</b> yalnız <i>2. Hat – Bağımsız Validasyon</i> rolünde düzenlenebilir; diğer roller salt-okur görür (validasyon bağımsızlığının sistemsel karşılığı). Veriyi yedekleyebilir/geri yükleyebilirsiniz (JSON).</p>
+   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="tbtn" onclick="exportJSON()">⭳ JSON dışa aktar</button><button class="tbtn" onclick="document.getElementById('impFile').click()">⭱ JSON içe aktar</button><input type="file" id="impFile" accept="application/json" style="display:none" onchange="importJSON(this.files[0])"></div>
   </div>
   <div class="card panel" style="margin-top:14px"><h3>Referans çerçeveler</h3>
    <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 11-7</b> · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>TRIM</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BDDK <b>İç Sistemler/İSEDES</b>, IRB-AMA validasyon rehberi (Dok.1041), TFRS 9 BKZ.</div></div>
@@ -1180,6 +1188,67 @@ window.savePma=function(id){
 };
 window.delPma=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
 
+/* ============ YASAM DONGUSU / IS AKISI ============ */
+const LC_ORDER=["Taslak","Geliştirme","Validasyonda","Onayda","Onaylı/Prod","İzlemede","Revalidasyonda","Koşullu Onaylı","Kısıtlı/Askıda","Emekli"];
+const LC_MAIN=["Taslak","Geliştirme","Validasyonda","Onayda","Onaylı/Prod","İzlemede"];
+const TRANSITIONS={
+ "Taslak":[["Geliştirmeye Gönder","Geliştirme","f"]],
+ "Geliştirme":[["Validasyona Gönder","Validasyonda","f"]],
+ "Validasyonda":[["Onaya Gönder","Onayda","f"],["Geliştiriciye İade","Geliştirme","n"]],
+ "Onayda":[["Onayla → Prod","Onaylı/Prod","f"],["Koşullu Onayla","Koşullu Onaylı","n"],["Reddet","Geliştirme","n"]],
+ "Onaylı/Prod":[["İzlemeye Al","İzlemede","f"]],
+ "İzlemede":[["Revalidasyona Al","Revalidasyonda","n"],["Kısıtla","Kısıtlı/Askıda","n"]],
+ "Revalidasyonda":[["İzlemeye Al","İzlemede","f"],["Kısıtla","Kısıtlı/Askıda","n"],["Emekliye Ayır","Emekli","n"]],
+ "Koşullu Onaylı":[["İzlemeye Al","İzlemede","f"],["Kısıtla","Kısıtlı/Askıda","n"]],
+ "Kısıtlı/Askıda":[["İzlemeye Al","İzlemede","f"],["Emekliye Ayır","Emekli","n"]],
+ "Emekli":[]
+};
+let wfSel="";
+function viewYasam(v){
+ const models=state.models;
+ if(!wfSel||!models.find(m=>m.id===wfSel))wfSel=(models[0]||{}).id||"";
+ v.innerHTML=`
+  <p class="vlead">Model yaşam döngüsü durum makinesi ve iş akışı (Archer <b>Advanced Workflow</b>). Bir model seçip geçişleri (User Action düğmeleri) uygulayın; durum panosu kurumsal görünümü verir.</p>
+  <div class="section-h" style="margin-top:0">İş Akışı Sürücüsü</div>
+  <div class="card panel" style="margin-bottom:20px">
+    <div class="toolbar" style="margin-bottom:8px"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
+      <select id="wf-model" style="min-width:320px">${models.map(m=>`<option value="${m.id}" ${wfSel===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
+    <div id="wf-flow"></div>
+  </div>
+  <div class="section-h">Durum Panosu (${models.length} model)</div>
+  <div style="overflow-x:auto"><div style="display:flex;gap:12px;padding-bottom:10px">
+   ${LC_ORDER.map(s=>{const ms=models.filter(m=>m.durum===s);return `<div style="min-width:198px;width:198px;flex:none">
+     <div style="display:flex;align-items:center;gap:6px;margin-bottom:9px;padding-bottom:7px;border-bottom:2px solid var(--line)"><span class="chip dot ${STATUS_CLASS[s]||'muted'}">${esc(s)}</span><span class="tsub" style="margin-left:auto;font-variant-numeric:tabular-nums">${ms.length}</span></div>
+     <div style="display:flex;flex-direction:column;gap:8px">${ms.map(m=>`<div class="card" style="padding:10px 12px;cursor:pointer" onclick="modelDetail('${m.id}')"><div class="tname" style="font-size:12.5px;white-space:normal;line-height:1.3">${esc(m.ad)}</div><div style="margin-top:6px;display:flex;gap:5px;align-items:center">${tierChip(m.tier)}${m.aiml?'<span class="chip ai" style="padding:0 6px">AI</span>':''}</div></div>`).join("")||`<div class="tsub" style="opacity:.45;font-size:11.5px;padding:4px">boş</div>`}</div>
+   </div>`;}).join("")}
+  </div></div>`;
+ document.getElementById("wf-model").onchange=e=>{wfSel=e.target.value;renderWfFlow();};
+ renderWfFlow();
+}
+function renderWfFlow(){
+ const m=state.models.find(x=>x.id===wfSel);if(!m){document.getElementById("wf-flow").innerHTML="";return;}
+ const ci=LC_MAIN.indexOf(m.durum);
+ const stepper=LC_MAIN.map((s,i)=>{
+   const active=s===m.durum;const done=ci>=0&&i<ci;
+   const bg=active?"background:var(--accent);color:#fff":done?"background:var(--good-bg);color:var(--good)":"background:var(--surface-2);color:var(--muted)";
+   return `<div style="display:flex;align-items:flex-start;flex:none">
+     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:104px">
+       <div style="width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;${bg}">${done?"✓":i+1}</div>
+       <div style="font-size:10.5px;text-align:center;color:${active?"var(--accent-ink)":"var(--muted)"};font-weight:${active?700:500};white-space:normal">${esc(s)}</div>
+     </div>
+     ${i<LC_MAIN.length-1?`<div style="height:2px;width:20px;background:${done?"var(--good)":"var(--line)"};margin-top:14px"></div>`:""}</div>`;
+ }).join("");
+ const side=["Revalidasyonda","Koşullu Onaylı","Kısıtlı/Askıda","Emekli"].includes(m.durum)?`<div style="margin:6px 0 0"><span class="chip warn">Yan durum: ${esc(m.durum)}</span></div>`:"";
+ const trans=TRANSITIONS[m.durum]||[];
+ document.getElementById("wf-flow").innerHTML=`
+   <div style="display:flex;align-items:flex-start;overflow-x:auto;padding:6px 0 4px">${stepper}</div>${side}
+   <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+     <span class="tsub">Mevcut ${statusChip(m.durum)} · Geçiş:</span>
+     ${trans.length?trans.map(t=>`<button class="tbtn ${t[2]==="f"?"primary":""}" onclick="wfDo('${m.id}','${t[1]}')">${t[0]}</button>`).join(""):`<span class="chip good">Son durum (Emekli)</span>`}
+   </div>`;
+}
+window.wfDo=function(id,to){const m=state.models.find(x=>x.id===id);if(!m)return;m.durum=to;save();render();};
+
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
  const r=document.getElementById("modal-root");
@@ -1193,11 +1262,34 @@ function applyTheme(t){document.documentElement.setAttribute("data-theme",t);loc
 document.getElementById("themeBtn").onclick=()=>{const cur=document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");applyTheme(cur==="dark"?"light":"dark");};
 document.getElementById("seedBtn").onclick=()=>{if(confirm("Tüm veriler örnek sete sıfırlansın mı?")){seed();buildNav();render();}};
 
+/* ============ VERI DISA/ICE AKTARMA ============ */
+window.exportJSON=function(){
+ const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);const a=document.createElement("a");
+ a.href=url;a.download="mrm-sim-veri.json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+};
+window.importJSON=function(file){
+ if(!file)return;const r=new FileReader();
+ r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.models))throw 0;
+   const base={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[]};
+   Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,base,d);
+   ["metrics","pmas","changes"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+   save();buildNav();render();alert("Veri içe aktarıldı.");
+ }catch(e){alert("Geçersiz veya bozuk JSON dosyası.");}};
+ r.readAsText(file);
+};
+const ROLES=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı","Model Risk Komitesi","3. Hat – İç Denetim"];
+
 /* ============ INIT ============ */
 (function init(){
  const th=localStorage.getItem("mrm_theme");if(th)applyTheme(th);
  if(!load())seed();
+ refreshMonitorStatus();
  buildNav();
+ window.activeRole=localStorage.getItem("mrm_role")||"Model Risk Komitesi";
+ const rs=document.getElementById("roleSel");
+ rs.innerHTML=ROLES.map(r=>`<option ${window.activeRole===r?"selected":""}>${r}</option>`).join("");
+ rs.onchange=()=>{window.activeRole=rs.value;localStorage.setItem("mrm_role",rs.value);render();};
  const h=(location.hash||"").replace("#","");if(NAV.find(n=>n.id===h))current=h;
  window.addEventListener("hashchange",()=>{const h=location.hash.replace("#","");if(NAV.find(n=>n.id===h)&&h!==current){current=h;render();}});
  render();
