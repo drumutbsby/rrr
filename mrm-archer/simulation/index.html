@@ -313,17 +313,45 @@ function seed(){
  state.models.forEach(m=>{if(aug[m.id])m.aimlEk=aug[m.id];});
  const deps={"MDL-0002":["MDL-0001"],"MDL-0009":["MDL-0001"],"MDL-0008":["MDL-0002"]};
  state.models.forEach(m=>{if(deps[m.id])m.upstream=deps[m.id];});
- // izleme metrikleri
- state.metrics=[];
- const MM=["2025-10-01","2025-11-01","2025-12-01","2026-01-01","2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
- let mid=0;
- const ser=(modelId,tur,esik,vals)=>vals.forEach((d,i)=>state.metrics.push({id:"MET-"+String(++mid).padStart(4,"0"),modelId,tarih:MM[i],tur,deger:d,esik}));
- ser("MDL-0001","PSI",0.25,[0.06,0.07,0.09,0.10,0.12,0.15,0.18,0.21,0.24,0.28]);
- ser("MDL-0001","Gini",0.40,[0.63,0.62,0.62,0.61,0.61,0.60,0.60,0.59,0.59,0.58]);
- ser("MDL-0003","PSI",0.25,[0.05,0.06,0.08,0.07,0.09,0.10,0.11,0.12,0.12,0.12]);
- ser("MDL-0003","AUC",0.70,[0.95,0.94,0.94,0.93,0.93,0.92,0.92,0.91,0.90,0.90]);
- ser("MDL-0002","PSI",0.25,[0.04,0.05,0.05,0.06,0.06,0.07,0.07,0.08,0.08,0.09]);
- refreshMonitorStatus();
+ // sınıf + metrik profili (mevcut 9 model)
+ const enrich={
+  "MDL-0001":{sinif:"Geleneksel",metricProfile:"pd_rating",_degrade:true,links:{doc:"#/model-dok/MDL-0001",monitor:"#/izleme/MDL-0001",repo:"#/git/irb-pd",val:"#/rapor/MDL-0001"}},
+  "MDL-0002":{sinif:"Ekonometrik",metricProfile:"ifrs9",links:{doc:"#/model-dok/MDL-0002"}},
+  "MDL-0003":{sinif:"ML/AI",metricProfile:"ml_class",_degrade:true,links:{repo:"#/git/fraud-ml",monitor:"#/mlops/fraud"}},
+  "MDL-0004":{sinif:"Ekonometrik",metricProfile:"var_market"},
+  "MDL-0005":{sinif:"Geleneksel",metricProfile:"pd_rating"},
+  "MDL-0006":{sinif:"ML/AI",metricProfile:"genai",_degrade:true,links:{repo:"#/git/genai-ozet"}},
+  "MDL-0007":{sinif:"ML/AI",metricProfile:"aml_fraud"},
+  "MDL-0008":{sinif:"Ekonometrik",metricProfile:"alm_irrbb"},
+  "MDL-0009":{sinif:"ML/AI",metricProfile:"ml_class"}};
+ state.models.forEach(m=>{if(enrich[m.id])Object.assign(m,enrich[m.id]);});
+ // banka geneli ek modeller (10 birim, 3 sınıf)
+ const mk2=(o)=>{const crit=Object.assign({M1:o.mm,M2:Math.max(1,o.mm-1),M3:o.mm,M4:o.mm,M5:Math.max(1,o.mm-2),K1:o.kk,K2:o.kk,K3:Math.max(1,o.kk-1),K4:o.kk,K5:o.kk,K6:Math.max(1,o.kk-1),K7:Math.max(1,o.kk-2),B1:o.b||1,O1:o.o||0,duzenleyici:!!o.duz,genai:!!o.genai},o.crit||{});const s=scoreCrit(crit);
+   return {id:o.id,ad:o.ad,tip:o.tip,sinif:o.sinif,kategori:o.kat||["Diğer"],metricProfile:o.mp,aiml:!!o.aiml,genai:!!o.genai,duzenleyici:!!o.duz,amac:o.amac||"",sahipBirim:o.unit,sahip:o.sahip||"—",gelistirici:o.dev||"Model Geliştirme Ekibi",validator:"Bağımsız Validasyon Birimi",koken:o.koken||"İç Geliştirme",tedarikci:o.tedarik||"",barindiran:o.sys||"—",metodoloji:o.met||"—",algoritma:o.alg||"",durum:o.durum||"İzlemede",gelistirmeTarihi:o.gt||"2023-01-01",prodTarihi:o.pt||"2023-06-01",sonValidasyon:o.lv||"2025-06-01",valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:o.up||[],links:o.links||{},_degrade:!!o.deg,crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};};
+ [
+  {id:"MDL-0010",ad:"KOBİ PD Skorkartı",tip:"İstatistiksel",sinif:"Geleneksel",mp:"pd_rating",kat:["Kredi/IRB"],duz:true,unit:"Kredi Tahsis ve Yönetimi GMY",sahip:"H. Çakır",met:"Lojistik skorkart",alg:"Lojistik Reg.",mm:4,kk:3,links:{doc:"#/model-dok/MDL-0010"}},
+  {id:"MDL-0011",ad:"Bireysel LGD Modeli",tip:"İstatistiksel",sinif:"Geleneksel",mp:"lgd_ead",kat:["Kredi/IRB"],duz:true,unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",met:"Beta regresyon",mm:4,kk:3},
+  {id:"MDL-0012",ad:"Kurumsal EAD / CCF",tip:"İstatistiksel",sinif:"Geleneksel",mp:"lgd_ead",kat:["Kredi/IRB"],duz:true,unit:"Kredi Tahsis ve Yönetimi GMY",sahip:"H. Çakır",met:"CCF regresyon",mm:4,kk:3},
+  {id:"MDL-0013",ad:"IFRS9 Makro Senaryo Modeli",tip:"İstatistiksel",sinif:"Ekonometrik",mp:"ifrs9",kat:["TFRS9 BKZ"],duz:true,unit:"Finansal Yönetim ve Planlama GMY",sahip:"M. Demir",met:"VAR / makro regresyon",mm:5,kk:4,deg:true},
+  {id:"MDL-0014",ad:"Stres Testi Makro Projeksiyon",tip:"İstatistiksel",sinif:"Ekonometrik",mp:"stress",kat:["İSEDES Sermaye"],duz:true,unit:"Finansal Yönetim ve Planlama GMY",sahip:"M. Demir",met:"Senaryo bazlı ekonometrik",mm:5,kk:4,durum:"Revalidasyonda"},
+  {id:"MDL-0015",ad:"Karşı Taraf Kredi Riski (CVA)",tip:"İstatistiksel",sinif:"Ekonometrik",mp:"var_market",kat:["Karşı Taraf/CVA"],duz:true,unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",met:"CVA / maruziyet simülasyonu",mm:4,kk:4},
+  {id:"MDL-0016",ad:"Faiz Oranı Riski (IRRBB)",tip:"İstatistiksel",sinif:"Ekonometrik",mp:"alm_irrbb",kat:["ALM/IRRBB"],duz:true,unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",met:"Zaman serisi / repricing",mm:4,kk:3},
+  {id:"MDL-0017",ad:"Müşteri Churn Tahmini",tip:"AI/ML",sinif:"ML/AI",mp:"ml_class",aiml:true,kat:["Diğer"],unit:"Perakende Bankacılık GMY",sahip:"C. Temel",met:"XGBoost",alg:"GBM",mm:3,kk:4,o:1,deg:true,links:{repo:"#/git/churn"}},
+  {id:"MDL-0018",ad:"Tahsilat Önceliklendirme",tip:"AI/ML",sinif:"ML/AI",mp:"ml_class",aiml:true,kat:["Kredi/IRB"],unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",met:"Random Forest",alg:"Random Forest",mm:3,kk:3,o:1},
+  {id:"MDL-0019",ad:"Next-Best-Offer Skoru",tip:"AI/ML",sinif:"ML/AI",mp:"ml_reg",aiml:true,kat:["Diğer"],unit:"Kurumsal ve Ticari Pazarlama GMY",sahip:"S. Ünal",met:"Gradient Boosting Reg.",alg:"GBM",mm:2,kk:3,o:2},
+  {id:"MDL-0020",ad:"AML Anomali Tespiti (Unsupervised)",tip:"AI/ML",sinif:"ML/AI",mp:"aml_fraud",aiml:true,kat:["AML/Suistimal"],duz:true,unit:"İç Sistemler Grup Başkanlığı",sahip:"N. Arslan",met:"Isolation Forest",alg:"Isolation Forest",mm:3,kk:4,deg:true},
+  {id:"MDL-0021",ad:"Belge OCR & Sınıflandırma",tip:"AI/ML",sinif:"ML/AI",mp:"ml_class",aiml:true,kat:["Diğer"],unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",met:"CNN / Transformer",alg:"Sinir Ağı",mm:2,kk:4,o:2,koken:"Satıcı/Vendor",tedarik:"OCR Sağlayıcısı"},
+  {id:"MDL-0022",ad:"Müşteri Segmentasyon",tip:"AI/ML",sinif:"ML/AI",mp:"ml_reg",aiml:true,kat:["Diğer"],unit:"Perakende Bankacılık GMY",sahip:"C. Temel",met:"K-Means + skorlama",alg:"Kümeleme",mm:2,kk:3},
+  {id:"MDL-0023",ad:"GenAI Doküman Özetleme",tip:"GenAI/Temel Model",sinif:"ML/AI",mp:"genai",aiml:true,genai:true,kat:["Diğer"],unit:"Bilgi Teknolojileri Grup Başkanlığı",sahip:"K. Öz",met:"Fine-tuned LLM + RAG",alg:"Transformer/LLM",mm:2,kk:5,o:2,koken:"Satıcı/Vendor",tedarik:"Bulut LLM Sağlayıcısı",durum:"Koşullu Onaylı"}
+ ].forEach(o=>state.models.push(mk2(o)));
+ const aug2={
+  "MDL-0017":{algoAile:"GBM",aciklanabilirlikYontem:"SHAP",disparateImpact:0.79,temsil:"Temsil Ediyor",pii:false,robustlukTest:false,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.20,retrainFrekans:"Çeyreklik",insanGozetim:false,euAiKategori:"Minimal"},
+  "MDL-0020":{algoAile:"Isolation Forest",ogrenmeTipi:"Gözetimsiz",aciklanabilirlikYontem:"—",temsil:"Kısmen",pii:true,piiKontrol:"Maskeleme",robustlukTest:true,reproducibility:true,driftMetrik:["PSI"],insanGozetim:true,euAiKategori:"Sınırlı"},
+  "MDL-0023":{algoAile:"Transformer/LLM",aciklanabilirlikYontem:"Behavioral",temsil:"Kısmen",pii:false,reproducibility:false,euAiKategori:"Sınırlı",temelModel:"Bulut LLM",saglayici:"Bulut LLM Sağlayıcısı",lisans:"Ticari",guardrailModeller:"Toksisite filtresi",halusinasyonMetrik:"NLI",halusinasyonEsik:0.15,halusinasyonSon:0.12,insanGozetim:true}};
+ state.models.forEach(m=>{if(aug2[m.id])m.aimlEk=aug2[m.id];});
+ const deps2={"MDL-0002":["MDL-0001","MDL-0013"],"MDL-0018":["MDL-0001"],"MDL-0011":["MDL-0001"],"MDL-0014":["MDL-0013"]};
+ state.models.forEach(m=>{if(deps2[m.id])m.upstream=deps2[m.id];});
+ genSeedMetrics();
  // PMA / istisna
  state.pmas=[
   {id:"PMA-0001",modelId:"MDL-0002",tur:"PMA/Overlay",gerekce:"Makroekonomik belirsizlik için ömür boyu ECL üzerine muhafazakâr overlay.",materyalite:"Yüksek",hesaplama:"Senaryo ağırlıklı ek yüzde; komite kararıyla",kaldirma:"Makro göstergeler normalleşince kademeli azalt",onayMakam:"Risk Komitesi",bagimsizGozden:"Yapıldı — gerekçe ve girdi doğrulandı",durum:"Aktif"},
@@ -338,8 +366,26 @@ function seed(){
  save();
 }
 /* ============ IZLEME / METRIK ============ */
-const METRIC_DEF={PSI:{dir:"low",esik:0.25,lab:"PSI (drift)"},CSI:{dir:"low",esik:0.25,lab:"CSI"},AUC:{dir:"high",esik:0.70,lab:"AUC"},Gini:{dir:"high",esik:0.40,lab:"Gini"},KS:{dir:"high",esik:0.30,lab:"KS"}};
-function isBreach(tur,deger,esik){const d=METRIC_DEF[tur];if(!d)return false;return d.dir==="low"?(+deger>+esik):(+deger<+esik);}
+const METRIC_DEF={
+ PSI:{dir:"low",esik:0.25,lab:"PSI (popülasyon stabilite)"},
+ CSI:{dir:"low",esik:0.25,lab:"CSI (karakteristik stabilite)"},
+ AUC:{dir:"high",esik:0.70,lab:"AUC"},
+ Gini:{dir:"high",esik:0.40,lab:"Gini"},
+ KS:{dir:"high",esik:0.30,lab:"KS"},
+ F1:{dir:"high",esik:0.60,lab:"F1"},
+ Precision:{dir:"high",esik:0.70,lab:"Precision"},
+ Recall:{dir:"high",esik:0.70,lab:"Recall"},
+ RMSE:{dir:"low",esik:0.15,lab:"RMSE"},
+ MAE:{dir:"low",esik:0.12,lab:"MAE"},
+ R2:{dir:"high",esik:0.70,lab:"R²"},
+ MAPE:{dir:"low",esik:0.15,lab:"MAPE"},
+ DW:{dir:"band",band:[1.5,2.5],esik:2.0,lab:"Durbin-Watson"},
+ VaRexc:{dir:"low",esik:4,lab:"VaR aşımı (12 ay)"},
+ HHI:{dir:"low",esik:0.20,lab:"HHI (yoğunlaşma)"},
+ Halusinasyon:{dir:"low",esik:0.15,lab:"Halüsinasyon"},
+ Toksisite:{dir:"low",esik:0.10,lab:"Toksisite"},
+ Faithfulness:{dir:"high",esik:0.85,lab:"RAG Faithfulness"}};
+function isBreach(tur,deger,esik){const d=METRIC_DEF[tur];if(!d)return false;if(d.dir==="band")return +deger<d.band[0]||+deger>d.band[1];return d.dir==="low"?(+deger>+esik):(+deger<+esik);}
 function latestMetric(modelId,tur){const a=(state.metrics||[]).filter(m=>m.modelId===modelId&&m.tur===tur).sort((x,y)=>new Date(x.tarih)-new Date(y.tarih));return a[a.length-1];}
 function modelMetricTypes(modelId){return [...new Set((state.metrics||[]).filter(m=>m.modelId===modelId).map(m=>m.tur))];}
 function modelBreaching(modelId){return modelMetricTypes(modelId).some(t=>{const l=latestMetric(modelId,t);return l&&isBreach(t,l.deger,l.esik);});}
@@ -351,6 +397,34 @@ const TIER_THRESH={
  "İhmal Edilebilir":{PSI:0.30,CSI:0.30,AUC:0.60,Gini:0.35,KS:0.25}};
 function tierThresh(tur,tier){const t=TIER_THRESH[tier]||TIER_THRESH["Tier 2"];return t[tur]!=null?t[tur]:(METRIC_DEF[tur]||{}).esik;}
 window.applyTierThresh=function(modelId){const m=state.models.find(x=>x.id===modelId);if(!m)return;(state.metrics||[]).filter(x=>x.modelId===modelId).forEach(x=>{x.esik=tierThresh(x.tur,m.tier);});refreshMonitorStatus();save();renderIzleme();};
+const MODEL_SINIFLARI=["Geleneksel","Ekonometrik","ML/AI"];
+const METRIC_FRAMEWORKS={
+ pd_rating:{lab:"PD / Derecelendirme",metrics:["Gini","KS","PSI","HHI"]},
+ lgd_ead:{lab:"LGD / EAD",metrics:["RMSE","MAE","R2"]},
+ ifrs9:{lab:"IFRS9 BKZ (ekonometrik)",metrics:["RMSE","MAPE","R2","PSI"]},
+ alm_irrbb:{lab:"ALM / IRRBB (zaman serisi)",metrics:["RMSE","MAPE","DW"]},
+ var_market:{lab:"Piyasa / Karşı Taraf (VaR)",metrics:["VaRexc"]},
+ stress:{lab:"Stres testi (ekonometrik)",metrics:["RMSE","MAPE","R2"]},
+ ml_class:{lab:"ML Sınıflandırma",metrics:["AUC","Gini","KS","F1","Precision","Recall","PSI"]},
+ ml_reg:{lab:"ML Regresyon",metrics:["RMSE","MAE","R2","PSI"]},
+ aml_fraud:{lab:"AML / Suistimal",metrics:["Precision","Recall","PSI"]},
+ genai:{lab:"GenAI",metrics:["Halusinasyon","Toksisite","Faithfulness"]}};
+const METRIC_BASE={PSI:0.06,CSI:0.07,AUC:0.82,Gini:0.55,KS:0.42,F1:0.74,Precision:0.80,Recall:0.76,RMSE:0.09,MAE:0.07,R2:0.80,MAPE:0.09,DW:2.0,VaRexc:2,HHI:0.12,Halusinasyon:0.08,Toksisite:0.03,Faithfulness:0.92};
+function genSeedMetrics(){
+ state.metrics=[];let id=0;
+ const months=["2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
+ state.models.forEach(m=>{const fw=METRIC_FRAMEWORKS[m.metricProfile];if(!fw)return;
+   fw.metrics.forEach(t=>{const d=METRIC_DEF[t];const base=METRIC_BASE[t];
+     for(let i=0;i<months.length;i++){
+       let noise=(Math.random()-0.5)*(d.dir==="band"?0.3:(base*0.12+0.008));
+       let val=base+noise;
+       if(m._degrade&&i>=months.length-2){if(d.dir==="low")val=d.esik*1.18;else if(d.dir==="high")val=d.esik*0.9;else val=d.band[1]+0.35;val+=noise*0.25;}
+       val=t==="VaRexc"?Math.round(Math.max(0,val)):+val.toFixed(t==="DW"?2:3);
+       const esik=(TIER_THRESH[m.tier]&&TIER_THRESH[m.tier][t]!=null)?TIER_THRESH[m.tier][t]:d.esik;
+       state.metrics.push({id:"MET-"+String(++id).padStart(4,"0"),modelId:m.id,tarih:months[i],tur:t,deger:val,esik});
+     }});});
+ refreshMonitorStatus();
+}
 
 /* ============ ROUTER ============ */
 const NAV=[
