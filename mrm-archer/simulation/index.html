@@ -320,11 +320,19 @@ function latestMetric(modelId,tur){const a=(state.metrics||[]).filter(m=>m.model
 function modelMetricTypes(modelId){return [...new Set((state.metrics||[]).filter(m=>m.modelId===modelId).map(m=>m.tur))];}
 function modelBreaching(modelId){return modelMetricTypes(modelId).some(t=>{const l=latestMetric(modelId,t);return l&&isBreach(t,l.deger,l.esik);});}
 function refreshMonitorStatus(){state.models.forEach(m=>{const types=modelMetricTypes(m.id);if(!types.length)return;m.izlemeDurumu=modelBreaching(m.id)?"Eşik Aşımı":"Normal";});}
+const TIER_THRESH={
+ "Tier 1":{PSI:0.10,CSI:0.10,AUC:0.75,Gini:0.50,KS:0.35},
+ "Tier 2":{PSI:0.20,CSI:0.20,AUC:0.70,Gini:0.42,KS:0.30},
+ "Tier 3":{PSI:0.25,CSI:0.25,AUC:0.65,Gini:0.38,KS:0.28},
+ "İhmal Edilebilir":{PSI:0.30,CSI:0.30,AUC:0.60,Gini:0.35,KS:0.25}};
+function tierThresh(tur,tier){const t=TIER_THRESH[tier]||TIER_THRESH["Tier 2"];return t[tur]!=null?t[tur]:(METRIC_DEF[tur]||{}).esik;}
+window.applyTierThresh=function(modelId){const m=state.models.find(x=>x.id===modelId);if(!m)return;(state.metrics||[]).filter(x=>x.modelId===modelId).forEach(x=>{x.esik=tierThresh(x.tur,m.tier);});refreshMonitorStatus();save();renderIzleme();};
 
 /* ============ ROUTER ============ */
 const NAV=[
  {grp:"İzleme"},
  {id:"dashboard",t:"Genel Bakış",ic:"◉",sub:"Model riski panosu"},
+ {id:"risk",t:"Risk Panosu & Board",ic:"▦",sub:"Toplulaştırılmış risk, ısı haritası"},
  {grp:"MRM Uygulamaları"},
  {id:"envanter",t:"Model Envanteri",ic:"▤",sub:"Tüm modeller ve algoritmalar"},
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
@@ -368,7 +376,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1070,12 +1078,13 @@ function renderIzleme(){
    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">${statusChip2b(m.izlemeDurumu||"Normal")} ${tierChip(m.tier)} <span class="tsub">${esc(m.ad)}</span></div>
    ${types.length?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-bottom:16px">${cards}</div>`:`<div class="card empty" style="margin-bottom:16px">Bu model için metrik yok. Aşağıdan ölçüm ekleyin.</div>`}
    <div class="card panel">
-     <h3>Ölçüm Ekle</h3>
+     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0">Ölçüm Ekle</h3><span class="chip ${tierClass(m.tier)}" style="margin-left:auto">${m.tier} eşik politikası</span><button class="tbtn ghost" style="padding:5px 9px" onclick="applyTierThresh('${m.id}')" title="Tüm eşikleri modelin tier’ine göre yeniden uygula">↻ Eşikleri tier’e göre uygula</button></div>
+     <div class="tsub" style="margin:4px 0 12px">Eşik, metrik ve tier’den otomatik türetilir: ${Object.keys(METRIC_DEF).map(k=>`${k} ${tierThresh(k,m.tier)}`).join(" · ")}</div>
      <div class="form-grid">
        <div class="field"><label>Metrik</label><select id="mt-tur">${Object.keys(METRIC_DEF).map(k=>`<option>${k}</option>`).join("")}</select></div>
        <div class="field"><label>Tarih</label><input id="mt-tarih" type="date"></div>
        <div class="field"><label>Değer</label><input id="mt-deger" type="number" step="0.01"></div>
-       <div class="field"><label>Eşik</label><input id="mt-esik" type="number" step="0.01"></div>
+       <div class="field"><label>Eşik (tier’den)</label><input id="mt-esik" type="number" step="0.01"></div>
      </div>
      <div class="formfoot" style="border:none;padding-top:12px"><button class="tbtn primary" id="mt-add">Ölçüm Ekle</button></div>
    </div>
@@ -1084,7 +1093,7 @@ function renderIzleme(){
     ${rows.map(r=>{const br=isBreach(r.tur,r.deger,r.esik);return `<tr style="cursor:default"><td>${r.tarih}</td><td>${r.tur}</td><td class="num">${(+r.deger).toFixed(2)}</td><td class="num">${r.esik}</td><td><span class="chip ${br?'crit':'good'}" style="padding:0 7px">${br?'Aşım':'Normal'}</span></td></tr>`;}).join("")||`<tr><td colspan="5"><div class="empty">Ölçüm yok.</div></td></tr>`}
    </tbody></table></div>`;
  const turEl=document.getElementById("mt-tur");
- const fillEsik=()=>{document.getElementById("mt-esik").value=METRIC_DEF[turEl.value].esik;};
+ const fillEsik=()=>{document.getElementById("mt-esik").value=tierThresh(turEl.value,m.tier);};
  turEl.onchange=fillEsik;fillEsik();
  document.getElementById("mt-add").onclick=()=>{
    const tur=turEl.value,tarih=document.getElementById("mt-tarih").value,deger=document.getElementById("mt-deger").value,esik=document.getElementById("mt-esik").value;
@@ -1248,6 +1257,81 @@ function renderWfFlow(){
    </div>`;
 }
 window.wfDo=function(id,to){const m=state.models.find(x=>x.id===id);if(!m)return;m.durum=to;save();render();};
+
+/* ============ RISK PANOSU & BOARD ============ */
+function riskZone(p){return p>=15?"t1":p>=8?"t2":p>=3?"t3":"t0";}
+function viewRisk(v){
+ const M=state.models;
+ const exposure=M.reduce((s,m)=>s+(+m.icsel||0),0).toFixed(0);
+ const highF=state.findings.filter(f=>f.onem==="Yüksek"&&f.durum!=="Kapandı").length;
+ const breach=M.filter(m=>modelBreaching(m.id)).length;
+ const overdueV=M.filter(m=>overdue(nextVal(m)).c==="crit").length;
+ const activePma=(state.pmas||[]).filter(p=>p.durum==="Aktif").length;
+ const t1=M.filter(m=>m.tier==="Tier 1").length;
+ // 5x5 isı haritası
+ const cell={};M.forEach(m=>{const x=Math.max(1,Math.min(5,Math.round(+m.kar||1)));const y=Math.max(1,Math.min(5,Math.round(+m.mat||1)));const k=y+"-"+x;(cell[k]=cell[k]||[]).push(m);});
+ let flat="";
+ for(let y=5;y>=1;y--){
+   flat+=`<div style="font-size:11px;color:var(--muted);text-align:right;padding-right:6px;align-self:center;font-variant-numeric:tabular-nums">${y}</div>`;
+   for(let x=1;x<=5;x++){const arr=cell[y+"-"+x]||[];const z=riskZone(y*x);
+     flat+=`<div onclick="riskCell(${y},${x})" title="Materyalite ${y} × Karmaşıklık ${x} · ${arr.length} model" style="aspect-ratio:1.4;border-radius:8px;background:var(--${z});opacity:${arr.length?0.92:0.16};display:grid;place-items:center;color:#fff;font-weight:700;cursor:${arr.length?'pointer':'default'};font-variant-numeric:tabular-nums;font-size:15px">${arr.length||""}</div>`;}
+ }
+ flat+=`<div></div>`+[1,2,3,4,5].map(x=>`<div style="font-size:11px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums">${x}</div>`).join("");
+ // kategori x tier
+ const cats=[...new Set(M.flatMap(m=>m.kategori||[]))];
+ const tiers=["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"];
+ const ctCount=(c,t)=>M.filter(m=>(m.kategori||[]).includes(c)&&m.tier===t).length;
+ const ctMax=Math.max(1,...cats.flatMap(c=>tiers.map(t=>ctCount(c,t))));
+ // birim bazında
+ const bu={};M.forEach(m=>{const b=m.sahipBirim||"—";bu[b]=bu[b]||{n:0,t1:0,exp:0};bu[b].n++;if(m.tier==="Tier 1")bu[b].t1++;bu[b].exp+=(+m.icsel||0);});
+ const buArr=Object.entries(bu).sort((a,b)=>b[1].exp-a[1].exp).slice(0,6);
+ const appetiteOk=overdueV===0;
+ v.innerHTML=`
+  <div class="toolbar"><div class="sp"></div><button class="tbtn" onclick="window.print()">⎙ Board raporunu yazdır</button></div>
+  <div class="grid kpis">
+   ${kpi("Toplulaştırılmış Risk Skoru",exposure,"Σ içsel risk (materyalite×karmaşıklık)","info")}
+   ${kpi("Tier 1 Model",t1,"En yoğun gözetim","crit")}
+   ${kpi("Gecikmiş Validasyon",overdueV,appetiteOk?"İştah dahilinde":"İştah AŞILDI","crit")}
+   ${kpi("Eşik Aşımı (izleme)",breach,"Drift/performans","warn")}
+   ${kpi("Açık Yüksek Bulgu",highF,"Öncelikli remediation","warn")}
+   ${kpi("Aktif PMA/İstisna",activePma,"Azaltıcı yürürlükte","info")}
+  </div>
+  <div class="grid panels">
+   <div class="card panel">
+     <h3>Model Riski Isı Haritası <span class="cnt">Materyalite × Karmaşıklık</span></h3>
+     <div style="display:flex;gap:10px;align-items:stretch">
+       <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--muted);text-align:center;font-weight:600;letter-spacing:.04em">MATERYALİTE →</div>
+       <div style="flex:1"><div style="display:grid;grid-template-columns:24px repeat(5,1fr);gap:7px">${flat}</div>
+       <div style="text-align:center;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;margin-top:8px;padding-left:24px">KARMAŞIKLIK →</div></div>
+     </div>
+     <div class="legend" style="flex-direction:row;flex-wrap:wrap;margin-top:14px">
+       <div class="li"><span class="sw" style="background:var(--t1)"></span>Kritik (≥15)</div>
+       <div class="li"><span class="sw" style="background:var(--t2)"></span>Yüksek (8–15)</div>
+       <div class="li"><span class="sw" style="background:var(--t3)"></span>Orta (3–8)</div>
+       <div class="li"><span class="sw" style="background:var(--t0)"></span>Düşük (<3)</div>
+     </div>
+   </div>
+   <div class="card panel">
+     <h3>İş Birimi Bazında Risk <span class="cnt">ilk 6</span></h3>
+     <div class="bars">${buArr.map(([b,d])=>`<div class="bar" style="grid-template-columns:150px 1fr 60px"><span style="white-space:normal;font-size:11.5px">${esc(b)}</span><div class="track"><div class="fill" style="width:${d.exp/Math.max(...buArr.map(x=>x[1].exp))*100}%"></div></div><span class="v">${d.n} md${d.t1?` · ${d.t1}×T1`:""}</span></div>`).join("")}</div>
+     <div class="section-h" style="margin-top:20px">Kategori × Tier</div>
+     <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Kategori</th>${tiers.map(t=>`<th class="num" style="text-align:center">${t.replace("Tier ","T").replace("İhmal Edilebilir","İhmal")}</th>`).join("")}</tr></thead><tbody>
+       ${cats.map(c=>`<tr style="cursor:default"><td class="tsub">${esc(c)}</td>${tiers.map(t=>{const n=ctCount(c,t);const z=t==="Tier 1"?"t1":t==="Tier 2"?"t2":t==="Tier 3"?"t3":"t0";return `<td class="num" style="text-align:center">${n?`<span class="chip ${z}" style="padding:0 8px">${n}</span>`:'<span class="tsub" style="opacity:.4">·</span>'}</td>`;}).join("")}</tr>`).join("")}
+     </tbody></table></div>
+   </div>
+  </div>
+  <div class="card panel" style="margin-top:16px">
+    <h3>Board Özeti (Model Riski Profili vs İştah)</h3>
+    <p style="margin:0 0 6px;font-size:13px;line-height:1.7">Kurumda <b>${M.length}</b> model izlenmektedir; bunların <b>${t1}</b>’i Tier 1’dir. Toplulaştırılmış içsel risk skoru <b>${exposure}</b> düzeyindedir. Model risk iştahı açısından kritik gösterge olan <b>gecikmiş validasyon</b> sayısı <b>${overdueV}</b> (hedef: 0) — ${appetiteOk?'<span class="chip good">iştah dahilinde</span>':'<span class="chip crit">iştah aşıldı, eskalasyon gerekli</span>'}. İzlemede <b>${breach}</b> modelde eşik aşımı, <b>${highF}</b> açık yüksek öncelikli bulgu ve <b>${activePma}</b> aktif azaltıcı (PMA/istisna) bulunmaktadır.</p>
+    <div class="footnote" style="border:none;padding-top:6px">SR 11-7 & SS1/23 2.1d: board, model riski profilini iştaha karşı düzenli izler; en materyal modellerin çıktısını sorgular.</div>
+  </div>`;
+}
+window.riskCell=function(y,x){
+ const ms=state.models.filter(m=>Math.max(1,Math.min(5,Math.round(+m.mat||1)))===y&&Math.max(1,Math.min(5,Math.round(+m.kar||1)))===x);
+ if(!ms.length)return;
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">Materyalite ${y} × Karmaşıklık ${x}</h2><div class="id">${ms.length} model</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,
+  `<div class="list">${ms.map(m=>`<div class="li-row"><span class="grow"><div class="t">${esc(m.ad)}</div><div class="s">İçsel risk ${m.icsel} · ${esc(m.durum)}</div></span>${tierChip(m.tier)}<button class="tbtn ghost" onclick="closeDrawer();modelDetail('${m.id}')">Aç</button></div>`).join("")}</div>`);
+};
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
