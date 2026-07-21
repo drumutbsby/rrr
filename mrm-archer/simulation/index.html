@@ -617,25 +617,36 @@ window.modelDetail=function(id){
  const nv=nextVal(m),o=overdue(nv);
  const vals=state.validations.filter(x=>x.modelId===id);
  const finds=state.findings.filter(x=>x.modelId===id);
+ const changes=(state.changes||[]).filter(c=>c.modelId===id);
+ const pmas=(state.pmas||[]).filter(pp=>pp.modelId===id);
  const ups=(m.upstream||[]).map(uid=>{const u=state.models.find(x=>x.id===uid);return u?u.ad:uid;});
  const downs=state.models.filter(x=>(x.upstream||[]).includes(id)).map(x=>x.ad);
  openDrawer(`
   <div style="flex:1">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${tierChip(m.tier)} ${statusChip(m.durum)} ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${m.duzenleyici?`<span class="chip info">Düzenleyici</span>`:""}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${tierChip(m.tier)} ${statusChip(m.durum)} <span class="chip ${m.sinif==='ML/AI'?'warn':'info'}">${esc(m.sinif||"—")}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${m.duzenleyici?`<span class="chip info">Düzenleyici</span>`:""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':''}</div>
     <h2 style="margin:8px 0 2px;font-size:19px">${esc(m.ad)}</h2>
-    <div class="id">${m.id}</div>
+    <div class="id">${m.id} · ${esc(m.sahipBirim||"")}</div>
   </div>
   <button class="tbtn" onclick="modelForm('${m.id}')">Düzenle</button>
   <button class="iconbtn x" onclick="closeDrawer()">✕</button>
  `,`
   <div class="tabs" id="mtabs">
-   ${["Genel","Kritiklik","Metodoloji & Veri","Yaşam Döngüsü","İlişkiler"].map((t,i)=>`<button class="${i===0?"active":""}" onclick="mtab(this,${i})">${t}</button>`).join("")}
+   ${["Genel","Performans","Kritiklik","Metodoloji & Veri","Yaşam Döngüsü","İlişkiler & Linkler"].map((t,i)=>`<button class="${i===0?"active":""}" onclick="mtab(this,${i})">${t}</button>`).join("")}
   </div>
   <div class="mtab" data-i="0">
-    ${dl({"Amaç":m.amac,"Model Tipi":m.tip,"Kategori":(m.kategori||[]).join(", "),"Öncelik":m.oncelik||"—","Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
-    ${m.aiml?`<div style="margin-top:14px"><button class="tbtn" onclick="closeDrawer();go('aiml');setTimeout(()=>{aimlSel='${m.id}';render();},60)">◆ AI/ML Ek Değerlendirmeyi aç →</button></div>`:""}
+    ${dl({"Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi":m.tip,"Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
+    <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
+    <div class="section-h">Hızlı Erişim</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="tbtn ghost" onclick="closeDrawer();izlSel='${m.id}';go('izleme')">İzleme & Metrikler</button>
+      <button class="tbtn ghost" onclick="closeDrawer();go('kritiklik');setTimeout(()=>loadCritModel('${m.id}'),60)">Kritiklik</button>
+      ${m.aiml?`<button class="tbtn ghost" onclick="closeDrawer();aimlSel='${m.id}';go('aiml')">AI/ML Ek</button><button class="tbtn ghost" onclick="closeDrawer();euaiSel='${m.id}';go('euai')">EU AI Act</button>`:""}
+      <button class="tbtn ghost" onclick="closeDrawer();depSel='${m.id}';go('baglanti')">Bağımlılık & Etki</button>
+      <button class="tbtn ghost" onclick="closeDrawer();go('validasyon')">Validasyonlar</button>
+    </div>
   </div>
-  <div class="mtab" data-i="1" hidden>
+  <div class="mtab" data-i="1" hidden>${perfTab(m)}</div>
+  <div class="mtab" data-i="2" hidden>
     <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:10px"><span class="tag-tier ${'c-'+tierClass(m.tier)}" style="color:var(--${tierClass(m.tier)})">${m.tier}</span><span class="chip ${m.derece==='Yüksek'?'crit':m.derece==='Orta'?'warn':'good'}">Risk: ${m.derece}</span></div>
     ${dl({"Materyalite Skoru":m.mat,"Karmaşıklık Skoru":m.kar,"İçsel Risk Skoru (Mat×Karm)":m.icsel,"Validasyon Frekansı":m.valFrekans})}
     <div class="section-h">Skor kırılımı</div>
@@ -645,24 +656,50 @@ window.modelDetail=function(id){
     </div>
     <div style="margin-top:14px"><button class="tbtn" onclick="closeDrawer();go('kritiklik');setTimeout(()=>loadCritModel('${m.id}'),60)">Kritiklik hesaplayıcıda aç →</button></div>
   </div>
-  <div class="mtab" data-i="2" hidden>
+  <div class="mtab" data-i="3" hidden>
     ${dl({"Metodoloji":m.metodoloji||"—","Algoritma":m.algoritma||"—","Barındıran Sistem":m.barindiran||"—","Varsayımlar":m.varsayim||"—","Sınırlamalar":m.sinirlama||"—"})}
   </div>
-  <div class="mtab" data-i="3" hidden>
+  <div class="mtab" data-i="4" hidden>
     ${dl({"Durum":m.durum,"İzleme Durumu":m.izlemeDurumu||"—","Geliştirme Tarihi":m.gelistirmeTarihi||"—","Prod'a Alınma":m.prodTarihi||"—","Son Validasyon":m.sonValidasyon||"—","Sonraki Validasyon":nv?`${nv} · ${o.t}`:"—"})}
     <div class="section-h">Validasyon Kayıtları (${vals.length})</div>
     ${vals.length?`<div class="list">${vals.map(vv=>`<div class="li-row"><span class="chip ${vv.onayKarar==='Onaylandı'?'good':vv.onayKarar==='Reddedildi'?'crit':'warn'}">${esc(vv.onayKarar||vv.durum)}</span><div class="grow"><div class="t">${esc(vv.baslik)}</div><div class="s">${esc(vv.tur)} · Öneri: ${esc(vv.oneri||"—")}</div></div><button class="tbtn ghost" onclick="valDetail('${vv.id}')">Aç</button></div>`).join("")}</div>`:`<div class="empty">Validasyon kaydı yok.</div>`}
+    <div class="section-h">Model Değişiklikleri (${changes.length})</div>
+    ${changes.length?`<div class="list">${changes.map(c=>`<div class="li-row"><span class="chip ${c.materyalite==='Materyal'?'warn':'muted'}">${esc(c.materyalite)}</span><div class="grow"><div class="t">${esc(c.tur)} ${esc(c.versiyon||"")}</div><div class="s">${esc(c.onay)}</div></div></div>`).join("")}</div>`:`<div class="empty" style="padding:12px">Değişiklik yok</div>`}
+    <div class="section-h">PMA / İstisna (${pmas.length})</div>
+    ${pmas.length?`<div class="list">${pmas.map(pp=>`<div class="li-row"><span class="chip info">${esc(pp.tur)}</span><div class="grow"><div class="t" style="white-space:normal">${esc(pp.gerekce||"")}</div><div class="s">${esc(pp.durum)}</div></div></div>`).join("")}</div>`:`<div class="empty" style="padding:12px">PMA/istisna yok</div>`}
   </div>
-  <div class="mtab" data-i="4" hidden>
+  <div class="mtab" data-i="5" hidden>
     <div class="section-h">Besleyen Modeller (Upstream)</div>${ups.length?`<ul>${ups.map(u=>`<li>${esc(u)}</li>`).join("")}</ul>`:`<div class="empty" style="padding:14px">Yok</div>`}
     <div class="section-h">Beslenen Modeller (Downstream)</div>${downs.length?`<ul>${downs.map(u=>`<li>${esc(u)}</li>`).join("")}</ul>`:`<div class="empty" style="padding:14px">Yok</div>`}
+    <div style="margin:6px 0"><button class="tbtn ghost" onclick="closeDrawer();depSel='${m.id}';go('baglanti')">Bağımlılık ağını & etki analizini aç →</button></div>
     <div class="section-h">Bulgular (${finds.length})</div>
-    ${finds.length?`<div class="list">${finds.map(f=>`<div class="li-row"><span class="chip ${f.onem==='Yüksek'?'crit':f.onem==='Orta'?'warn':'muted'}">${esc(f.onem)}</span><div class="grow"><div class="t">${esc(f.baslik)}</div><div class="s">${esc(f.kaynak)} · ${esc(f.durum)}</div></div></div>`).join("")}</div>`:`<div class="empty" style="padding:14px">Bulgu yok</div>`}
+    ${finds.length?`<div class="list">${finds.map(f=>`<div class="li-row"><span class="chip ${f.onem==='Yüksek'?'crit':f.onem==='Orta'?'warn':'muted'}">${esc(f.onem)}</span><div class="grow"><div class="t" style="white-space:normal">${esc(f.baslik)}</div><div class="s">${esc(f.kaynak)} · ${esc(f.durum)}${f.hedefTarih?" · hedef "+f.hedefTarih:""}</div></div></div>`).join("")}</div>`:`<div class="empty" style="padding:14px">Bulgu yok</div>`}
+    <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
   </div>
  `);
 }
 window.mtab=function(btn,i){document.querySelectorAll("#mtabs button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".mtab").forEach(t=>t.hidden=+t.dataset.i!==i);};
 function dl(obj){return `<dl class="dl">${Object.entries(obj).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v==null||v===""?"—":v)}</dd>`).join("")}</dl>`;}
+function linksBlock(m){
+ const L=m.links||{};const lk=(u,lab)=>u?`<a class="tbtn ghost" href="${esc(u)}" onclick="return false" title="${esc(u)}" style="text-decoration:none">${lab}</a>`:"";
+ const items=[lk(L.doc,"📄 Model Dokümanı"),lk(L.monitor,"📈 İzleme Panosu"),lk(L.repo,"💻 Kod Deposu"),lk(L.val,"✓ Validasyon Raporu")].filter(Boolean);
+ return items.length?`<div style="display:flex;gap:8px;flex-wrap:wrap">${items.join("")}</div>`:`<div class="tsub">Tanımlı harici link yok (model formundan eklenebilir).</div>`;
+}
+function perfTab(m){
+ const fw=METRIC_FRAMEWORKS[m.metricProfile];
+ if(!fw)return `<div class="empty">Bu model için tanımlı performans metrik çerçevesi yok.</div>`;
+ const cards=fw.metrics.map(t=>{
+   const series=(state.metrics||[]).filter(x=>x.modelId===m.id&&x.tur===t).sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
+   const vals=series.map(s=>+s.deger);const last=series[series.length-1];const d=METRIC_DEF[t];const esik=last?+last.esik:d.esik;
+   const br=last&&isBreach(t,last.deger,esik);
+   return `<div class="card" style="padding:12px 14px"><div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:13px">${d.lab}</b><span class="chip ${br?'crit':'good'}" style="margin-left:auto;padding:0 7px">${br?'Aşım':'Normal'}</span></div>
+     <div style="display:flex;align-items:baseline;gap:8px;margin:3px 0 6px"><span style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--${br?'crit':'ink'})">${last?(+last.deger).toFixed(d.dir==="band"?2:3):"—"}</span><span class="tsub">eşik ${esik} · ${d.dir==="low"?"↓ iyi":d.dir==="high"?"↑ iyi":"~ bant"}</span></div>
+     ${vals.length?sparkline(vals,esik,d.dir,240,42):""}</div>`;
+ }).join("");
+ return `<div class="tsub" style="margin-bottom:10px">Metrik çerçevesi: <b>${fw.lab}</b> · Sınıf: <b>${esc(m.sinif||"—")}</b> — modele/tipe uygun performans metrikleri.</div>
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">${cards}</div>
+   <div style="margin-top:12px"><button class="tbtn" onclick="closeDrawer();izlSel='${m.id}';go('izleme')">İzleme ekranında tüm seriyi aç →</button></div>`;
+}
 
 /* ============ MODEL FORM ============ */
 window.modelForm=function(id){
@@ -672,6 +709,7 @@ window.modelForm=function(id){
   <div class="form-grid">
    ${fld("Model Adı","ad",m.ad,"text",true,true)}
    ${fldSel("Model Tipi","tip",m.tip,["İstatistiksel","AI/ML","GenAI/Temel Model","Deterministik/Kural","Hibrit"])}
+   ${fldSel("Model Sınıfı","sinif",m.sinif,MODEL_SINIFLARI)}
    ${fld("Amaç / Kullanım","amac",m.amac,"textarea",false,true)}
    <div class="field full"><label>Kategori (çoklu)</label><div class="checks">${cats.map(c=>`<label><input type="checkbox" name="kat" value="${c}" ${(m.kategori||[]).includes(c)?"checked":""}>${c}</label>`).join("")}</div></div>
    <div class="field full"><label>Bayraklar</label><div class="checks">
@@ -696,6 +734,10 @@ window.modelForm=function(id){
    ${fldSel("Validasyon Frekansı","valFrekans",m.valFrekans,["Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"])}
    ${fld("Varsayımlar","varsayim",m.varsayim,"textarea",false,true)}
    ${fld("Sınırlamalar","sinirlama",m.sinirlama,"textarea",false,true)}
+   ${fld("Link — Model Dokümanı","lk_doc",(m.links||{}).doc,"text")}
+   ${fld("Link — İzleme Panosu","lk_monitor",(m.links||{}).monitor,"text")}
+   ${fld("Link — Kod Deposu","lk_repo",(m.links||{}).repo,"text")}
+   ${fld("Link — Validasyon Raporu","lk_val",(m.links||{}).val,"text")}
    <div class="field full"><label>Besleyen Modeller (Upstream) — bağımlılık</label><div class="checks">${state.models.filter(x=>x.id!==(m.id||"")).map(x=>`<label style="font-weight:500"><input type="checkbox" name="ups" value="${x.id}" ${(m.upstream||[]).includes(x.id)?"checked":""}> ${esc(x.ad)}</label>`).join("")||'<span class="tsub">Başka model yok</span>'}</div></div>
   </div>
   <div class="field full" style="margin-top:8px"><span class="hint">Kritiklik skorları (Materyalite/Karmaşıklık/Tier) “Kritiklik Değerlendirmesi” ekranından hesaplanır; yeni modelde varsayılan orta değerlerle başlar.</span></div>
@@ -720,7 +762,7 @@ window.saveModel=function(id){
  const ups=[...document.querySelectorAll('input[name="ups"]:checked')].map(x=>x.value);
  const base=id?state.models.find(x=>x.id===id):{crit:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K6:3,K7:3,B1:1,O1:0}};
  const obj=Object.assign({},base,{
-  id:id||uid("MDL-"),ad,tip:g("tip"),amac:g("amac"),kategori:kat,upstream:ups,
+  id:id||uid("MDL-"),ad,tip:g("tip"),sinif:g("sinif"),amac:g("amac"),kategori:kat,upstream:ups,links:{doc:g("lk_doc"),monitor:g("lk_monitor"),repo:g("lk_repo"),val:g("lk_val")},
   aiml:document.getElementById("fx-aiml").checked,genai:document.getElementById("fx-genai").checked,
   deterministik:document.getElementById("fx-det").checked,duzenleyici:document.getElementById("fx-duz").checked,
   koken:g("koken"),tedarikci:g("tedarikci"),sahipBirim:g("sahipBirim"),sahip:g("sahip"),gelistirici:g("gelistirici"),
