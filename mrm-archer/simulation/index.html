@@ -311,6 +311,8 @@ function seed(){
   "MDL-0009":{algoAile:"Random Forest",ogrenmeTipi:"Gözetimli",aciklanabilirlikYontem:"SHAP",disparateImpact:0.78,temsil:"Temsil Ediyor",pii:false,robustlukTest:false,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.18,retrainFrekans:"Olay-Tetikli",insanGozetim:false,euAiKategori:"Minimal"},
  };
  state.models.forEach(m=>{if(aug[m.id])m.aimlEk=aug[m.id];});
+ const deps={"MDL-0002":["MDL-0001"],"MDL-0009":["MDL-0001"],"MDL-0008":["MDL-0002"]};
+ state.models.forEach(m=>{if(deps[m.id])m.upstream=deps[m.id];});
  // izleme metrikleri
  state.metrics=[];
  const MM=["2025-10-01","2025-11-01","2025-12-01","2026-01-01","2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
@@ -365,6 +367,7 @@ const NAV=[
  {id:"degisiklik",t:"Model Değişiklik",ic:"⇄",sub:"Değişiklik & revalidasyon tetiği"},
  {id:"pma",t:"PMA / İstisna",ic:"⊘",sub:"Azaltıcılar: overlay, kısıt, istisna"},
  {id:"yasam",t:"Yaşam Döngüsü",ic:"⧉",sub:"İş akışı ve durum panosu"},
+ {id:"baglanti",t:"Bağımlılık & Etki",ic:"⧓",sub:"Model bağımlılık ağı, etki analizi"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
  {grp:"Yönetişim"},
  {id:"yetki",t:"Yetki Matrisi",ic:"⊞",sub:"Rol × işlem (FLS)"},
@@ -405,7 +408,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -594,6 +597,7 @@ window.modelForm=function(id){
    ${fldSel("Validasyon Frekansı","valFrekans",m.valFrekans,["Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"])}
    ${fld("Varsayımlar","varsayim",m.varsayim,"textarea",false,true)}
    ${fld("Sınırlamalar","sinirlama",m.sinirlama,"textarea",false,true)}
+   <div class="field full"><label>Besleyen Modeller (Upstream) — bağımlılık</label><div class="checks">${state.models.filter(x=>x.id!==(m.id||"")).map(x=>`<label style="font-weight:500"><input type="checkbox" name="ups" value="${x.id}" ${(m.upstream||[]).includes(x.id)?"checked":""}> ${esc(x.ad)}</label>`).join("")||'<span class="tsub">Başka model yok</span>'}</div></div>
   </div>
   <div class="field full" style="margin-top:8px"><span class="hint">Kritiklik skorları (Materyalite/Karmaşıklık/Tier) “Kritiklik Değerlendirmesi” ekranından hesaplanır; yeni modelde varsayılan orta değerlerle başlar.</span></div>
   <div class="formfoot">
@@ -614,9 +618,10 @@ window.saveModel=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const ad=g("ad");if(!ad){alert("Model adı zorunludur.");return;}
  const kat=[...document.querySelectorAll('input[name="kat"]:checked')].map(x=>x.value);
+ const ups=[...document.querySelectorAll('input[name="ups"]:checked')].map(x=>x.value);
  const base=id?state.models.find(x=>x.id===id):{crit:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K6:3,K7:3,B1:1,O1:0}};
  const obj=Object.assign({},base,{
-  id:id||uid("MDL-"),ad,tip:g("tip"),amac:g("amac"),kategori:kat,
+  id:id||uid("MDL-"),ad,tip:g("tip"),amac:g("amac"),kategori:kat,upstream:ups,
   aiml:document.getElementById("fx-aiml").checked,genai:document.getElementById("fx-genai").checked,
   deterministik:document.getElementById("fx-det").checked,duzenleyici:document.getElementById("fx-duz").checked,
   koken:g("koken"),tedarikci:g("tedarikci"),sahipBirim:g("sahipBirim"),sahip:g("sahip"),gelistirici:g("gelistirici"),
@@ -1541,6 +1546,51 @@ function viewGovern(v){
  document.querySelectorAll("[data-sa]").forEach(e=>{e.onchange=()=>{const k=e.dataset.sa;if(k==="note")sa.note=e.value;else sa[k]=Object.assign({},sa[k],{r:e.value});save();if(k!=="note")render();};});
 }
 window.attest=function(){const sa=state.selfAssessment=state.selfAssessment||{};sa.attestDate=todayStr();sa.attestBy=window.activeRole;logAudit("MRM öz-değerlendirme beyanı","govern","Genel değerlendirme onaylandı");save();render();};
+
+/* ============ BAGIMLILIK & ETKI ANALIZI ============ */
+let depSel="";
+function downstreamOf(id){return state.models.filter(m=>(m.upstream||[]).includes(id));}
+function allDownstream(id,seen){seen=seen||new Set();downstreamOf(id).forEach(d=>{if(!seen.has(d.id)){seen.add(d.id);allDownstream(d.id,seen);}});return seen;}
+window.depSelSet=function(id){depSel=id;render();};
+function depNode(x,y,label,cls,id){return `<g style="cursor:pointer" onclick="depSelSet('${id}')"><rect x="${x-72}" y="${y-15}" width="144" height="30" rx="8" fill="var(--surface)" stroke="var(--${cls})" stroke-width="1.6"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10.5" fill="var(--ink)">${esc(label.length>21?label.slice(0,20)+"…":label)}</text></g>`;}
+function depGraph(m,ups,downs){
+ const W=700,rowH=48,pad=24;const n=Math.max(ups.length,downs.length,1);const H=n*rowH+2*pad;const cx=W/2,cy=H/2;
+ let lines="",nodes="";
+ ups.forEach((u,i)=>{const y=pad+15+i*rowH;lines+=`<line x1="152" y1="${y}" x2="${cx-72}" y2="${cy}" stroke="var(--line)" stroke-width="1.5"/>`;nodes+=depNode(80,y,u.ad,"info",u.id);});
+ downs.forEach((d,i)=>{const y=pad+15+i*rowH;lines+=`<line x1="${cx+72}" y1="${cy}" x2="${W-152}" y2="${y}" stroke="var(--warn)" stroke-width="1.5"/>`;nodes+=depNode(W-80,y,d.ad,"warn",d.id);});
+ nodes+=depNode(cx,cy,m.ad,"accent",m.id);
+ return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:560px;max-width:820px">${lines}${nodes}</svg></div>`;
+}
+function viewBaglanti(v){
+ const models=state.models;
+ if(!depSel||!models.find(m=>m.id===depSel))depSel=(models[0]||{}).id||"";
+ const m=models.find(x=>x.id===depSel);if(!m){v.innerHTML=`<div class="card empty">Model yok.</div>`;return;}
+ const ups=(m.upstream||[]).map(id=>models.find(x=>x.id===id)).filter(Boolean);
+ const downs=downstreamOf(depSel);
+ const allDown=[...allDownstream(depSel)].map(id=>models.find(x=>x.id===id)).filter(Boolean);
+ const t1Down=allDown.filter(x=>x.tier==="Tier 1").length;
+ v.innerHTML=`
+  <p class="vlead">Model bağımlılık ağı ve etki analizi — besleyen (upstream) / beslenen (downstream) ilişkileri ve “bu model bozulursa” dolaylı etki (SS1/23 1.2b: doğrudan ve dolaylı ara bağımlılıklar).</p>
+  <div class="toolbar"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
+   <select id="dep-model" style="min-width:320px">${models.map(x=>`<option value="${x.id}" ${depSel===x.id?"selected":""}>${esc(x.ad)}</option>`).join("")}</select></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Besleyen (Upstream)",ups.length,"Girdi sağlayan model","info")}
+   ${kpi("Doğrudan Beslenen",downs.length,"Bu modeli kullanan","warn")}
+   ${kpi("Toplam Etki (dolaylı)",allDown.length,"Zincirdeki tüm downstream","crit")}
+   ${kpi("Etkilenen Tier 1",t1Down,"Kritik downstream","crit")}
+  </div>
+  <div class="card panel"><h3>Bağımlılık Ağı</h3>${(ups.length||downs.length)?depGraph(m,ups,downs):`<div class="empty">Bu modelin tanımlı bağımlılığı yok. Model formundan “Besleyen Modeller” seçebilirsiniz.</div>`}
+    <div class="legend" style="flex-direction:row;flex-wrap:wrap;margin-top:10px"><div class="li"><span class="sw" style="background:var(--info)"></span>Besleyen</div><div class="li"><span class="sw" style="background:var(--accent)"></span>Seçili model</div><div class="li"><span class="sw" style="background:var(--warn)"></span>Beslenen</div></div>
+  </div>
+  ${allDown.length?`<div class="card panel" style="margin-top:16px"><h3>Etki Analizi — “${esc(m.ad)}” bozulursa</h3>
+    <p class="tsub" style="white-space:normal;margin:0 0 10px"><b>${allDown.length}</b> model doğrudan/dolaylı etkilenir (${t1Down} Tier 1). Bu modelde materyal değişiklik/başarısızlık, downstream modellerde revalidasyon gerektirebilir.</p>
+    <div class="list">${allDown.map(d=>`<div class="li-row"><span class="grow"><div class="t">${esc(d.ad)}</div><div class="s">${esc(d.durum)}</div></span>${tierChip(d.tier)}<button class="tbtn ghost" onclick="depSelSet('${d.id}')">Aç</button></div>`).join("")}</div></div>`:""}
+  <div class="card panel" style="margin-top:16px"><h3>Tüm Bağımlılıklar</h3>
+    <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Model</th><th>Tier</th><th class="num">Upstream</th><th class="num">Downstream</th><th class="num">Toplam Etki</th></tr></thead><tbody>
+     ${models.map(x=>{const dn=[...allDownstream(x.id)].length;return `<tr onclick="depSelSet('${x.id}')"><td class="tname">${esc(x.ad)}</td><td>${tierChip(x.tier)}</td><td class="num">${(x.upstream||[]).length}</td><td class="num">${downstreamOf(x.id).length}</td><td class="num">${dn||"—"}</td></tr>`;}).join("")}
+    </tbody></table></div></div>`;
+ document.getElementById("dep-model").onchange=e=>{depSel=e.target.value;render();};
+}
 
 /* ============ DRAWER ============ */
 function openDrawer(head,body){
