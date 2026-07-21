@@ -544,49 +544,71 @@ function tierChipText(t){return `<span class="chip ${tierClass(t)}" style="paddi
 function kpi(lab,num,meta,cls){return `<div class="card kpi ${cls}"><div class="stripe"></div><div class="lab">${lab}</div><div class="num">${num}</div><div class="meta">${meta}</div></div>`;}
 
 /* ============ ENVANTER ============ */
-let envFilter={q:"",tier:"",tip:"",durum:""};
+let envFilter={q:"",tier:"",tip:"",durum:"",sinif:"",unit:"",group:false};
 function viewEnvanter(v){
- const tips=[...new Set(state.models.map(m=>m.tip))];
- const durums=[...new Set(state.models.map(m=>m.durum))];
+ const M=state.models;
+ const durums=[...new Set(M.map(m=>m.durum))];
+ const units=[...new Set(M.map(m=>m.sahipBirim))].sort();
+ const cls=s=>M.filter(m=>m.sinif===s).length;
+ const breaching=M.filter(m=>modelBreaching(m.id)).length;
  v.innerHTML=`
+ <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr))">
+  ${kpi("Toplam Model",M.length,units.length+" iş birimi","")}
+  ${kpi("Geleneksel",cls("Geleneksel"),"skorkart, PD/LGD/EAD","info")}
+  ${kpi("Ekonometrik",cls("Ekonometrik"),"IFRS9, ALM, VaR, stres","info")}
+  ${kpi("ML / AI",cls("ML/AI"),"GBM, RF, LLM…","warn")}
+  ${kpi("İzleme Eşik Aşımı",breaching,"drift / performans","crit")}
+ </div>
+ <div class="card panel" style="margin-bottom:16px"><h3>Banka Geneli — İş Birimi × Model Sınıfı <span class="cnt">satıra tıkla → filtrele</span></h3>
+  <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>İş Birimi</th>${MODEL_SINIFLARI.map(s=>`<th class="num" style="text-align:center">${s}</th>`).join("")}<th class="num" style="text-align:center">Toplam</th><th style="text-align:center">Aşım</th></tr></thead><tbody>
+   ${units.map(u=>{const ms=M.filter(m=>m.sahipBirim===u);const br=ms.filter(m=>modelBreaching(m.id)).length;return `<tr data-unit="${esc(u)}" style="cursor:pointer"><td class="tsub">${esc(u)}</td>${MODEL_SINIFLARI.map(s=>{const n=ms.filter(m=>m.sinif===s).length;return `<td class="num" style="text-align:center">${n||'<span style="opacity:.3">·</span>'}</td>`;}).join("")}<td class="num" style="text-align:center"><b>${ms.length}</b></td><td style="text-align:center">${br?`<span class="chip crit" style="padding:0 7px">${br}</span>`:`<span class="chip good" style="padding:0 7px">0</span>`}</td></tr>`;}).join("")}
+  </tbody></table></div></div>
  <div class="toolbar">
   <input type="search" id="f-q" placeholder="Ara: ad, ID, sahip…" value="${esc(envFilter.q)}">
+  <select id="f-sinif"><option value="">Tüm sınıf</option>${MODEL_SINIFLARI.map(s=>`<option ${envFilter.sinif===s?"selected":""}>${s}</option>`).join("")}</select>
   <select id="f-tier"><option value="">Tüm Tier</option>${["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"].map(t=>`<option ${envFilter.tier===t?"selected":""}>${t}</option>`).join("")}</select>
-  <select id="f-tip"><option value="">Tüm Tip</option>${tips.map(t=>`<option ${envFilter.tip===t?"selected":""}>${t}</option>`).join("")}</select>
   <select id="f-durum"><option value="">Tüm Durum</option>${durums.map(t=>`<option ${envFilter.durum===t?"selected":""}>${t}</option>`).join("")}</select>
+  <select id="f-unit"><option value="">Tüm Birim</option>${units.map(t=>`<option value="${esc(t)}" ${envFilter.unit===t?"selected":""}>${esc(t.length>30?t.slice(0,29)+"…":t)}</option>`).join("")}</select>
+  <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="f-group" ${envFilter.group?"checked":""}> Birime göre grupla</label>
   <div class="sp"></div>
   <button class="tbtn primary" id="newModel">+ Yeni Model</button>
  </div>
  <div id="envtable"></div>`;
- const upd=()=>{envFilter={q:val("f-q"),tier:val("f-tier"),tip:val("f-tip"),durum:val("f-durum")};renderEnvTable();};
- ["f-q","f-tier","f-tip","f-durum"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
+ const upd=()=>{envFilter={q:val("f-q"),sinif:val("f-sinif"),tier:val("f-tier"),tip:envFilter.tip,durum:val("f-durum"),unit:val("f-unit"),group:document.getElementById("f-group").checked};renderEnvTable();};
+ ["f-q","f-sinif","f-tier","f-durum","f-unit"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
+ document.getElementById("f-group").onchange=upd;
  document.getElementById("newModel").onclick=()=>modelForm(null);
+ document.querySelectorAll('#view tr[data-unit]').forEach(tr=>{tr.onclick=()=>{envFilter.unit=tr.dataset.unit;const s=document.getElementById("f-unit");if(s)s.value=tr.dataset.unit;renderEnvTable();document.getElementById("envtable").scrollIntoView({behavior:"smooth",block:"start"});};});
  renderEnvTable();
 }
 function val(id){return document.getElementById(id).value;}
 function renderEnvTable(){
  let rows=state.models.filter(m=>{
   if(envFilter.tier&&m.tier!==envFilter.tier)return false;
-  if(envFilter.tip&&m.tip!==envFilter.tip)return false;
+  if(envFilter.sinif&&m.sinif!==envFilter.sinif)return false;
   if(envFilter.durum&&m.durum!==envFilter.durum)return false;
-  if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.sahip||"")+(m.kategori||[]).join()).toLowerCase().includes(q)))return false;}
+  if(envFilter.unit&&m.sahipBirim!==envFilter.unit)return false;
+  if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.sahip||"")+(m.kategori||[]).join()+(m.sinif||"")).toLowerCase().includes(q)))return false;}
   return true;
  });
  const el=document.getElementById("envtable");
  if(!rows.length){el.innerHTML=`<div class="card empty">Kriterlere uyan model yok.</div>`;return;}
- el.innerHTML=`<div class="tablewrap"><table><thead><tr>
-   <th>Model</th><th>Tip</th><th>Kategori</th><th>Tier</th><th class="num">İçsel Risk</th><th>Durum</th><th>Sahip</th><th>Sonraki Validasyon</th></tr></thead><tbody>
-   ${rows.map(m=>{const nv=nextVal(m),o=overdue(nv);return `<tr onclick="modelDetail('${m.id}')">
-     <td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}${m.aiml?` · <span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""}</div></td>
-     <td>${esc(m.tip)}</td>
-     <td class="tsub">${(m.kategori||[]).join(", ")}</td>
-     <td>${tierChip(m.tier)}</td>
-     <td class="num">${m.icsel}</td>
-     <td>${statusChip(m.durum)}</td>
-     <td>${esc(m.sahip||"—")}</td>
-     <td>${nv?`${nv} <span class="chip ${o.c}" style="padding:0 7px">${o.t}</span>`:"—"}</td>
-   </tr>`;}).join("")}
- </tbody></table></div>`;
+ const rowHtml=m=>{const nv=nextVal(m),o=overdue(nv);const iz=m.izlemeDurumu||"Normal";return `<tr onclick="modelDetail('${m.id}')">
+   <td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}${m.aiml?` · <span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""}</div></td>
+   <td><span class="chip ${m.sinif==='ML/AI'?'warn':'info'}" style="padding:0 8px">${esc(m.sinif||"—")}</span></td>
+   <td class="tsub">${(m.kategori||[]).join(", ")}</td>
+   <td>${tierChip(m.tier)}</td>
+   <td>${statusChip(m.durum)}</td>
+   <td>${iz==="Eşik Aşımı"?'<span class="chip crit" style="padding:0 7px">Aşım</span>':'<span class="chip good" style="padding:0 7px">Normal</span>'}</td>
+   <td>${esc(m.sahip||"—")}</td>
+   <td>${nv?`${nv} <span class="chip ${o.c}" style="padding:0 7px">${o.t}</span>`:"—"}</td></tr>`;};
+ const head=`<thead><tr><th>Model</th><th>Sınıf</th><th>Kategori</th><th>Tier</th><th>Durum</th><th>İzleme</th><th>Sahip</th><th>Sonraki Validasyon</th></tr></thead>`;
+ if(envFilter.group){
+   const units=[...new Set(rows.map(m=>m.sahipBirim))].sort();
+   el.innerHTML=`<div class="tablewrap"><table>${head}<tbody>${units.map(u=>{const ms=rows.filter(m=>m.sahipBirim===u);return `<tr style="background:var(--surface-2);cursor:default"><td colspan="8" style="font-weight:700;color:var(--accent-ink)">${esc(u)} · ${ms.length} model</td></tr>`+ms.map(rowHtml).join("");}).join("")}</tbody></table></div>`;
+ } else {
+   el.innerHTML=`<div class="tablewrap"><table>${head}<tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
+ }
 }
 
 /* ============ MODEL DETAIL ============ */
