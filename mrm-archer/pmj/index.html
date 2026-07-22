@@ -300,6 +300,13 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .lc-ring{grid-column:2/3;grid-row:1/4;align-self:center;width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--pct)*1%),var(--surface-2) 0);display:grid;place-items:center}
 .lc-ring span{width:42px;height:42px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--accent-ink)}
 .pf-status{font-size:13px;color:var(--muted);margin-top:8px}
+/* Sınıf küp */
+.sinif-cube{display:inline-grid;grid-template-columns:repeat(2,26px);grid-template-rows:repeat(2,26px);gap:3px}
+.sc-cell{border-radius:5px;display:grid;place-items:center;opacity:.32;transition:.15s}
+.sc-cell span{font-size:12px;font-weight:800;color:#fff}
+.sc-cell.on{opacity:1;box-shadow:0 0 0 2px var(--surface),0 0 0 4px currentColor;transform:scale(1.05)}
+.sc-cell.t1{background:var(--t1);color:var(--t1)}.sc-cell.t2{background:var(--t2);color:var(--t2)}
+.sc-cell.t3{background:var(--t3);color:var(--t3)}.sc-cell.t0{background:var(--t0);color:var(--t0)}
 /* Model map */
 .mp-map{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
 .mp-map-col .mm-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:8px}
@@ -650,6 +657,12 @@ function render(){
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function tierChip(t){return `<span class="chip ${tierClass(t)}">${esc(t)}</span>`;}
 function statusChip(s){return `<span class="chip dot ${STATUS_CLASS[s]||"muted"}">${esc(s)}</span>`;}
+/* PMJ Sınıf 1-4 (3 boyut) — tier ile tutarlı */
+const SINIF_MAP={"Tier 1":{n:1,l:"Sınıf 1",c:"t1",d:"En yüksek model riski"},"Tier 2":{n:2,l:"Sınıf 2",c:"t2",d:"Yüksek"},"Tier 3":{n:3,l:"Sınıf 3",c:"t3",d:"Orta"},"İhmal Edilebilir":{n:4,l:"Sınıf 4",c:"t0",d:"Düşük"}};
+function sinifOf(m){return SINIF_MAP[m.tier]||SINIF_MAP["Tier 2"];}
+function sinifChip(m){const s=sinifOf(m);return `<span class="chip ${s.c}" title="${esc(s.d)} · ${esc(m.tier)}">${s.l}</span>`;}
+function critDims(c){c=c||{};const s=scoreCrit(c);const A=+(s.mat/5).toFixed(2);const B=+(s.kar/5).toFixed(2);const C=Math.min(1,+(((+c.M3||0)+(+c.M4||0))/10*0.7+(c.duzenleyici?0.3:0)).toFixed(2));return {A,B,C,s};}
+function sinifCube(tier){const cells=["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"];return `<div class="sinif-cube">${cells.map((t,i)=>`<div class="sc-cell ${tierClass(t)} ${t===tier?"on":""}"><span>${i+1}</span></div>`).join("")}</div>`;}
 
 /* ============ DASHBOARD ============ */
 function viewDashboard(v){
@@ -786,13 +799,13 @@ function renderRegGrid(){
    <td><span class="chip info" style="padding:0 8px" title="${esc(m.lifecyclePhase)}">${esc(LC_ABBR[m.lifecyclePhase]||m.lifecyclePhase)}</span></td>
    <td>${statuChip(m.statu)}</td>
    <td><span class="chip ${m.modelTipi==='İLERİ ANALİTİK MODEL'?'warn':'muted'}" style="padding:0 8px">${m.modelTipi==='İLERİ ANALİTİK MODEL'?'İLERİ ANALİTİK':'BASİT'}</span></td>
-   <td>${tierChip(m.tier)}</td>
+   <td>${sinifChip(m)}</td>
    <td class="tsub">${esc(m.department||"—")}</td>
    <td class="tsub" style="max-width:150px">${esc((m.area||"—").slice(0,26))}</td>
    <td class="mono tsub">${esc(m.demand||"—")}</td>
    <td class="mono tsub">${esc(m.projeId||"—")}</td>
    <td class="tsub">${esc(m.modelUpdate||"—")}${br?' <span class="chip crit" style="padding:0 6px">aşım</span>':""}</td></tr>`;};
- const head=`<thead><tr><th>Code</th><th>Model Adı / Description</th><th>Version</th><th>Lifecycle</th><th>Statü</th><th>Model Tipi</th><th>Sınıf</th><th>Modeli Geliştiren</th><th>Area Model</th><th>Demand</th><th>ID Progetto</th><th>Güncelleme</th></tr></thead>`;
+ const head=`<thead><tr><th>Code</th><th>Model Adı / Description</th><th>Version</th><th>Lifecycle</th><th>Statü</th><th>Model Tipi</th><th>Risk Sınıfı</th><th>Modeli Geliştiren</th><th>Area Model</th><th>Demand</th><th>ID Progetto</th><th>Güncelleme</th></tr></thead>`;
  el.innerHTML=`<div class="tablewrap reg-grid"><table>${head}<tbody>${pg.map(row).join("")}</tbody></table></div>
   <div class="reg-pager"><span class="tsub">${rows.length} kayıt · sayfa ${regState.page+1}/${pages}</span><div class="sp"></div>
    <button class="tbtn ghost" id="pgPrev" ${regState.page===0?"disabled":""}>‹ Önceki</button>
@@ -887,7 +900,7 @@ function renderModelPage(v){
  <div class="mp-head">
    <div class="mp-h-l">
      <div class="mp-title">${esc(m.ad)} <span class="mono mp-code">${esc(m.code)}</span></div>
-     <div class="mp-tags">${tierChip(m.tier)} ${statuChip(m.statu)} <span class="chip info">${esc(m.lifecyclePhase)}</span> <span class="chip ${m.modelTipi==='İLERİ ANALİTİK MODEL'?'warn':'muted'}">${esc(m.modelTipi)}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':""}</div>
+     <div class="mp-tags">${sinifChip(m)} ${statuChip(m.statu)} <span class="chip info">${esc(m.lifecyclePhase)}</span> <span class="chip ${m.modelTipi==='İLERİ ANALİTİK MODEL'?'warn':'muted'}">${esc(m.modelTipi)}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':""}</div>
    </div>
    <div class="mp-h-r">
      <select class="mp-ver" id="mpVer">${(m.versions||[]).map(x=>`<option ${x===av?"selected":""}>${esc(x.v)}${x.date?" · "+x.date:""}</option>`).join("")}</select>
@@ -1130,7 +1143,7 @@ let critState={modelId:"",c:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K
 window.loadCritModel=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;critState.modelId=id;critState.c=Object.assign({B1:1,O1:0},m.crit,{duzenleyici:m.duzenleyici,genai:m.genai});const sel=document.getElementById("crit-model");if(sel)sel.value=id;renderCrit();};
 function viewKritiklik(v){
  v.innerHTML=`
-  <p class="vlead">SS1/23 §1.3 & OSFI E-23 uyarınca <b>Materyalite × Karmaşıklık</b> boyutlarından İçsel Risk skoru ve <b>Tier</b> hesaplanır. Blok ağırlıkları %100’e normalizedir; düzenleyici kullanım, otonomi ve GenAI için <b>sert kurallar</b> minimum tier’i yükseltir.</p>
+  <p class="vlead">PMJ <b>Kritiklik Değerlendirmesi (S.03)</b> — üç boyut: <b>S.03.A Kapsamlılık</b>, <b>S.03.B Karmaşıklık &amp; Belirsizlik</b>, <b>S.03.C İş Etkisi</b>. Boyut skorları toplulaştırılarak <b>Sınıf 1–4</b> (Sınıf 1 kırmızı = en yüksek) belirlenir. SS1/23 §1.3 &amp; OSFI E-23 uyarınca düzenleyici kullanım, otonomi ve GenAI için <b>sert kurallar</b> minimum sınıfı yükseltir.</p>
   <div class="toolbar">
    <label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="crit-model" style="min-width:280px"><option value="">— Bağımsız / yeni değerlendirme —</option>${state.models.map(m=>`<option value="${m.id}" ${critState.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select>
@@ -1139,8 +1152,8 @@ function viewKritiklik(v){
   </div>
   <div class="calc">
    <div>
-     <div class="card panel"><div class="section-h" style="margin-top:0">Materyalite (Σ ağırlık = %100)</div><div id="mat-qs"></div></div>
-     <div class="card panel" style="margin-top:14px"><div class="section-h" style="margin-top:0">Karmaşıklık (Σ ağırlık = %100 · AI faktörleri dahil)</div><div id="kar-qs"></div></div>
+     <div class="card panel"><div class="section-h" style="margin-top:0">S.03.A Kapsamlılık Derecesi — Materyalite (Σ ağırlık = %100)</div><div id="mat-qs"></div></div>
+     <div class="card panel" style="margin-top:14px"><div class="section-h" style="margin-top:0">S.03.B Karmaşıklık &amp; Belirsizlik (Σ ağırlık = %100 · AI faktörleri dahil)</div><div id="kar-qs"></div></div>
      <div class="card panel" style="margin-top:14px"><div class="section-h" style="margin-top:0">Modifiye & Sert Kurallar</div><div id="mod-qs"></div></div>
    </div>
    <div class="result card panel" id="crit-result"></div>
@@ -1174,11 +1187,17 @@ function renderResult(){
  const s=scoreCrit(critState.c);
  const el=document.getElementById("crit-result");
  const model=state.models.find(m=>m.id===critState.modelId);
+ const dims=critDims(critState.c);const sn=SINIF_MAP[s.tier]||SINIF_MAP["Tier 2"];
  el.innerHTML=`
-   <div class="gauge"><div class="big" style="color:var(--${tierClass(s.tier)})">${s.icsel}</div><div class="cap">İçsel Risk (Mat×Karm, 1-25)</div></div>
-   <div style="text-align:center;margin:-4px 0 12px"><span class="tag-tier" style="color:var(--${tierClass(s.tier)})">${s.tier}</span></div>
-   <div class="sline"><span>Materyalite</span><b>${s.mat} / 5</b></div>
-   <div class="sline"><span>Karmaşıklık</span><b>${s.kar} / 5</b></div>
+   <div style="text-align:center;margin-bottom:8px">${sinifCube(s.tier)}</div>
+   <div style="text-align:center;margin:2px 0 10px"><span class="tag-tier ${sn.c}" style="color:var(--${sn.c})">${sn.l}</span><div class="tsub" style="margin-top:2px">${esc(sn.d)} · ${s.tier}</div></div>
+   <div class="section-h" style="margin-top:6px">3 Boyutlu Değerlendirme (S.03)</div>
+   <div class="bars">
+    <div class="bar"><span>S.03.A Kapsamlılık</span><div class="track"><div class="fill" style="width:${dims.A*100}%"></div></div><span class="v">${dims.A}</span></div>
+    <div class="bar"><span>S.03.B Karmaşıklık</span><div class="track"><div class="fill" style="width:${dims.B*100}%;background:var(--accent-ink)"></div></div><span class="v">${dims.B}</span></div>
+    <div class="bar"><span>S.03.C İş Etkisi</span><div class="track"><div class="fill" style="width:${dims.C*100}%;background:#e0912f"></div></div><span class="v">${dims.C}</span></div>
+   </div>
+   <div class="gauge" style="margin-top:10px"><div class="big" style="color:var(--${tierClass(s.tier)})">${s.icsel}</div><div class="cap">İçsel Risk (Mat×Karm, 1-25)</div></div>
    <div class="sline"><span>Model Risk Derecesi</span><b>${s.derece}</b></div>
    <div class="sline"><span>Önerilen Frekans</span><b>${tierFreq(s.tier)}</b></div>
    ${s.rules.length?`<div class="rule-note"><b>Sert kural(lar):</b><br>${s.rules.map(r=>"• "+esc(r)).join("<br>")}</div>`:""}
