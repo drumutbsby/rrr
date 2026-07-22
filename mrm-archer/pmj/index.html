@@ -236,6 +236,25 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .sso-tile .ic{font-size:40px}
 .sso-tile.empty{background:#eef1f6;box-shadow:none;cursor:default;pointer-events:none}
 @media(max-width:820px){.submenu{display:none!important}.sso-tiles{grid-template-columns:1fr 1fr}.pm-user .u-name{display:none}}
+/* PMJ Registry */
+.reg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.reg-title{font-size:20px;font-weight:800;color:var(--pmnav);letter-spacing:-.01em}
+:root[data-theme="dark"] .reg-title{color:var(--accent-ink)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .reg-title{color:var(--accent-ink)}}
+.reg-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.reg-wrap{display:flex;gap:14px;align-items:flex-start}
+.reg-tree{width:210px;flex:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;position:sticky;top:8px}
+.reg-tree .rt-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;padding:6px 8px 6px}
+.reg-cat{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;color:var(--ink);font-size:12.5px;font-weight:500;cursor:pointer}
+.reg-cat:hover{background:var(--surface-2)}
+.reg-cat.active{background:var(--accent-weak);color:var(--accent-ink);font-weight:700}
+.reg-cat .rc-n{margin-left:auto;font-size:11px;color:var(--muted);background:var(--surface-2);border-radius:20px;padding:0 7px}
+.reg-cat.active .rc-n{background:var(--accent);color:#fff}
+.reg-main{flex:1;min-width:0}
+.reg-grid table{font-size:12.5px}
+.reg-grid td.mono,.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.reg-pager{display:flex;align-items:center;gap:10px;margin-top:10px;padding:0 2px}
+@media(max-width:820px){.reg-wrap{flex-direction:column}.reg-tree{width:100%;position:static}}
 </style>
 
 <div class="sso" id="sso">
@@ -269,7 +288,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 <script>
 "use strict";
 /* ============ DURUM / KALICILIK ============ */
-const KEY="mrm_sim_v1";
+const KEY="pmj_sim_v1";
 const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[],audit:[]};
 ["metrics","pmas","changes","audit"].forEach(k=>{if(!state[k])state[k]=[];});
 function logAudit(action,entity,detail){state.audit=state.audit||[];state.audit.unshift({ts:new Date().toISOString(),role:window.activeRole||"—",action,entity,detail:detail||""});if(state.audit.length>500)state.audit.length=500;}
@@ -324,6 +343,33 @@ function nextVal(m){const f=FREQMON[m.valFrekans||tierFreq(m.tier)]||0;return m.
 function overdue(next){if(!next)return{t:"—",c:"muted"};const days=(new Date(next)-new Date())/86400000;if(days<0)return{t:"Gecikmiş",c:"crit"};if(days<45)return{t:"Yaklaşan",c:"warn"};return{t:"Zamanında",c:"good"};}
 function tierClass(t){return t==="Tier 1"?"t1":t==="Tier 2"?"t2":t==="Tier 3"?"t3":"t0";}
 const STATUS_CLASS={"Taslak":"muted","Geliştirme":"info","Validasyonda":"info","Onayda":"warn","Onaylı/Prod":"good","İzlemede":"good","Revalidasyonda":"warn","Koşullu Onaylı":"warn","Kısıtlı/Askıda":"crit","Emekli":"muted"};
+
+/* ============ PMJ TAKSONOMI & ZENGINLESTIRME ============ */
+const LC10=["İş İhtiyaç ve Gereksinim Analizi","Model Tanımı","Model Envanteri","Model Geliştirme","İmplementasyon Öncesi Validasyon","İçsel/Dışsal Onay","İmplementasyon ve Entegrasyon","İmplementasyon Sonrası Validasyon","Model Risk Onay/İzleme","Yaygınlaştırma ve Bakım"];
+const LC4=["İş İhtiyaç ve Gereksinim Analizi","Model Geliştirme","İmplementasyon","Yayımlaştırma ve Kullanım"];
+const LC_FROM_DURUM={"Taslak":"İş İhtiyaç ve Gereksinim Analizi","Geliştirme":"Model Geliştirme","Validasyonda":"İmplementasyon","Onayda":"İmplementasyon","Koşullu Onaylı":"İmplementasyon","Onaylı/Prod":"Yayımlaştırma ve Kullanım","İzlemede":"Yayımlaştırma ve Kullanım","Revalidasyonda":"Yayımlaştırma ve Kullanım","Kısıtlı/Askıda":"Yayımlaştırma ve Kullanım","Emekli":"Yayımlaştırma ve Kullanım"};
+const STATU_FROM_DURUM={"Taslak":"Talep edildi","Geliştirme":"Geliştirmede","Validasyonda":"Geliştirmede","Onayda":"Geliştirmede","Koşullu Onaylı":"Üretimde","Onaylı/Prod":"Üretimde","İzlemede":"Üretimde","Revalidasyonda":"Üretimde","Kısıtlı/Askıda":"Üretimde","Emekli":"Emekli"};
+const STATU_CLASS={"Talep edildi":"muted","Geliştirmede":"info","Validasyonda":"info","Üretimde":"good","Emekli":"muted"};
+const LC10_FROM_DURUM={"Taslak":1,"Geliştirme":3,"Validasyonda":4,"Onayda":5,"Koşullu Onaylı":6,"Onaylı/Prod":6,"İzlemede":8,"Revalidasyonda":7,"Kısıtlı/Askıda":8,"Emekli":9};
+function pmjModelTipi(m){return (m.aiml||m.genai||m.sinif==="Ekonometrik"||m.sinif==="ML/AI")?"İLERİ ANALİTİK MODEL":"BASİT MODEL";}
+function pmjCode(m){const n=(m.id.match(/(\d+)$/)||["","0"])[1];return "MOD-"+String(n).padStart(4,"0");}
+function pmjEnrich(m,i){
+ i=i||0;
+ if(m.code==null)m.code=pmjCode(m);
+ if(m.description==null)m.description=m.amac||m.ad;
+ if(m.version==null)m.version="v1.0";
+ if(m.lifecyclePhase==null)m.lifecyclePhase=LC_FROM_DURUM[m.durum]||"Yayımlaştırma ve Kullanım";
+ if(m.statu==null)m.statu=STATU_FROM_DURUM[m.durum]||"Üretimde";
+ if(m.modelTipi==null)m.modelTipi=pmjModelTipi(m);
+ if(m.department==null)m.department=m.gelistirici||m.sahipBirim||"—";
+ if(m.area==null)m.area=m.sahipBirim||"—";
+ if(m.demand==null)m.demand="DEM-"+String(1401+i).slice(-4);
+ if(m.projeId==null)m.projeId="PRJ-"+String(2301+i).slice(-4);
+ if(m.modelUpdate==null)m.modelUpdate=m.sonValidasyon||m.prodTarihi||"";
+ if(m.arsiv==null)m.arsiv=(m.durum==="Emekli");
+}
+function pmjEnrichAll(){(state.models||[]).forEach((m,i)=>pmjEnrich(m,i));}
+function statuChip(s){return `<span class="chip dot ${STATU_CLASS[s]||"muted"}">${esc(s)}</span>`;}
 
 /* ============ ORNEK VERI ============ */
 function seed(){
@@ -410,6 +456,7 @@ function seed(){
   {id:"CHG-0001",modelId:"MDL-0003",versiyon:"v2.1",tur:"Retraining",aciklama:"Çeyreklik retraining; yeni özellikler eklendi.",materyalite:"Materyal Değil",revalidasyon:"Hayır",onay:"Onaylandı",tarih:"2026-04-01"},
   {id:"CHG-0002",modelId:"MDL-0001",versiyon:"v3.0",tur:"Rekalibrasyon",aciklama:"PSI artışı nedeniyle rekalibrasyon önerisi.",materyalite:"Materyal",revalidasyon:"Evet",onay:"Beklemede",tarih:""},
  ];
+ pmjEnrichAll();
  state.audit=[];logAudit("Örnek veri yüklendi","sistem",state.models.length+" model");
  save();
 }
@@ -572,71 +619,106 @@ function tierChipText(t){return `<span class="chip ${tierClass(t)}" style="paddi
 function kpi(lab,num,meta,cls){return `<div class="card kpi ${cls}"><div class="stripe"></div><div class="lab">${lab}</div><div class="num">${num}</div><div class="meta">${meta}</div></div>`;}
 
 /* ============ ENVANTER ============ */
-let envFilter={q:"",tier:"",tip:"",durum:"",sinif:"",unit:"",group:false};
+let regState={q:"",cat:"all",statu:"",lc:"",tipi:"",tier:"",page:0,per:12,matrix:false};
 function viewEnvanter(v){
  const M=state.models;
- const durums=[...new Set(M.map(m=>m.durum))];
- const units=[...new Set(M.map(m=>m.sahipBirim))].sort();
+ const areas=[...new Set(M.filter(m=>!m.arsiv).map(m=>m.area))].sort();
+ const archN=M.filter(m=>m.arsiv).length;
  const cls=s=>M.filter(m=>m.sinif===s).length;
  const breaching=M.filter(m=>modelBreaching(m.id)).length;
+ const catNode=(id,lab,n,ind)=>`<a data-cat="${esc(id)}" class="reg-cat ${regState.cat===id?"active":""}" style="padding-left:${ind}px">${esc(lab)}<span class="rc-n">${n}</span></a>`;
  v.innerHTML=`
- <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr))">
-  ${kpi("Toplam Model",M.length,units.length+" iş birimi","")}
-  ${kpi("Geleneksel",cls("Geleneksel"),"skorkart, PD/LGD/EAD","info")}
-  ${kpi("Ekonometrik",cls("Ekonometrik"),"IFRS9, ALM, VaR, stres","info")}
-  ${kpi("ML / AI",cls("ML/AI"),"GBM, RF, LLM…","warn")}
-  ${kpi("İzleme Eşik Aşımı",breaching,"drift / performans","crit")}
+ <div class="reg-top">
+   <div><div class="reg-title">Model Registry</div><div class="reg-sub">Halkbank · Model Envanteri — banka geneli tüm model ve algoritmalar</div></div>
+   <button class="tbtn primary" id="newItem">+ New Item</button>
  </div>
- <div class="card panel" style="margin-bottom:16px"><h3>Banka Geneli — İş Birimi × Model Sınıfı <span class="cnt">satıra tıkla → filtrele</span></h3>
-  <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>İş Birimi</th>${MODEL_SINIFLARI.map(s=>`<th class="num" style="text-align:center">${s}</th>`).join("")}<th class="num" style="text-align:center">Toplam</th><th style="text-align:center">Aşım</th></tr></thead><tbody>
-   ${units.map(u=>{const ms=M.filter(m=>m.sahipBirim===u);const br=ms.filter(m=>modelBreaching(m.id)).length;return `<tr data-unit="${esc(u)}" style="cursor:pointer"><td class="tsub">${esc(u)}</td>${MODEL_SINIFLARI.map(s=>{const n=ms.filter(m=>m.sinif===s).length;return `<td class="num" style="text-align:center">${n||'<span style="opacity:.3">·</span>'}</td>`;}).join("")}<td class="num" style="text-align:center"><b>${ms.length}</b></td><td style="text-align:center">${br?`<span class="chip crit" style="padding:0 7px">${br}</span>`:`<span class="chip good" style="padding:0 7px">0</span>`}</td></tr>`;}).join("")}
-  </tbody></table></div></div>
- <div class="toolbar">
-  <input type="search" id="f-q" placeholder="Ara: ad, ID, sahip…" value="${esc(envFilter.q)}">
-  <select id="f-sinif"><option value="">Tüm sınıf</option>${MODEL_SINIFLARI.map(s=>`<option ${envFilter.sinif===s?"selected":""}>${s}</option>`).join("")}</select>
-  <select id="f-tier"><option value="">Tüm Tier</option>${["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"].map(t=>`<option ${envFilter.tier===t?"selected":""}>${t}</option>`).join("")}</select>
-  <select id="f-durum"><option value="">Tüm Durum</option>${durums.map(t=>`<option ${envFilter.durum===t?"selected":""}>${t}</option>`).join("")}</select>
-  <select id="f-unit"><option value="">Tüm Birim</option>${units.map(t=>`<option value="${esc(t)}" ${envFilter.unit===t?"selected":""}>${esc(t.length>30?t.slice(0,29)+"…":t)}</option>`).join("")}</select>
-  <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="f-group" ${envFilter.group?"checked":""}> Birime göre grupla</label>
-  <div class="sp"></div>
-  <button class="tbtn primary" id="newModel">+ Yeni Model</button>
+ <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+  ${kpi("Toplam Model",M.length,areas.length+" area · "+archN+" arşiv","")}
+  ${kpi("Geleneksel",cls("Geleneksel"),"BASİT + İLERİ","info")}
+  ${kpi("Ekonometrik",cls("Ekonometrik"),"İLERİ ANALİTİK","info")}
+  ${kpi("ML / AI",cls("ML/AI"),"İLERİ ANALİTİK","warn")}
+  ${kpi("İzleme Aşımı",breaching,"drift / performans","crit")}
  </div>
- <div id="envtable"></div>`;
- const upd=()=>{envFilter={q:val("f-q"),sinif:val("f-sinif"),tier:val("f-tier"),tip:envFilter.tip,durum:val("f-durum"),unit:val("f-unit"),group:document.getElementById("f-group").checked};renderEnvTable();};
- ["f-q","f-sinif","f-tier","f-durum","f-unit"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
- document.getElementById("f-group").onchange=upd;
- document.getElementById("newModel").onclick=()=>modelForm(null);
- document.querySelectorAll('#view tr[data-unit]').forEach(tr=>{tr.onclick=()=>{envFilter.unit=tr.dataset.unit;const s=document.getElementById("f-unit");if(s)s.value=tr.dataset.unit;renderEnvTable();document.getElementById("envtable").scrollIntoView({behavior:"smooth",block:"start"});};});
- renderEnvTable();
+ <div class="reg-wrap">
+  <aside class="reg-tree">
+   <div class="rt-h">Kategoriler</div>
+   ${catNode("all","Tümü (Cat_test_gp)",M.filter(m=>!m.arsiv).length,10)}
+   ${areas.map(a=>catNode("area:"+a,a.length>26?a.slice(0,25)+"…":a,M.filter(m=>m.area===a&&!m.arsiv).length,22)).join("")}
+   <div class="rt-h" style="margin-top:12px">Arşiv</div>
+   ${catNode("arch","Archived",archN,10)}
+  </aside>
+  <div class="reg-main">
+   <div class="toolbar">
+    <input type="search" id="f-q" placeholder="Ara: kod, ad, geliştiren, demand…" value="${esc(regState.q)}">
+    <select id="f-statu"><option value="">Tüm Statü</option>${["Talep edildi","Geliştirmede","Validasyonda","Üretimde","Emekli"].map(t=>`<option ${regState.statu===t?"selected":""}>${t}</option>`).join("")}</select>
+    <select id="f-lc"><option value="">Tüm Lifecycle</option>${LC4.map(t=>`<option ${regState.lc===t?"selected":""}>${t}</option>`).join("")}</select>
+    <select id="f-tipi"><option value="">Tüm Model Tipi</option>${["İLERİ ANALİTİK MODEL","BASİT MODEL"].map(t=>`<option ${regState.tipi===t?"selected":""}>${t}</option>`).join("")}</select>
+    <select id="f-tier"><option value="">Tüm Sınıf</option>${["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"].map(t=>`<option ${regState.tier===t?"selected":""}>${t}</option>`).join("")}</select>
+    <div class="sp"></div>
+    <button class="tbtn ghost" id="matrixTog">${regState.matrix?"Grid":"Banka Geneli ▦"}</button>
+   </div>
+   <div id="regGrid"></div>
+  </div>
+ </div>`;
+ const upd=()=>{regState.q=val("f-q");regState.statu=val("f-statu");regState.lc=val("f-lc");regState.tipi=val("f-tipi");regState.tier=val("f-tier");regState.page=0;renderRegGrid();};
+ ["f-q","f-statu","f-lc","f-tipi","f-tier"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
+ document.getElementById("newItem").onclick=()=>modelForm(null);
+ document.getElementById("matrixTog").onclick=()=>{regState.matrix=!regState.matrix;renderRegGrid();document.getElementById("matrixTog").textContent=regState.matrix?"Grid":"Banka Geneli ▦";};
+ v.querySelectorAll(".reg-cat").forEach(a=>a.onclick=()=>{regState.cat=a.dataset.cat;regState.page=0;v.querySelectorAll(".reg-cat").forEach(x=>x.classList.remove("active"));a.classList.add("active");renderRegGrid();});
+ renderRegGrid();
 }
-function val(id){return document.getElementById(id).value;}
-function renderEnvTable(){
- let rows=state.models.filter(m=>{
-  if(envFilter.tier&&m.tier!==envFilter.tier)return false;
-  if(envFilter.sinif&&m.sinif!==envFilter.sinif)return false;
-  if(envFilter.durum&&m.durum!==envFilter.durum)return false;
-  if(envFilter.unit&&m.sahipBirim!==envFilter.unit)return false;
-  if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.sahip||"")+(m.kategori||[]).join()+(m.sinif||"")).toLowerCase().includes(q)))return false;}
+function val(id){const e=document.getElementById(id);return e?e.value:"";}
+function regFilter(){
+ return state.models.filter(m=>{
+  if(regState.cat==="arch"){if(!m.arsiv)return false;}
+  else if(regState.cat==="all"){if(m.arsiv)return false;}
+  else if(regState.cat.startsWith("area:")){if(m.area!==regState.cat.slice(5)||m.arsiv)return false;}
+  if(regState.statu&&m.statu!==regState.statu)return false;
+  if(regState.lc&&m.lifecyclePhase!==regState.lc)return false;
+  if(regState.tipi&&m.modelTipi!==regState.tipi)return false;
+  if(regState.tier&&m.tier!==regState.tier)return false;
+  if(regState.q){const q=regState.q.toLowerCase();if(!((m.code+" "+m.ad+" "+m.id+" "+(m.department||"")+" "+(m.demand||"")+" "+(m.projeId||"")+" "+(m.area||"")).toLowerCase().includes(q)))return false;}
   return true;
  });
- const el=document.getElementById("envtable");
- if(!rows.length){el.innerHTML=`<div class="card empty">Kriterlere uyan model yok.</div>`;return;}
- const rowHtml=m=>{const nv=nextVal(m),o=overdue(nv);const iz=m.izlemeDurumu||"Normal";return `<tr onclick="modelDetail('${m.id}')">
-   <td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}${m.aiml?` · <span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""}</div></td>
-   <td><span class="chip ${m.sinif==='ML/AI'?'warn':'info'}" style="padding:0 8px">${esc(m.sinif||"—")}</span></td>
-   <td class="tsub">${(m.kategori||[]).join(", ")}</td>
-   <td>${tierChip(m.tier)}</td>
-   <td>${statusChip(m.durum)}</td>
-   <td>${iz==="Eşik Aşımı"?'<span class="chip crit" style="padding:0 7px">Aşım</span>':'<span class="chip good" style="padding:0 7px">Normal</span>'}</td>
-   <td>${esc(m.sahip||"—")}</td>
-   <td>${nv?`${nv} <span class="chip ${o.c}" style="padding:0 7px">${o.t}</span>`:"—"}</td></tr>`;};
- const head=`<thead><tr><th>Model</th><th>Sınıf</th><th>Kategori</th><th>Tier</th><th>Durum</th><th>İzleme</th><th>Sahip</th><th>Sonraki Validasyon</th></tr></thead>`;
- if(envFilter.group){
-   const units=[...new Set(rows.map(m=>m.sahipBirim))].sort();
-   el.innerHTML=`<div class="tablewrap"><table>${head}<tbody>${units.map(u=>{const ms=rows.filter(m=>m.sahipBirim===u);return `<tr style="background:var(--surface-2);cursor:default"><td colspan="8" style="font-weight:700;color:var(--accent-ink)">${esc(u)} · ${ms.length} model</td></tr>`+ms.map(rowHtml).join("");}).join("")}</tbody></table></div>`;
- } else {
-   el.innerHTML=`<div class="tablewrap"><table>${head}<tbody>${rows.map(rowHtml).join("")}</tbody></table></div>`;
+}
+const LC_ABBR={"İş İhtiyaç ve Gereksinim Analizi":"İş İhtiyaç","Model Geliştirme":"Geliştirme","İmplementasyon":"İmplementasyon","Yayımlaştırma ve Kullanım":"Yayım & Kullanım"};
+function renderRegGrid(){
+ const el=document.getElementById("regGrid");if(!el)return;
+ if(regState.matrix){
+  const M=state.models;const units=[...new Set(M.map(m=>m.area))].sort();
+  el.innerHTML=`<div class="card panel"><h3>Banka Geneli — Area × Model Sınıfı <span class="cnt">satıra tıkla → filtrele</span></h3>
+   <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Area</th>${MODEL_SINIFLARI.map(s=>`<th class="num" style="text-align:center">${s}</th>`).join("")}<th class="num" style="text-align:center">Toplam</th><th style="text-align:center">Aşım</th></tr></thead><tbody>
+   ${units.map(u=>{const ms=M.filter(m=>m.area===u);const br=ms.filter(m=>modelBreaching(m.id)).length;return `<tr data-unit="${esc(u)}" style="cursor:pointer"><td class="tsub">${esc(u)}</td>${MODEL_SINIFLARI.map(s=>{const n=ms.filter(m=>m.sinif===s).length;return `<td class="num" style="text-align:center">${n||'<span style="opacity:.3">·</span>'}</td>`;}).join("")}<td class="num" style="text-align:center"><b>${ms.length}</b></td><td style="text-align:center">${br?`<span class="chip crit" style="padding:0 7px">${br}</span>`:`<span class="chip good" style="padding:0 7px">0</span>`}</td></tr>`;}).join("")}
+   </tbody></table></div></div>`;
+  el.querySelectorAll('tr[data-unit]').forEach(tr=>tr.onclick=()=>{regState.cat="area:"+tr.dataset.unit;regState.matrix=false;render();});
+  return;
  }
+ const rows=regFilter();
+ const per=regState.per,pages=Math.max(1,Math.ceil(rows.length/per));
+ if(regState.page>=pages)regState.page=pages-1;
+ const pg=rows.slice(regState.page*per,regState.page*per+per);
+ if(!rows.length){el.innerHTML=`<div class="card empty">Kriterlere uyan kayıt yok.</div>`;return;}
+ const row=m=>{const br=modelBreaching(m.id);return `<tr onclick="modelDetail('${m.id}')">
+   <td class="mono">${esc(m.code)}</td>
+   <td><div class="tname">${esc(m.ad)}${m.aiml?` <span class="chip ai" style="padding:0 6px">${m.genai?"GenAI":"AI/ML"}</span>`:""}</div><div class="id" style="white-space:normal;max-width:280px">${esc((m.description||"").slice(0,72))}${(m.description||"").length>72?"…":""}</div></td>
+   <td class="mono tsub">${esc(m.version)}</td>
+   <td><span class="chip info" style="padding:0 8px" title="${esc(m.lifecyclePhase)}">${esc(LC_ABBR[m.lifecyclePhase]||m.lifecyclePhase)}</span></td>
+   <td>${statuChip(m.statu)}</td>
+   <td><span class="chip ${m.modelTipi==='İLERİ ANALİTİK MODEL'?'warn':'muted'}" style="padding:0 8px">${m.modelTipi==='İLERİ ANALİTİK MODEL'?'İLERİ ANALİTİK':'BASİT'}</span></td>
+   <td>${tierChip(m.tier)}</td>
+   <td class="tsub">${esc(m.department||"—")}</td>
+   <td class="tsub" style="max-width:150px">${esc((m.area||"—").slice(0,26))}</td>
+   <td class="mono tsub">${esc(m.demand||"—")}</td>
+   <td class="mono tsub">${esc(m.projeId||"—")}</td>
+   <td class="tsub">${esc(m.modelUpdate||"—")}${br?' <span class="chip crit" style="padding:0 6px">aşım</span>':""}</td></tr>`;};
+ const head=`<thead><tr><th>Code</th><th>Model Adı / Description</th><th>Version</th><th>Lifecycle</th><th>Statü</th><th>Model Tipi</th><th>Sınıf</th><th>Modeli Geliştiren</th><th>Area Model</th><th>Demand</th><th>ID Progetto</th><th>Güncelleme</th></tr></thead>`;
+ el.innerHTML=`<div class="tablewrap reg-grid"><table>${head}<tbody>${pg.map(row).join("")}</tbody></table></div>
+  <div class="reg-pager"><span class="tsub">${rows.length} kayıt · sayfa ${regState.page+1}/${pages}</span><div class="sp"></div>
+   <button class="tbtn ghost" id="pgPrev" ${regState.page===0?"disabled":""}>‹ Önceki</button>
+   <button class="tbtn ghost" id="pgNext" ${regState.page>=pages-1?"disabled":""}>Sonraki ›</button></div>`;
+ const pv=document.getElementById("pgPrev"),nx=document.getElementById("pgNext");
+ if(pv)pv.onclick=()=>{if(regState.page>0){regState.page--;renderRegGrid();}};
+ if(nx)nx.onclick=()=>{if(regState.page<pages-1){regState.page++;renderRegGrid();}};
 }
 
 /* ============ MODEL DETAIL ============ */
@@ -1907,6 +1989,7 @@ window.enterApp=function(portal){
 (function init(){
  const th=localStorage.getItem("mrm_theme");if(th)applyTheme(th);
  if(!load())seed();
+ pmjEnrichAll();
  refreshMonitorStatus();
  window.activeRole=localStorage.getItem("pmj_role")||"Model Owner";
  window.addEventListener("hashchange",()=>{const h=location.hash.replace("#","");if(SUB2MOD[h]&&h!==current){current=h;if(!document.getElementById("app").hidden)render();}});
