@@ -196,6 +196,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .hb-logo{display:flex;align-items:center;gap:2px;font-weight:800;font-size:17px;letter-spacing:-.4px;line-height:1}
 .hb-logo .hb-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#e2001a,#b0001a);display:grid;place-items:center;color:#fff;font-size:15px;font-weight:900;flex:none;margin-right:7px}
 .hb-logo .hb-w1{color:#004a93}.hb-logo .hb-w2{color:#e2001a}
+.hb-logo img{background:#fff;padding:4px 9px;border-radius:9px;box-shadow:0 1px 4px #0002}
 :root[data-theme="dark"] .hb-logo .hb-w1{color:#6ea8e6}
 .user-chip{display:flex;align-items:center;gap:9px;padding:4px 10px 4px 4px;background:var(--surface);border:1px solid var(--line);border-radius:24px}
 .user-chip .u-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#004a93,#0a63b8);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
@@ -223,6 +224,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
       <select id="roleSel" title="Aktif rol — üç savunma hattı" style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;color:var(--ink);max-width:220px"></select>
       <button class="tbtn ghost" id="themeBtn" title="Tema">◐ Tema</button>
       <button class="tbtn" id="seedBtn" title="Örnek veriyi yükle">↺ Örnek Veri</button>
+      <button class="tbtn" id="xlsxBtn" title="Tüm çıktıları Excel çalışma kitabı (10 sheet) olarak indir">📊 XLSX Rapor</button>
       <div class="user-chip"><span class="u-av">UÖB</span><div class="u-tx"><b>Umut Okan Başbay</b><span>Model Risk · Turkish Branch</span></div></div>
     </header>
     <div class="ro-note" style="align-items:center;gap:8px;background:var(--warn-bg);color:var(--warn);padding:8px 22px;font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line)">🔒 3. Hat – İç Denetim: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim.</div>
@@ -430,9 +432,10 @@ const METRIC_FRAMEWORKS={
  aml_fraud:{lab:"AML / Suistimal",metrics:["Precision","Recall","PSI"]},
  genai:{lab:"GenAI",metrics:["Halusinasyon","Toksisite","Faithfulness"]}};
 const METRIC_BASE={PSI:0.06,CSI:0.07,AUC:0.82,Gini:0.55,KS:0.42,F1:0.74,Precision:0.80,Recall:0.76,RMSE:0.09,MAE:0.07,R2:0.80,MAPE:0.09,DW:2.0,VaRexc:2,HHI:0.12,Halusinasyon:0.08,Toksisite:0.03,Faithfulness:0.92};
+function last6Months(){const out=[];const now=new Date();for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01");}return out;}
 function genSeedMetrics(){
  state.metrics=[];let id=0;
- const months=["2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
+ const months=last6Months(); // Y3: sabit ay yerine bugüne göre son 6 ay
  state.models.forEach(m=>{const fw=METRIC_FRAMEWORKS[m.metricProfile];if(!fw)return;
    fw.metrics.forEach(t=>{const d=METRIC_DEF[t];const base=METRIC_BASE[t];
      for(let i=0;i<months.length;i++){
@@ -448,7 +451,7 @@ function genSeedMetrics(){
 /* Tek modele performans metrik serisi üret (yeni giriş → izleme/dashboard'ları besler) */
 function genMetricsForModel(m){
  const fw=METRIC_FRAMEWORKS[m.metricProfile];if(!fw)return;
- const months=["2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
+ const months=last6Months(); // Y3: sabit ay yerine bugüne göre son 6 ay
  state.metrics=state.metrics||[];
  (state.metrics=state.metrics.filter(x=>x.modelId!==m.id));
  let maxId=0;state.metrics.forEach(x=>{const mm=(x.id||"").match(/(\d+)/);if(mm)maxId=Math.max(maxId,+mm[1]);});
@@ -510,8 +513,10 @@ const WF_STAGES=[{id:"mrm",label:"MRM Programı İncelemesi",role:"2. Hat – MR
 function wfStageIndex(id){return WF_STAGES.findIndex(s=>s.id===id);}
 function wfPending(m){return m.wf&&m.wf!=="aktif"&&m.wf!=="red";}
 function wfLabel(wf){if(wf==="aktif")return "Onaylı — Aktif";if(wf==="red")return "Reddedildi";const s=WF_STAGES.find(x=>x.id===wf);return s?s.label+" bekliyor":"—";}
-window.wfApprove=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const idx=wfStageIndex(m.wf);const stage=WF_STAGES[idx];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü onaylayabilir (görevler ayrılığı).");return;}const next=WF_STAGES[idx+1];m.wf=next?next.id:"aktif";logAudit("Onay akışı — "+stage.label+" ONAY","MDL "+id,m.ad+" → "+(m.wf==="aktif"?"Aktif (envanterde onaylı)":wfLabel(m.wf)));save();closeDrawer();render();};
-window.wfReject=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const stage=WF_STAGES[wfStageIndex(m.wf)];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü işleyebilir.");return;}m.wf="red";logAudit("Onay akışı — REDDEDİLDİ","MDL "+id,m.ad+" ("+stage.label+")");save();closeDrawer();render();};
+window.wfApprove=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const idx=wfStageIndex(m.wf);const stage=WF_STAGES[idx];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü onaylayabilir (görevler ayrılığı).");return;}const next=WF_STAGES[idx+1];m.wf=next?next.id:"aktif";
+ if(m.wf==="aktif"){m.durum=m.durumTalep||(m.durum==="Onayda"?"İzlemede":m.durum);} // Y1: onay tamamlanınca talep edilen duruma geç
+ logAudit("Onay akışı — "+stage.label+" ONAY","MDL "+id,m.ad+" → "+(m.wf==="aktif"?"Aktif ("+m.durum+")":wfLabel(m.wf)));save();closeDrawer();render();};
+window.wfReject=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const stage=WF_STAGES[wfStageIndex(m.wf)];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü işleyebilir.");return;}m.wf="red";m.durum="Taslak";logAudit("Onay akışı — REDDEDİLDİ","MDL "+id,m.ad+" ("+stage.label+")");save();closeDrawer();render();};
 window.wfReset=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;m.wf="mrm";logAudit("Onay akışı — yeniden başlatıldı","MDL "+id,m.ad);save();closeDrawer();render();};
 function wfBlock(m){
  if(!m.wf)return "";
@@ -670,6 +675,7 @@ function viewEnvanter(v){
   <select id="f-tier"><option value="">Tüm Tier</option>${["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"].map(t=>`<option ${envFilter.tier===t?"selected":""}>${t}</option>`).join("")}</select>
   <select id="f-durum"><option value="">Tüm Durum</option>${durums.map(t=>`<option ${envFilter.durum===t?"selected":""}>${t}</option>`).join("")}</select>
   <select id="f-unit"><option value="">Tüm Birim</option>${units.map(t=>`<option value="${esc(t)}" ${envFilter.unit===t?"selected":""}>${esc(t.length>30?t.slice(0,29)+"…":t)}</option>`).join("")}</select>
+  <select id="f-kaynak"><option value="">Tüm Kaynak</option>${["Seed/Sistem","İş Birimi Beyanı","CSV İçe Aktarım"].map(t=>`<option ${envFilter.kaynak===t?"selected":""}>${t}</option>`).join("")}</select>
   <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="f-group" ${envFilter.group?"checked":""}> Birime göre grupla</label>
   <div class="sp"></div>
   <button class="tbtn" id="expCsv" title="Envanteri CSV/Excel olarak indir">⭳ CSV</button>
@@ -679,8 +685,8 @@ function viewEnvanter(v){
   <button class="tbtn primary" id="newModel">+ Yeni Model</button>
  </div>
  <div id="envtable"></div>`;
- const upd=()=>{envFilter={q:val("f-q"),sinif:val("f-sinif"),tier:val("f-tier"),tip:envFilter.tip,durum:val("f-durum"),unit:val("f-unit"),group:document.getElementById("f-group").checked};renderEnvTable();};
- ["f-q","f-sinif","f-tier","f-durum","f-unit"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
+ const upd=()=>{envFilter={q:val("f-q"),sinif:val("f-sinif"),tier:val("f-tier"),tip:envFilter.tip,durum:val("f-durum"),unit:val("f-unit"),kaynak:val("f-kaynak"),group:document.getElementById("f-group").checked};renderEnvTable();};
+ ["f-q","f-sinif","f-tier","f-durum","f-unit","f-kaynak"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
  document.getElementById("f-group").onchange=upd;
  document.getElementById("newModel").onclick=()=>modelForm(null);
  document.getElementById("newBeyan").onclick=()=>beyanForm();
@@ -697,6 +703,7 @@ function renderEnvTable(){
   if(envFilter.sinif&&m.sinif!==envFilter.sinif)return false;
   if(envFilter.durum&&m.durum!==envFilter.durum)return false;
   if(envFilter.unit&&m.sahipBirim!==envFilter.unit)return false;
+  if(envFilter.kaynak){const k=m.kaynak||"Seed/Sistem";if(k!==envFilter.kaynak)return false;}
   if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.sahip||"")+(m.kategori||[]).join()+(m.sinif||"")).toLowerCase().includes(q)))return false;}
   return true;
  });
@@ -903,11 +910,15 @@ window.saveModel=function(id){
  });
  obj.crit=Object.assign({},obj.crit,{duzenleyici:obj.duzenleyici,genai:obj.genai});
  const s=scoreCrit(obj.crit);Object.assign(obj,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
+ if(!id){ // H4: yeni model de onay akışına girer (Beyan → MRM → Komite); onaylanana dek "Onayda"
+  obj.wf="mrm";obj.durumTalep=obj.durum;obj.durum="Onayda";
+  state.validations.push({id:uid("VAL-"),baslik:obj.ad+" — İlk Validasyon",modelId:obj.id,tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",durum:"Planlandı"});
+ }
  if(id){const i=state.models.findIndex(x=>x.id===id);state.models[i]=obj;}else state.models.push(obj);
- logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier);
+ logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier+(id?"":" · onay akışına gönderildi"));
  save();closeDrawer();render();
 };
-window.delModel=function(id){if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
+window.delModel=function(id){if(!roleGuard("Model sil"))return;if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
 
 /* ============ CSV İÇE/DIŞA AKTARMA (Archer: Data Import/Feed + export) ============ */
 const KRIT_PRESET={"Düşük":2,"Orta":3,"Yüksek":4,"Kritik":5};
@@ -938,7 +949,8 @@ window.importInventoryCsv=function(file){
    const aiml=/evet|yes|^e$|^1$/i.test(((row[iAi]||"")+"").trim())||sinif==="ML/AI";
    const lvlRaw=((row[iKrit]||"Orta")+"").trim();const lvl=KRIT_PRESET[lvlRaw]?lvlRaw:"Orta";
    const crit=critFromLevel(lvl,duz,aiml);const s=scoreCrit(crit);
-   const m={id:uid("MDL-"),ad,sahipBirim:((row[iBirim]||"—")+"").trim()||"—",sinif,modelTipi:((row[iTip]||"")+"").trim()||modelTipiOf({aiml,sinif}),kategori:[((row[iKat]||"Diğer")+"").split(";")[0].trim()||"Diğer"],durum:((row[iDurum]||"İzlemede")+"").trim()||"İzlemede",metricProfile:mp,aiml,genai:false,duzenleyici:duz,tip:aiml?"AI/ML":"İstatistiksel",amac:"CSV içe aktarım",sahip:"CSV İçe Aktarım",gelistirici:"—",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",metodoloji:"—",barindiran:"—",sonValidasyon:((row[iSv]||"")+"").trim(),valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"CSV İçe Aktarım",crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};
+   const durumCsv=((row[iDurum]||"İzlemede")+"").trim()||"İzlemede";
+   const m={id:uid("MDL-"),ad,sahipBirim:((row[iBirim]||"—")+"").trim()||"—",sinif,modelTipi:((row[iTip]||"")+"").trim()||modelTipiOf({aiml,sinif}),kategori:[((row[iKat]||"Diğer")+"").split(";")[0].trim()||"Diğer"],durum:"Onayda",durumTalep:durumCsv,wf:"mrm",metricProfile:mp,aiml,genai:false,duzenleyici:duz,tip:aiml?"AI/ML":"İstatistiksel",amac:"CSV içe aktarım",sahip:"CSV İçe Aktarım",gelistirici:"—",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",metodoloji:"—",barindiran:"—",sonValidasyon:((row[iSv]||"")+"").trim(),valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"CSV İçe Aktarım",crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};
    state.models.push(m);genMetricsForModel(m);added++;
   }
   logAudit("CSV içe aktarım","envanter",added+" model");save();render();
@@ -1053,6 +1065,9 @@ window.beyanToggleAdv=function(){const el=document.getElementById("beyanAdv");co
 /* FLS / rol kısıtı: yazma yetkisi (Archer Access Roles) */
 function canWrite(){return !window.activeRole||PERMS["Yeni/Düzenle model"].includes(window.activeRole);}
 function guardWrite(){if(!canWrite()){alert("Bu işlem için yetkiniz yok. Aktif rol: "+(window.activeRole||"—")+". Model oluşturma/düzenleme yalnız 1. hat (Sahip/Geliştirici) ve 2. hat (MRM Programı) rollerindedir (Archer Access Roles/FLS).");return false;}return true;}
+/* H2/H3: silme/yazma işlemleri PERMS matrisiyle zorlanır (Archer record permission) */
+function roleGuard(perm){const need=PERMS[perm];if(window.activeRole&&need&&!need.includes(window.activeRole)){alert("Yetkisiz işlem: \""+perm+"\" yalnız şu rollerde: "+need.join(", ")+".\nAktif rol: "+window.activeRole+" (Archer record permission / FLS).");return false;}return true;}
+function roGuard(){if(window.activeRole==="3. Hat – İç Denetim"){alert("3. Hat – İç Denetim salt-okur roldür; oluşturma/düzenleme/silme yapamaz.");return false;}return true;}
 window.saveBeyan=function(){
  if(!guardWrite())return;
  const gb=n=>{const e=document.querySelector(`[data-b="${n}"]`);return e?e.value:"";};
@@ -1062,10 +1077,12 @@ window.saveBeyan=function(){
  for(const r of req){if(!gb(r[0])){alert(r[1]+" seçilmelidir.");return;}}
  const num=n=>{const v=gb(n);return v===""?0:+v;};
  const crit={M1:num("M1"),M2:num("M2"),M3:num("M3"),M4:num("M4"),M5:num("M5"),K1:num("K1"),K2:num("K2"),K3:num("K3"),K4:num("K4"),K5:num("K5"),K6:num("K6"),K7:num("K7"),O1:num("O1"),B1:num("B1"),duzenleyici:gb("duzenleyici")==="Evet",genai:gb("genai")==="Evet"};
- // Basit mod: ayrıntılı M/K girilmemişse "Genel Kritiklik Düzeyi" presetini uygula
+ // Basit mod: ayrıntılı M/K girilmemişse "Genel Kritiklik Düzeyi" presetini uygula.
+ // H1 düzeltmesi: hiçbir kritiklik bilgisi verilmezse MUHAFAZAKÂR varsayılan "Orta" uygulanır —
+ // bilgi vermeyen beyan asla "İhmal Edilebilir" sınıfına düşemez (SR 11-7 muhafazakârlık ilkesi).
  const mkSum=["M1","M2","M3","M4","M5","K1","K2","K3","K4","K5","K6","K7"].reduce((s,k)=>s+(crit[k]||0),0);
  const gk=gb("genelKrit");
- if(mkSum===0&&KRIT_PRESET[gk]){const p=critFromLevel(gk,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
+ if(mkSum===0){const lvl=KRIT_PRESET[gk]?gk:"Orta";const p=critFromLevel(lvl,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
  const bddk=gb("bddkKapsam")==="Evet";if(bddk)crit.duzenleyici=true;
  if((gb("etki")||"").startsWith("Doğrudan"))crit.O1=Math.max(crit.O1,3);
  const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama")};
@@ -1078,17 +1095,19 @@ window.saveBeyan=function(){
   sinif:gb("sinif"),modelTipi:gb("modelTipi"),kategori:[gb("kategori")],amac:gb("amac"),metodoloji:gb("metodoloji"),
   metricProfile:gb("metricProfile"),lifecyclePhase:gb("lifecyclePhase")||"",aiml,genai:gb("genai")==="Evet",
   deterministik:gb("metodoloji")==="Kural Tabanlı / Deterministik",duzenleyici:crit.duzenleyici,
-  sahipBirim:gb("unit"),sahip:"İş Birimi Beyanı",gelistirici:envanter.gelistiriciAd||(gb("koken")==="Satıcı/Vendor"?"Satıcı/Vendor":"İş Birimi"),
+  sahipBirim:gb("unit"),sahip:envanter.iletisimKisi||"İş Birimi Beyanı",gelistirici:envanter.gelistiriciAd||(gb("koken")==="Satıcı/Vendor"?"Satıcı/Vendor":"İş Birimi"),
   validator:"Bağımsız Validasyon Birimi",koken:gb("koken")||"İç Geliştirme",barindiran:envanter.platform||"—",algoritma:envanter.algoritma||gb("metodoloji"),
-  durum:gb("durum"),gelistirmeTarihi:gf("gtarih")||"",prodTarihi:"",sonValidasyon:sv,valFrekans,
+  durum:"Onayda",durumTalep:gb("durum"),gelistirmeTarihi:gf("gtarih")||"",prodTarihi:"",sonValidasyon:sv,valFrekans,
   izlemeDurumu:"Normal",upstream:[],links:(envanter.dokuman==="Evet"?{doc:"#/model-dok/beyan"}:{}),kaynak:"İş Birimi Beyanı",wf:"mrm",crit,envanter,amacDetay:envanter.amacDetay,
   mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece
  };
  state.models.push(m);
  genMetricsForModel(m);
+ // E4: yeni model → otomatik "İlk Validasyon" kaydı (SR 11-7: her yeni model ilk validasyona tabidir)
+ state.validations.push({id:uid("VAL-"),baslik:ad+" — İlk Validasyon",modelId:m.id,tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",durum:"Planlandı"});
  logAudit("İş birimi model beyanı","MDL "+m.id,esc(ad)+" · "+m.sahipBirim+" · "+m.tier);
  save();closeDrawer();
- alert(`Beyan kaydedildi: “${ad}”\nRisk Sınıfı: ${sinifOf(m).l} (${m.tier}) · İçsel risk ${m.icsel}\nPerformans metrikleri üretildi; izleme, dashboard ve ısı haritası güncellendi.`);
+ alert(`Beyan kaydedildi: “${ad}”\nRisk Sınıfı: ${sinifOf(m).l} (${m.tier}) · İçsel risk ${m.icsel}\nOnay akışına gönderildi (MRM Programı → Model Risk Komitesi) — onaylanana dek durum "Onayda".\nİlk Validasyon kaydı açıldı; performans metrikleri üretildi; tüm panolar güncellendi.`);
  render();
 };
 
@@ -1236,6 +1255,7 @@ window.valForm=function(id){
  if(window.activeRole&&!(window.activeRole==="2. Hat – Bağımsız Validasyon"||window.activeRole==="Model Risk Komitesi")){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi yalnız bağımsız validasyon rolünde düzenlenebilir";}});}
 };
 window.saveVal=function(id){
+ if(!roGuard())return;
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const baslik=g("baslik");if(!baslik){alert("Başlık zorunludur.");return;}
  const obj=Object.assign(id?state.validations.find(x=>x.id===id):{},{
@@ -1251,7 +1271,7 @@ window.saveVal=function(id){
  logAudit(id?"Validasyon güncelle":"Validasyon oluştur","VAL "+obj.id,"Öneri: "+(obj.oneri||"—")+" · Onay: "+(obj.onayKarar||"—"));
  save();closeDrawer();render();
 };
-window.delVal=function(id){if(!confirm("Validasyon kaydı silinsin mi?"))return;state.validations=state.validations.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delVal=function(id){if(!roGuard())return;if(!confirm("Validasyon kaydı silinsin mi?"))return;state.validations=state.validations.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ BULGULAR ============ */
 const SLA_DAYS={"Yüksek":30,"Orta":60,"Düşük":90};
@@ -1327,6 +1347,7 @@ window.findForm=function(id){
    <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delFind('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveFind('${id||""}')">Kaydet</button></div>`);
 };
 window.saveFind=function(id){
+ if(!roleGuard("Bulgu / remediation"))return;
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const baslik=g("baslik");if(!baslik){alert("Başlık zorunludur.");return;}
  const onem=g("onem");const olusturma=g("olusturma")||todayStr();
@@ -1341,7 +1362,7 @@ window.saveFind=function(id){
  save();closeDrawer();render();
 };
 window.findClose=function(id){const f=state.findings.find(x=>x.id===id);if(!f)return;if(window.activeRole&&!REM_CLOSE_ROLES.includes(window.activeRole)){alert("Kapanış onayı yalnız 2. hat (Bağımsız Validasyon / MRM Programı) rolündedir.");return;}f.durum="Kapandı";f.kapanisOnay=window.activeRole||"2. Hat";f.kapanisTarih=todayStr();logAudit("Bulgu kapanış onayı","FND "+id,esc(f.baslik));save();closeDrawer();render();};
-window.delFind=function(id){if(!confirm("Bulgu silinsin mi?"))return;state.findings=state.findings.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delFind=function(id){if(!roleGuard("Bulgu / remediation"))return;if(!confirm("Bulgu silinsin mi?"))return;state.findings=state.findings.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ GEREKLILIK MATRISI ============ */
 const REQS=[
@@ -1395,10 +1416,10 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
-    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 11-7)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 11-7)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi","Toplam Model Riski Endeksi & risk iştahı eşikleri (board göstergesi)","Çok kullanıcılı onay akışı (Beyan → MRM Programı → Komite; görevler ayrılığı)","İş birimi model beyanı — dropdown anket + resmi Halkbank envanter alanları (23 alan)","TFRS9 BKZ overlay yönetişimi (etki/aşama/senaryo + komite onayı)","Bulgu remediation yaşam döngüsü (aksiyon → kanıt → re-test → 2. hat kapanış onayı)","Risk-bazlı validasyon planı: 12 aylık takvim + validatör kapasitesi","BDDK / İSEDES kanıt paketi (İSEDES-model bağı, CSV/PDF)","Vendor & GenAI güvence: 3. taraf durum tespiti + guardrail/red-team logu","CSV içe/dışa aktarma + XLSX raporu (10 sheet Excel çalışma kitabı)","E-posta bildirim kuralları — Archer Notifications (yazılım talebi + giden kutusu simülasyonu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Sıradaki geliştirmeler</h3><div class="list">
-    ${["Çok kullanıcılı kalıcı sunucu ve gerçek Archer REST bağlantısı","Otomatik model dokümanı / board raporu (PDF) üretimi","Senaryo & stres testi modülü","Model riski KRI trend ve tahmin analitiği","Bildirim/eskalasyon motoru (e-posta/görev)"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Çok kullanıcılı kalıcı sunucu ve gerçek Archer REST bağlantısı","Otomatik model dokümanı üretimi","Senaryo & stres testi modülü","Model riski KRI trend ve tahmin analitiği","10-fazlı PMJ Model Journey yaşam döngüsünün /mrm içine tam entegrasyonu"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
   </div>
   <div class="card panel" style="margin-top:14px"><h3>Veri Yönetimi & Rol (Üç Savunma Hattı)</h3>
@@ -1710,6 +1731,7 @@ window.chgForm=function(id){
    <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delChg('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveChg('${id||""}')">Kaydet</button></div>`);
 };
 window.saveChg=function(id){
+ if(!roGuard())return;
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const obj=Object.assign(id?(state.changes.find(x=>x.id===id)):{},{
    id:id||uid("CHG-"),modelId:g("modelId"),versiyon:g("versiyon"),tur:g("tur"),aciklama:g("aciklama"),
@@ -1726,7 +1748,7 @@ window.saveChg=function(id){
  }
  save();closeDrawer();render();if(msg)setTimeout(()=>alert(msg),50);
 };
-window.delChg=function(id){if(!confirm("Değişiklik kaydı silinsin mi?"))return;state.changes=state.changes.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delChg=function(id){if(!roGuard())return;if(!confirm("Değişiklik kaydı silinsin mi?"))return;state.changes=state.changes.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ PMA / ISTISNA ============ */
 /* ============ VALIDASYON PLANI / TAKVIM (risk-bazlı) ============ */
@@ -1736,7 +1758,7 @@ function viewValplan(v){
  const M=state.models.slice();
  const rows=M.map(m=>({m,next:nextVal(m),o:overdue(nextVal(m))}));
  const planned=rows.filter(x=>x.next);
- const unplanned=rows.filter(x=>!x.next);
+ const unplanned=rows.filter(x=>!x.next&&(x.m.valFrekans||tierFreq(x.m.tier))!=="Olay-Tetikli"); // Y2: olay-tetikli takvim gerektirmez
  const overdueR=planned.filter(x=>x.o.c==="crit").sort((a,b)=>new Date(a.next)-new Date(b.next));
  const soonR=planned.filter(x=>x.o.c==="warn").sort((a,b)=>new Date(a.next)-new Date(b.next));
  // 12 aylık takvim
@@ -1752,7 +1774,7 @@ function viewValplan(v){
    ${kpi("Gecikmiş",overdueR.length,"Hemen planla","crit")}
    ${kpi("Yaklaşan (45 gün)",soonR.length,"Öncelik ver","warn")}
    ${kpi("12 Ay İçinde",planned.filter(x=>months.includes(monthKey(x.next))).length,"Plan kapsamı","info")}
-   ${kpi("Planlanmamış",unplanned.length,"Son validasyon/frekans eksik","warn")}
+   ${kpi("Planlanmamış",unplanned.length,"Frekans gerektirip planı olmayan","warn")}
   </div>
   <div class="card panel">
    <h3>12 Aylık Validasyon Takvimi <span class="cnt">aya tıkla → modeller</span></h3>
@@ -1820,7 +1842,7 @@ window.vendorForm=function(id){const m=state.models.find(x=>x.id===id);if(!m)ret
   <div class="callout" style="margin-top:10px">EBA outsourcing & SR 11-7: vendor modeller iç modellerle aynı MRM standardına tabidir; kara-kutu erişim kısıtı validasyon yaklaşımını belirler, çıkış stratejisi zorunludur.</div>
   <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVendor('${id}')">Kaydet</button></div>`);
 };
-window.saveVendor=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(g("tedarikci"))m.tedarikci=g("tedarikci");m.vendor={tedarikci:g("tedarikci"),kutuTipi:g("kutuTipi"),sla:g("sla"),cikisStrateji:g("cikisStrateji"),kutuKisit:g("kutuKisit"),dueDiligence:g("dueDiligence"),sonGozden:g("sonGozden")};logAudit("Vendor yönetişim güncelle","MDL "+id,m.ad+" · "+g("dueDiligence"));save();closeDrawer();render();};
+window.saveVendor=function(id){if(!guardWrite())return;const m=state.models.find(x=>x.id===id);if(!m)return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(g("tedarikci"))m.tedarikci=g("tedarikci");m.vendor={tedarikci:g("tedarikci"),kutuTipi:g("kutuTipi"),sla:g("sla"),cikisStrateji:g("cikisStrateji"),kutuKisit:g("kutuKisit"),dueDiligence:g("dueDiligence"),sonGozden:g("sonGozden")};logAudit("Vendor yönetişim güncelle","MDL "+id,m.ad+" · "+g("dueDiligence"));save();closeDrawer();render();};
 window.grdForm=function(id){const g=id?JSON.parse(JSON.stringify((state.guardrails||[]).find(x=>x.id===id))):{sonuc:"Geçti",siddet:"—",tarih:todayStr()};
  openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Guardrail / Red-Team Testi":"Yeni Test Kaydı"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
   <div class="form-grid">
@@ -1834,10 +1856,10 @@ window.grdForm=function(id){const g=id?JSON.parse(JSON.stringify((state.guardrai
   <div class="callout" style="margin-top:10px">Sonuç "Kaldı" ise otomatik bir bulgu (Yüksek/Orta) açmak için Kaydet sonrası "Bulgu üret" önerilir.</div>
   <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delGrd('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveGrd('${id||""}')">Kaydet</button></div>`);
 };
-window.saveGrd=function(id){const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(!g("modelId")){alert("GenAI model seçilmeli.");return;}const obj={id:id||uid("GRD-"),modelId:g("modelId"),tur:g("tur"),tarih:g("tarih")||todayStr(),sonuc:g("sonuc"),siddet:g("siddet"),detay:g("detay")};if(id){const i=state.guardrails.findIndex(x=>x.id===id);state.guardrails[i]=obj;}else state.guardrails.push(obj);
+window.saveGrd=function(id){if(!guardWrite())return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(!g("modelId")){alert("GenAI model seçilmeli.");return;}const obj={id:id||uid("GRD-"),modelId:g("modelId"),tur:g("tur"),tarih:g("tarih")||todayStr(),sonuc:g("sonuc"),siddet:g("siddet"),detay:g("detay")};if(id){const i=state.guardrails.findIndex(x=>x.id===id);state.guardrails[i]=obj;}else state.guardrails.push(obj);
  if(obj.sonuc==="Kaldı"){const m=state.models.find(x=>x.id===obj.modelId);const title="[Guardrail] "+obj.tur+" başarısız";if(!state.findings.some(f=>f.modelId===obj.modelId&&f.baslik===title)){const onem=obj.siddet==="Yüksek"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:obj.modelId,baslik:title,kaynak:"AI/ML Değerlendirme",onem,durum:"Açık",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem]),aksiyon:"",kanit:""});}}
  logAudit(id?"Guardrail testi güncelle":"Guardrail testi kaydı","GRD "+obj.id,obj.tur+" · "+obj.sonuc);save();closeDrawer();render();};
-window.delGrd=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.guardrails=state.guardrails.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delGrd=function(id){if(!guardWrite())return;if(!confirm("Kayıt silinsin mi?"))return;state.guardrails=state.guardrails.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ BDDK / İSEDES KANIT PAKETİ (Archer: cross-reference + reporting) ============ */
 const ISEDES_MAP={"Kredi/IRB":"Kredi Riski (1. Yapısal Blok)","TFRS9 BKZ":"Kredi Riski / Karşılık","Piyasa/VaR":"Piyasa Riski (1. Yapısal Blok)","Karşı Taraf/CVA":"Karşı Taraf Kredi Riski","ALM/IRRBB":"IRRBB (2. Yapısal Blok)","İSEDES Sermaye":"İSEDES/ICAAP — Sermaye Planlaması","Operasyonel/AMA":"Operasyonel Risk"};
@@ -1927,6 +1949,7 @@ window.pmaForm=function(id){
    <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delPma('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="savePma('${id||""}')">Kaydet</button></div>`);
 };
 window.savePma=function(id){
+ if(!roGuard())return;
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const prev=id?(state.pmas||[]).find(x=>x.id===id):null;
  const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),yon:g("yon"),etkiTutar:g("etkiTutar"),tfrs9Asama:g("tfrs9Asama"),senaryo:g("senaryo"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozdenDurum:g("bagimsizGozdenDurum"),durum:g("durum"),onayDurum:prev?prev.onayDurum:"Onay Bekliyor"};
@@ -1936,7 +1959,7 @@ window.savePma=function(id){
  save();closeDrawer();render();
 };
 window.pmaApprove=function(id,karar){if(!id){alert("Önce kaydı oluşturun (Kaydet), sonra onaylayın.");return;}const p=(state.pmas||[]).find(x=>x.id===id);if(!p)return;if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){alert("Overlay onayı yalnız 'Model Risk Komitesi' rolündedir.");return;}p.onayDurum=karar;if(karar==="Reddedildi")p.durum="Beklemede";logAudit("Overlay onay kararı — "+karar,"PMA "+id,(p.tur||"")+" · "+(p.materyalite||""));save();closeDrawer();render();};
-window.delPma=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
+window.delPma=function(id){if(!roleGuard("PMA/istisna onayı"))return;if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ YASAM DONGUSU / IS AKISI ============ */
 const LC_ORDER=["Taslak","Geliştirme","Validasyonda","Onayda","Onaylı/Prod","İzlemede","Revalidasyonda","Koşullu Onaylı","Kısıtlı/Askıda","Emekli"];
@@ -2120,7 +2143,7 @@ function viewDenetim(v){
    ${A.slice(0,200).map(a=>`<tr style="cursor:default"><td class="tsub" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtTs(a.ts)}</td><td class="tsub">${esc(a.role)}</td><td>${esc(a.action)}</td><td class="id">${esc(a.entity)}</td><td class="tsub" style="white-space:normal">${esc(a.detail)}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Henüz işlem kaydı yok. Bir model oluşturun, validasyon onaylayın ya da yaşam döngüsü geçişi yapın.</div></td></tr>`}
   </tbody></table></div>`;
 }
-window.clearAudit=function(){if(!confirm("Denetim izi temizlensin mi?"))return;state.audit=[];save();render();};
+window.clearAudit=function(){if(window.activeRole&&window.activeRole!=="2. Hat – MRM Programı"){alert("Denetim izi yalnız 2. Hat – MRM Programı rolünce (test amaçlı) temizlenebilir; üretimde değişmezdir.");return;}if(!confirm("Denetim izi temizlensin mi?"))return;state.audit=[];save();render();};
 
 /* ============ VERI FEED / API (SIMULASYON) ============ */
 function nextMonthISO(ds){const d=ds?new Date(ds):new Date();d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,10);}
@@ -2343,8 +2366,131 @@ function viewBildirim(v){
    ${N.map((x,i)=>`<tr style="cursor:default"><td><span class="chip ${x.sev}">${x.sev==='crit'?'Kritik':x.sev==='warn'?'Uyarı':'Bilgi'}</span></td>
      <td class="tname" style="white-space:normal">${esc(x.rule)}</td><td class="tsub" style="white-space:normal">${esc(x.name)}</td><td class="tsub">${esc(x.target)}</td><td class="tsub" style="white-space:normal">${esc(x.detail)}</td>
      <td>${x.type==="model"?`<button class="tbtn ghost" onclick="notifAct(${i})">Görev oluştur</button>`:x.type==="val"?`<button class="tbtn ghost" onclick="closeDrawer();go('validasyon');setTimeout(()=>valDetail('${x.entity}'),60)">Aç</button>`:`<button class="tbtn ghost" onclick="go('bulgular')">Aç</button>`}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty">Aktif bildirim yok — her şey iştah dahilinde.</div></td></tr>`}
-  </tbody></table></div>`;
+  </tbody></table></div>
+  ${mailPanel(N)}`;
 }
+/* ===== E-POSTA BİLDİRİMLERİ — Archer Notifications (yazılım talebi) ===== */
+const MAIL_RULES=[
+ ["Yaklaşan validasyon (45 gün)","Model Sahibi + Validatör","VAL-REMINDER","Haftalık özet"],
+ ["Gecikmiş validasyon","Sahip + MRM Programı + Komite","VAL-OVERDUE","Günlük"],
+ ["İzleme eşik aşımı (drift/performans)","Model Sahibi + Bağımsız Validasyon","METRIC-BREACH","Anında"],
+ ["Bulgu SLA (14 gün kala / aşım)","Bulgu Sahibi + MRM Programı","FND-SLA","Günlük"],
+ ["Onay bekleyen model / overlay","Onay makamı (MRM / Komite)","APPROVAL-PENDING","Günlük"],
+ ["Guardrail / red-team başarısız","AI Model Sahibi + MRM Programı","GRD-FAIL","Anında"],
+ ["Haftalık MRM yönetim özeti","MRM Programı + Üst Yönetim","WEEKLY-DIGEST","Haftalık (Pzt 08:00)"]];
+function roleMail(t){return (t||"ilgili").toLowerCase().replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"")+"@halkbank.com.tr";}
+function mailOutbox(N){
+ const out=N.map(x=>({to:roleMail(x.target),tpl:x.sev==="crit"?(x.rule.includes("eşik")?"METRIC-BREACH":x.rule.includes("SLA")?"FND-SLA":"VAL-OVERDUE"):x.sev==="warn"?"VAL-REMINDER":"APPROVAL-PENDING",subject:"["+(x.sev==="crit"?"KRİTİK":x.sev==="warn"?"UYARI":"BİLGİ")+"] "+x.rule+" — "+x.name,body:x.detail}));
+ (state.models||[]).filter(m=>wfPending(m)).forEach(m=>out.push({to:roleMail(m.wf==="mrm"?"2. Hat – MRM Programı":"Model Risk Komitesi"),tpl:"APPROVAL-PENDING",subject:"[ONAY] Bekleyen model onayı — "+m.ad,body:wfLabel(m.wf)}));
+ (state.pmas||[]).filter(p=>pmaOnay(p)==="Onay Bekliyor").forEach(p=>out.push({to:roleMail("Model Risk Komitesi"),tpl:"APPROVAL-PENDING",subject:"[ONAY] Overlay/istisna onayı — "+p.id,body:p.tur+" · "+p.materyalite}));
+ (state.guardrails||[]).filter(g=>g.sonuc==="Kaldı").forEach(g=>{const m=state.models.find(x=>x.id===g.modelId);out.push({to:roleMail("2. Hat – MRM Programı"),tpl:"GRD-FAIL",subject:"[KRİTİK] Guardrail başarısız — "+(m?m.ad:g.modelId),body:g.tur+" · "+(g.siddet||"")});});
+ return out;
+}
+function mailPanel(N){
+ const out=mailOutbox(N);
+ return `<div class="card panel" style="margin-top:16px">
+  <h3>E-posta Bildirimleri — Archer Notifications <span class="chip warn" style="margin-left:8px">YAZILIM TALEBİ</span> <span class="cnt">${out.length} bekleyen e-posta</span></h3>
+  <div class="callout">Yazılım Geliştirme'den talep: bu kural seti Archer <b>Notifications</b> modülünde e-posta bildirimi olarak tanımlanacaktır — yaklaşan sorumluluklar (validasyon takvimi), alınan hatalar (eşik aşımı), yazılan bulgular (SLA) ve onay kuyrukları için şablonlu, rol-bazlı, zamanlanmış e-postalar (Advanced Workflow notification + scheduled report/digest). Aşağıdaki giden kutusu mevcut durumdan üretilmiş <b>simülasyondur</b>.</div>
+  <div class="section-h" style="margin-top:10px">Bildirim Kuralları (talep edilen konfigürasyon)</div>
+  <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Tetik</th><th>Alıcı (rol)</th><th>Şablon</th><th>Sıklık</th></tr></thead><tbody>
+   ${MAIL_RULES.map(r=>`<tr style="cursor:default"><td>${esc(r[0])}</td><td class="tsub">${esc(r[1])}</td><td><code class="k">${esc(r[2])}</code></td><td class="tsub">${esc(r[3])}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="section-h">Giden Kutusu (simülasyon — mevcut durumdan üretildi)</div>
+  <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Alıcı</th><th>Şablon</th><th>Konu</th></tr></thead><tbody>
+   ${out.slice(0,12).map(m=>`<tr style="cursor:default"><td class="tsub mono" style="font-size:11.5px">${esc(m.to)}</td><td><code class="k">${esc(m.tpl)}</code></td><td style="white-space:normal;font-size:12px">${esc(m.subject)}</td></tr>`).join("")||`<tr><td colspan="3"><div class="empty">Bekleyen e-posta yok.</div></td></tr>`}
+   ${out.length>12?`<tr><td colspan="3" class="tsub" style="text-align:center">… +${out.length-12} e-posta daha</td></tr>`:""}
+  </tbody></table></div>
+  <div style="display:flex;gap:8px;margin-top:10px"><button class="tbtn primary" onclick="mailDigest()">📧 Günlük Özet E-postası Önizle</button></div>
+ </div>`;
+}
+window.mailDigest=function(){
+ const N=genNotifications();const out=mailOutbox(N);
+ const tmr=totalModelRisk();
+ const lines=["HALKBANK — MRM GÜNLÜK ÖZETİ ("+todayStr()+")","","Toplam Model Riski Endeksi: "+tmr.index+"/100 ("+(tmr.rag==="good"?"iştah dahilinde":tmr.rag==="warn"?"amber":"İŞTAH AŞILDI")+")","Gecikmiş validasyon: "+tmr.overdueV+" · Açık yüksek bulgu: "+tmr.highF+" · Eşik aşımı: "+tmr.breach+" · Onay bekleyen: "+tmr.pend,"","--- BİLDİRİMLER ---",...N.slice(0,15).map(x=>"• ["+x.sev.toUpperCase()+"] "+x.rule+" — "+x.name),"","Bu e-posta Archer Notifications kural motorundan otomatik üretilmiştir."];
+ const body=lines.join("\n");
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">Günlük Özet E-postası (önizleme)</h2><div class="id">WEEKLY/DAILY-DIGEST şablonu · ${out.length} tekil bildirim</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  <div class="callout">Kime: <b>mrm.programi@halkbank.com.tr</b>; CC: ust.yonetim@halkbank.com.tr · Archer scheduled report/digest karşılığı.</div>
+  <pre style="background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:12px;line-height:1.6;white-space:pre-wrap">${esc(body)}</pre>
+  <div style="display:flex;gap:8px"><a class="tbtn primary" style="text-decoration:none" href="mailto:mrm.programi@halkbank.com.tr?subject=${encodeURIComponent("[MRM] Günlük Özet — "+todayStr())}&body=${encodeURIComponent(body.slice(0,1500))}">📧 E-posta istemcisinde aç</a><button class="tbtn" onclick="copyDigest()">Kopyala</button></div>`);
+ logAudit("E-posta özeti önizlendi","bildirim",out.length+" bildirim");
+};
+window.copyDigest=function(){const pre=document.querySelector("#modal-root pre");if(!pre)return;const t=pre.textContent;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>alert("Özet panoya kopyalandı."),()=>alert("Kopyalanamadı."));}else{alert("Pano erişimi yok.");}};
+
+/* ===== XLSX RAPOR — saf JS xlsx yazıcı (ZIP stored + SpreadsheetML), harici kütüphane yok ===== */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_TABLE[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){ // files: [{name, u8}] → Uint8Array (sıkıştırmasız ZIP)
+ const enc=new TextEncoder();const parts=[];const central=[];let off=0;
+ files.forEach(f=>{const nm=enc.encode(f.name);const crc=crc32(f.u8);
+  const lh=new DataView(new ArrayBuffer(30));
+  lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);
+  lh.setUint16(10,0,true);lh.setUint16(12,0x21,true);lh.setUint32(14,crc,true);lh.setUint32(18,f.u8.length,true);
+  lh.setUint32(22,f.u8.length,true);lh.setUint16(26,nm.length,true);lh.setUint16(28,0,true);
+  parts.push(new Uint8Array(lh.buffer),nm,f.u8);
+  const ch=new DataView(new ArrayBuffer(46));
+  ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);
+  ch.setUint16(12,0,true);ch.setUint16(14,0x21,true);ch.setUint32(16,crc,true);ch.setUint32(20,f.u8.length,true);ch.setUint32(24,f.u8.length,true);
+  ch.setUint16(28,nm.length,true);ch.setUint32(42,off,true);
+  central.push(new Uint8Array(ch.buffer),nm);
+  off+=30+nm.length+f.u8.length;});
+ const cdSize=central.reduce((s,x)=>s+x.length,0);
+ const end=new DataView(new ArrayBuffer(22));
+ end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);
+ end.setUint32(12,cdSize,true);end.setUint32(16,off,true);
+ const all=[...parts,...central,new Uint8Array(end.buffer)];
+ const total=all.reduce((s,x)=>s+x.length,0);const out=new Uint8Array(total);let p=0;all.forEach(x=>{out.set(x,p);p+=x.length;});
+ return out;
+}
+function xEsc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function colLetter(n){let s="";n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26;}return s;}
+function sheetXml(aoa){
+ const rows=aoa.map((r,ri)=>{const cells=r.map((v,ci)=>{const ref=colLetter(ci)+(ri+1);
+   if(typeof v==="number"&&isFinite(v))return `<c r="${ref}"><v>${v}</v></c>`;
+   return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xEsc(v)}</t></is></c>`;}).join("");
+  return `<row r="${ri+1}">${cells}</row>`;}).join("");
+ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`;
+}
+function buildXlsx(sheets){ // sheets: [[ad, aoa], ...]
+ const enc=new TextEncoder();
+ const files=[];
+ const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`;
+ const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+ const wb=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xEsc(s[0]).slice(0,31)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets></workbook>`;
+ const wbRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}</Relationships>`;
+ files.push({name:"[Content_Types].xml",u8:enc.encode(ct)});
+ files.push({name:"_rels/.rels",u8:enc.encode(rels)});
+ files.push({name:"xl/workbook.xml",u8:enc.encode(wb)});
+ files.push({name:"xl/_rels/workbook.xml.rels",u8:enc.encode(wbRels)});
+ sheets.forEach((s,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,u8:enc.encode(sheetXml(s[1]))}));
+ return zipStore(files);
+}
+window.exportXlsx=function(){
+ const M=state.models;const num=x=>{const n=+x;return isFinite(n)&&x!==""&&x!=null?n:String(x==null?"":x);};
+ const inv=[["Model ID","Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Tier","Risk Sınıfı","İçsel Risk","Materyalite","Karmaşıklık","AI/ML","GenAI","Düzenleyici","Metrik Çerçevesi","Son Validasyon","Sonraki Validasyon","Validasyon Frekansı","İzleme","Onay Akışı","Kaynak","Sahip","Geliştirici","Metodoloji"]];
+ M.forEach(m=>{const nv=nextVal(m);inv.push([m.id,m.ad,m.sahipBirim||"",m.sinif||"",modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.tier,sinifOf(m).l,num(m.icsel),num(m.mat),num(m.kar),m.aiml?"Evet":"Hayır",m.genai?"Evet":"Hayır",m.duzenleyici?"Evet":"Hayır",(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"",m.sonValidasyon||"",nv||"",m.valFrekans||"",m.izlemeDurumu||"",m.wf?wfLabel(m.wf):"—",m.kaynak||"Seed/Sistem",m.sahip||"",m.gelistirici||"",m.metodoloji||""]);});
+ const vals=[["ID","Başlık","Model","Tür","Tetik","Validatör","Bağımsızlık","Öneri","Rating","Onay Kararı","Onay Makamı","Rapor Tarihi","Durum"]];
+ state.validations.forEach(x=>{const m=M.find(y=>y.id===x.modelId);vals.push([x.id,x.baslik,m?m.ad:"",x.tur||"",x.tetik||"",x.validator||"",x.bagimsizlik||"",x.oneri||"",x.rating||"",x.onayKarar||"",x.onayMakam||"",x.raporTarihi||"",x.durum||""]);});
+ const plan=[["Model","Tier","Frekans","Son Validasyon","Sonraki Validasyon","Durum"]];
+ M.forEach(m=>{const nv=nextVal(m);plan.push([m.ad,m.tier,m.valFrekans||tierFreq(m.tier),m.sonValidasyon||"",nv||"",overdue(nv).t]);});
+ const fnd=[["ID","Başlık","Model","Kaynak","Önem","Remediation Durumu","Sahip","Oluşturma","Hedef","SLA","Aksiyon Planı","Kanıt/Re-test","Kapanış Onayı"]];
+ state.findings.forEach(f=>{const m=M.find(y=>y.id===f.modelId);fnd.push([f.id,f.baslik,m?m.ad:"",f.kaynak||"",f.onem||"",f.durum||"",f.sahip||"",f.olusturma||"",f.hedefTarih||"",findingSla(f).t,f.aksiyon||"",f.kanit||"",f.kapanisOnay||""]);});
+ const pma=[["ID","Model","Tür","Materyalite","Etki Yönü","Etki Tutarı","TFRS9 Aşama","Onay","Bağımsız G.G.","Durum","Gerekçe"]];
+ (state.pmas||[]).forEach(p=>{const m=M.find(y=>y.id===p.modelId);pma.push([p.id,m?m.ad:"",p.tur||"",p.materyalite||"",p.yon||"",p.etkiTutar||"",p.tfrs9Asama||"",pmaOnay(p),p.bagimsizGozdenDurum||"",p.durum||"",p.gerekce||""]);});
+ const grd=[["ID","Model","Tarih","Test Türü","Sonuç","Şiddet","Detay"]];
+ (state.guardrails||[]).forEach(g=>{const m=M.find(y=>y.id===g.modelId);grd.push([g.id,m?m.ad:"",g.tarih||"",g.tur||"",g.sonuc||"",g.siddet||"",g.detay||""]);});
+ const met=[["Model","Metrik","Son Tarih","Son Değer","Eşik","Durum"]];
+ M.forEach(m=>{modelMetricTypes(m.id).forEach(t=>{const l=latestMetric(m.id,t);if(l)met.push([m.ad,(METRIC_DEF[t]||{}).lab||t,l.tarih,num(l.deger),num(l.esik),isBreach(t,l.deger,l.esik)?"AŞIM":"Normal"]);});});
+ const bddk=[["Model ID","Model","Tier","İSEDES Bağı","Son Validasyon","Sonraki","Durum","Açık Bulgu","Aktif Overlay"]];
+ isedesModels().forEach(m=>{const nv=nextVal(m);bddk.push([m.id,m.ad,m.tier,isedesUse(m).join(" | "),m.sonValidasyon||"",nv||"",overdue(nv).t,state.findings.filter(f=>f.modelId===m.id&&f.durum!=="Kapandı").length,(state.pmas||[]).filter(p=>p.modelId===m.id&&p.durum==="Aktif").length]);});
+ const tmr=totalModelRisk();
+ const ozet=[["HALKBANK — MRM RAPORU","Tarih: "+todayStr()],[],["Toplam Model Riski Endeksi",tmr.index],["RAG Durumu",tmr.rag==="good"?"İştah dahilinde":tmr.rag==="warn"?"Amber":"İştah AŞILDI"],["Toplam Model",M.length],["Tier 1",M.filter(m=>m.tier==="Tier 1").length],["Gecikmiş Validasyon",tmr.overdueV],["Açık Yüksek Bulgu",tmr.highF],["İzleme Eşik Aşımı",tmr.breach],["Onay Bekleyen",tmr.pend],[],["Bileşen","Puan","Ağırlık"],...tmr.comps.map(c=>[c[0],c[1],c[2]])];
+ const aud=[["Zaman","Rol","İşlem","Nesne","Detay"]];
+ (state.audit||[]).slice(0,300).forEach(a=>aud.push([a.ts||"",a.role||"",a.action||"",a.entity||"",a.detail||""]));
+ const u8=buildXlsx([["Özet (Board)",ozet],["Model Envanteri",inv],["Validasyonlar",vals],["Validasyon Planı",plan],["Bulgular",fnd],["Overlay-PMA",pma],["Guardrail",grd],["Son Metrikler",met],["BDDK Kanıt",bddk],["Denetim İzi",aud]]);
+ const blob=new Blob([u8],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="halkbank_mrm_raporu.xlsx";a.click();
+ logAudit("XLSX raporu dışa aktarıldı","rapor","10 sheet · "+M.length+" model");
+};
 window.notifAct=function(i){const x=(window.__notifs||[])[i];if(!x||x.type!=="model")return;const m=state.models.find(y=>y.id===x.entity);const title="[Bildirim] "+x.rule;if(!state.findings.some(f=>f.modelId===x.entity&&f.baslik===title)){const onem=x.sev==="crit"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:x.entity,baslik:title,kaynak:"İzleme",onem,durum:"Açık",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem])});}logAudit("Bildirim eskalasyonu","MDL "+x.entity,x.rule);save();buildNav();render();};
 window.notifActAll=function(){const N=(window.__notifs||[]).filter(x=>x.type==="model"&&x.sev==="crit");let n=0;N.forEach(x=>{const m=state.models.find(y=>y.id===x.entity);const title="[Bildirim] "+x.rule;if(!state.findings.some(f=>f.modelId===x.entity&&f.baslik===title)){state.findings.push({id:uid("FND-"),modelId:x.entity,baslik:title,kaynak:"İzleme",onem:"Yüksek",durum:"Açık",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS["Yüksek"])});n++;}});logAudit("Toplu bildirim eskalasyonu","sistem",n+" görev");save();buildNav();render();alert(n+" görev (bulgu) oluşturuldu.");};
 
@@ -2359,6 +2505,7 @@ window.closeDrawer=function(){document.getElementById("modal-root").innerHTML=""
 /* ============ TEMA ============ */
 function applyTheme(t){document.documentElement.setAttribute("data-theme",t);localStorage.setItem("mrm_theme",t);}
 document.getElementById("themeBtn").onclick=()=>{const cur=document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");applyTheme(cur==="dark"?"light":"dark");};
+document.getElementById("xlsxBtn").onclick=()=>exportXlsx();
 document.getElementById("seedBtn").onclick=()=>{if(confirm("Tüm veriler örnek sete sıfırlansın mı?")){seed();buildNav();render();}};
 
 /* ============ VERI DISA/ICE AKTARMA ============ */
