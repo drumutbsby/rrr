@@ -313,6 +313,11 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .issue-main{flex:1;min-width:0}
 .issue-desc{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:var(--ink)}
 .issue-side{width:230px;flex:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.admin-badge{background:#c0392b;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 8px;border-radius:20px;align-self:center;margin-right:6px}
+.tree-flow{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
+.tree-flow .tf-node{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);width:100%;max-width:360px}
+.tree-flow .tf-node.on{background:var(--accent-weak);border-color:var(--accent);color:var(--accent-ink)}
+.tree-flow .tf-arrow{font-size:11px;color:var(--muted);font-weight:600}
 @media(max-width:720px){.issue-body{flex-direction:column}.issue-side{width:100%}}
 /* Model map */
 .mp-map{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
@@ -626,6 +631,21 @@ const MODULES=[
 ];
 const SUB2MOD={};MODULES.forEach(m=>m.sub.forEach(s=>SUB2MOD[s[0]]=m.id));
 const ROLES_PMJ=["Model Owner","Model Developer","Model User","Model Risk Manager","Internal Audit Officer","APIUser"];
+const ROLE_HAT={"Model Owner":"1. Hat – Sahip/Geliştirici","Model Developer":"1. Hat – Sahip/Geliştirici","Model User":"1. Hat – Sahip/Geliştirici","Model Risk Manager":"2. Hat – MRM Programı","Internal Audit Officer":"3. Hat – İç Denetim","APIUser":"3. Hat – İç Denetim"};
+function activeHat(){return ROLE_HAT[window.activeRole]||window.activeRole;}
+function roleReadonly(){return ["Internal Audit Officer","APIUser","Model User"].includes(window.activeRole);}
+const ROLE_RONOTE={"Internal Audit Officer":"🔒 Internal Audit Officer: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim (3. savunma hattı).","APIUser":"🔒 APIUser: salt-okur / API erişimi — arayüzden oluşturma/düzenleme kapalı.","Model User":"🔒 Model User: model kullanıcısı — görüntüleme yetkisi; oluşturma/düzenleme kapalı."};
+const PMJ_PERMS={
+ "Model kaydı oluştur/düzenle (Registry)":["Model Owner","Model Developer","Model Risk Manager"],
+ "Faz formu doldur / Lifecycle ilerlet":["Model Owner","Model Developer","Model Risk Manager"],
+ "Kritiklik / Risk Sınıfı belirle":["Model Owner","Model Risk Manager"],
+ "Validasyon önerisi / test":["Model Risk Manager"],
+ "Onay kararı (Model Risk Komitesi)":["Model Risk Manager"],
+ "İzleme ölçümü gir":["Model Owner","Model Developer","Model Risk Manager"],
+ "Issue / remediation":["Model Owner","Model Developer","Model Risk Manager"],
+ "Model kullan / görüntüle":["Model Owner","Model Developer","Model User","Model Risk Manager","APIUser","Internal Audit Officer"],
+ "API erişimi (okuma)":["APIUser","Model Risk Manager"],
+ "Salt-okur denetim erişimi":["Internal Audit Officer"]};
 function badgeFor(id){
  if(id==="envanter")return state.models.length;
  if(id==="aiml")return state.models.filter(m=>m.aiml).length;
@@ -638,12 +658,20 @@ function badgeFor(id){
  if(id==="bildirim"){const c=genNotifications().filter(x=>x.sev==="crit").length;return c||"";}
  return "";
 }
+const ADMIN_MODULES=[["ahome","Home"],["aregister","Register Configuration"],["areporting","Reporting"],["asettings","Settings"],["aaudit","Audit Tools"]];
+function isAdmin(){return window.__portal==="admin";}
 function buildNav(){
- const modId=current==="_model"?"registry":(SUB2MOD[current]||"dashboards");const mod=MODULES.find(m=>m.id===modId);
  const tabs=document.getElementById("pmjtabs");
+ const sm=document.getElementById("submenu");
+ if(isAdmin()){
+  if(tabs){tabs.innerHTML=`<span class="admin-badge">ADMIN</span>`+ADMIN_MODULES.map(m=>`<a data-mod="${m[0]}" class="${m[0]===current?"active":""}">${m[1]}</a>`).join("");
+   tabs.querySelectorAll("a").forEach(a=>a.onclick=()=>go(a.dataset.mod));}
+  if(sm)sm.style.display="none";
+  return;
+ }
+ const modId=current==="_model"?"registry":(SUB2MOD[current]||"dashboards");const mod=MODULES.find(m=>m.id===modId);
  if(tabs){tabs.innerHTML=MODULES.map(m=>`<a data-mod="${m.id}" class="${m.id===modId?"active":""}">${m.t}</a>`).join("");
   tabs.querySelectorAll("a").forEach(a=>a.onclick=()=>goModule(a.dataset.mod));}
- const sm=document.getElementById("submenu");
  if(sm){sm.innerHTML=`<div class="sm-h">${mod.t}</div>`+mod.sub.map(s=>{const b=badgeFor(s[0]);return `<a data-id="${s[0]}" class="${s[0]===current?"active":""}">${s[1]}${b!==""&&b!==0?`<span class="badge">${b}</span>`:""}</a>`;}).join("");
   sm.querySelectorAll("a").forEach(a=>a.onclick=()=>go(a.dataset.id));
   sm.style.display=mod.sub.length>1?"block":"none";}
@@ -652,9 +680,11 @@ function goModule(modId){const m=MODULES.find(x=>x.id===modId);if(m)go(m.sub[0][
 let current="envanter";
 function go(id){current=id;location.hash=id;render();}
 function render(){
- document.documentElement.setAttribute("data-ro",window.activeRole==="Internal Audit Officer"?"1":"0");
+ document.documentElement.setAttribute("data-ro",(!isAdmin()&&roleReadonly())?"1":"0");
+ const ron=document.querySelector(".ro-note");if(ron)ron.innerHTML=ROLE_RONOTE[window.activeRole]||"🔒 Salt-okur görünüm.";
  const v=document.getElementById("view");if(!v)return;
  buildNav();
+ if(isAdmin()){({ahome:adminHome,aregister:adminRegister,areporting:adminReporting,asettings:adminSettings,aaudit:adminAudit}[current]||adminHome)(v);window.scrollTo(0,0);return;}
  if(current==="_model"){renderModelPage(v);return;}
  ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewEnvanter)(v);
  window.scrollTo(0,0);
@@ -895,13 +925,13 @@ window.openModel=function(id,section){
  current="_model";location.hash="model/"+id;
  render();
 };
-const MODEL_SECTIONS=[["lifecycle","Lifecycle","◔"],["map","Map","🗺"],["history","History","⭮"],["details","Details","▤"],["issues","Issues","⚑"],["documentation","Documentation","📄"]];
+const MODEL_SECTIONS=[["lifecycle","Lifecycle","◔"],["map","Map","🗺"],["history","History","⭮"],["details","Details","▤"],["results","Sonuçlar","📊"],["issues","Issues","⚑"],["documentation","Documentation","📄"]];
 function renderModelPage(v){
  const m=state.models.find(x=>x.id===modelPage.id);
  if(!m){current="envanter";return viewEnvanter(v);}
  const prog=phaseProgress(m);
  const av=(m.versions||[]).find(x=>x.active)||(m.versions||[])[0]||{v:m.version};
- const secBody={lifecycle:sec_lifecycle,map:sec_map,history:sec_history,details:sec_details,issues:sec_issues,documentation:sec_documentation}[modelPage.section]||sec_lifecycle;
+ const secBody={lifecycle:sec_lifecycle,map:sec_map,history:sec_history,details:sec_details,results:sec_results,issues:sec_issues,documentation:sec_documentation}[modelPage.section]||sec_lifecycle;
  v.innerHTML=`
  <div class="mp-crumb"><a onclick="go('envanter')">Registry</a> ▸ <span>${esc(m.area||"Cat_test_gp")}</span> ▸ <a onclick="go('envanter')">${esc(m.ad)}</a> ▸ <b>${esc(av.v||m.version)} · ${esc(av.date||m.modelUpdate||"—")}</b></div>
  <div class="mp-head">
@@ -1015,6 +1045,43 @@ function sec_documentation(el,m){
    ${(m.phases||[]).map(p=>`<tr><td>Step ${p.n} · ${esc(p.name)}</td><td class="tsub">${p.status==="Completed"?esc(m.code)+"_S"+String(p.n).padStart(2,"0")+"_rapor.pdf":"—"}</td><td>${p.status==="Completed"?'<span class="chip good">Yüklü</span>':'<span class="chip muted">Bekliyor</span>'}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
+/* --- SONUÇLAR & PERFORMANS METRİKLERİ (P7: S.04.A/B/C) --- */
+function sec_results(el,m){
+ const fw=METRIC_FRAMEWORKS[m.metricProfile];
+ const better=(v,d)=>d.dir==="low"?+(v*0.9).toFixed(3):d.dir==="high"?+(Math.min(1,v*1.03)).toFixed(3):v;
+ const worse=(v,d)=>d.dir==="low"?+(v*1.12).toFixed(3):d.dir==="high"?+(v*0.95).toFixed(3):v;
+ const auto=fw?fw.metrics.map(t=>{const l=latestMetric(m.id,t);const d=METRIC_DEF[t];if(!l)return null;const test=+l.deger;return {date:l.tarih,name:d.lab,tur:t,train:better(test,d),test:test,oot:worse(test,d),esik:+l.esik,br:isBreach(t,l.deger,l.esik)};}).filter(Boolean):[];
+ const manual=(m.perfRows||[]).map(r=>({date:r.date,name:r.name,tur:"",train:r.train,test:r.test,oot:r.oot,esik:"",br:false,manual:true}));
+ const rows=auto.concat(manual);
+ // S.04 özet
+ const finds=state.findings.filter(f=>f.modelId===m.id);
+ const s04b=finds.filter(f=>f.kaynak==="İzleme"||f.kaynak==="İç Denetim");
+ const s04c=finds.filter(f=>f.kaynak==="Model Validasyonu");
+ const pmas=(state.pmas||[]).filter(p=>p.modelId===m.id);
+ const ek=m.aimlEk||{};
+ el.innerHTML=`
+  <div class="section-h" style="margin-top:0">S.04 — Model Riski Sonuçları</div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px">
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.A · Model Riskini Azaltma <span class="tsub">(5. Faz)</span></div>
+     <div class="tsub" style="margin-top:6px">${pmas.length?esc(pmas.length+" PMA/istisna aktif"):"PMA/istisna yok"}${ek.insanGozetim?" · İnsan gözetimi: "+esc(ek.insanRol||"var"):""}${m.durum==="Koşullu Onaylı"?" · Koşullu onay koşulları izleniyor":""}</div></div>
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.B · 3.–4. Seviye Bulguları <span class="tsub">(9. Faz)</span></div>
+     <div style="margin-top:6px"><span class="chip ${s04b.length?'warn':'good'}">${s04b.length} bulgu</span> <span class="tsub">${s04b.map(f=>esc(f.baslik)).slice(0,1).join("")||"izleme/denetim bulgusu yok"}</span></div></div>
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.C · Validasyon Bulguları <span class="tsub">(5, 8. Faz)</span></div>
+     <div style="margin-top:6px"><span class="chip ${s04c.length?'crit':'good'}">${s04c.length} düzenleyici/validasyon bulgusu</span></div></div>
+  </div>
+  <div style="display:flex;align-items:center;margin-bottom:8px"><div class="section-h" style="margin:0">Performans Metrikleri <span class="cnt">${fw?esc(fw.lab):"—"}</span></div><div style="flex:1"></div>
+    <button class="tbtn ghost" onclick="addPerfRow('${m.id}')">+ Add Row</button><button class="tbtn ghost" onclick="exportPerf('${m.id}')">⭳ Export CSV</button></div>
+  ${rows.length?`<div class="tablewrap reg-grid"><table><thead><tr><th>Metric Date</th><th>Metric Name</th><th class="num">Train Score</th><th class="num">Test Score</th><th class="num">OOT</th><th class="num">Eşik</th><th>Durum</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr><td class="tsub">${esc(r.date||"—")}</td><td>${esc(r.name)}${r.manual?' <span class="chip muted" style="padding:0 6px">manuel</span>':""}</td><td class="num mono">${r.train??"—"}</td><td class="num mono"><b>${r.test??"—"}</b></td><td class="num mono">${r.oot??"—"}</td><td class="num mono tsub">${r.esik!==""?r.esik:"—"}</td><td>${r.tur?`<span class="chip ${r.br?'crit':'good'}" style="padding:0 7px">${r.br?'Aşım':'Normal'}</span>`:'<span class="tsub">—</span>'}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="tsub" style="margin-top:8px">Train/Test/OOT: modele/tipe uygun performans metrikleri (${esc(m.sinif||"—")}). Support Fields — eşik tier'a göre uyarlanır.</div>`:`<div class="empty">Bu model için tanımlı performans metrik çerçevesi yok. “Add Row” ile manuel metrik girebilirsiniz.</div>`}
+  <div style="margin-top:12px"><button class="tbtn" onclick="izlSel='${m.id}';go('izleme')">İzleme ekranında tüm zaman serisini aç →</button></div>`;
+}
+window.addPerfRow=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const name=prompt("Metrik adı:","Özel Metrik");if(name===null)return;const test=prompt("Test skoru:","0.80");m.perfRows=m.perfRows||[];m.perfRows.push({date:todayStr(),name:name||"Özel Metrik",train:test,test:test,oot:test});logAudit("Performans satırı eklendi","results",id+" · "+name);save();renderModelPage(document.getElementById("view"));};
+window.exportPerf=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const fw=METRIC_FRAMEWORKS[m.metricProfile];const lines=[["Metric Date","Metric Name","Train","Test","OOT"]];
+ if(fw)fw.metrics.forEach(t=>{const l=latestMetric(m.id,t);const d=METRIC_DEF[t];if(l)lines.push([l.tarih,d.lab,l.deger,l.deger,l.deger]);});
+ (m.perfRows||[]).forEach(r=>lines.push([r.date,r.name,r.train,r.test,r.oot]));
+ const csv=lines.map(r=>r.join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=m.code+"_performans.csv";a.click();logAudit("Performans dışa aktarıldı","results",id);};
 /* --- FAZ FORM MOTORU (S.xx) --- */
 const PF_DEFOPTS=["Tamamlandı","Devam Ediyor","Uygulanmadı"];
 function phaseFormBody(m,n){
@@ -1291,8 +1358,8 @@ window.valForm=function(id){
     ${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delVal('${id}')">Sil</button>`:""}
     <div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVal('${id||""}')">Kaydet</button>
    </div>`);
- if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){["onayKarar","onayMakam"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Onay kararı yalnız 'Model Risk Komitesi' rolünde düzenlenebilir";}});}
- if(window.activeRole&&!(window.activeRole==="2. Hat – Bağımsız Validasyon"||window.activeRole==="Model Risk Komitesi")){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi yalnız bağımsız validasyon rolünde düzenlenebilir";}});}
+ if(window.activeRole&&window.activeRole!=="Model Risk Manager"){["onayKarar","onayMakam"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Onay kararı yalnız 'Model Risk Manager' (2. hat/komite) rolünde düzenlenebilir";}});}
+ if(window.activeRole&&window.activeRole!=="Model Risk Manager"){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi/testi yalnız 'Model Risk Manager' (bağımsız 2. hat) rolünde düzenlenebilir";}});}
 };
 window.saveVal=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
@@ -1480,8 +1547,32 @@ function viewRegulasyon(v){
 
 /* ============ HAKKINDA ============ */
 function viewHakkinda(v){
+ const el3=[["MRM","Model Risk Yönetimi — envanter, kritiklik/sınıf, yaşam döngüsü, validasyon, yönetişim"],["MP","Model Performance — sürekli izleme, drift/eşik, train/test/OOT metrikleri"],["MRM Raporlama","Board/denetim raporları, KRI panoları, düzenleyici çıktı"]];
+ const el4=[["Governance & Yönetişim","Politika, rol/onay, üç savunma hattı"],["Model Envanteri (Registry)","Banka geneli tek doğruluk kaynağı; kod/versiyon/lifecycle"],["360° Validasyon","Bağımsız gözden geçirme; test kataloğu; öneri≠onay"],["İzleme & Raporlama","Performans/drift, bulgu/remediation, dışa aktarma"]];
+ const pr5=[["1","Model tanımı & envanter","Model neyin modeli — tek envanterde"],["2","Yönetişim & sorumluluk","Rol, onay, politika, kayıt"],["3","Geliştirme, uygulama, kullanım","Yaşam döngüsü + kontroller"],["4","Bağımsız validasyon","Etkin sorgulama; öneri≠onay"],["5","Risk azaltıcı / kayıt","PMA, istisna, koşullu onay"]];
  v.innerHTML=`
-  <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
+  <div class="callout"><b>Prometeia Model Journey (PMJ) — Halkbank simülasyonu.</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin PMJ ürün yapısı (Registry · Model Journey/Lifecycle · Tiering · Issues · Dashboards) üzerinde uçtan uca nasıl işlediğini canlandırır. Mevcut zengin MRM işlevselliği korunur; UI ve süreç yapısı PMJ'ye hizalanmıştır.</div>
+  <div class="card panel"><h3>PMJ — 3 Modül</h3>
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+    ${el3.map(x=>`<div class="card" style="padding:12px 14px"><div style="font-weight:800;color:var(--accent-ink);font-size:15px">${esc(x[0])}</div><div class="tsub" style="margin-top:5px;white-space:normal">${esc(x[1])}</div></div>`).join("")}
+   </div></div>
+  <div class="card panel" style="margin-top:14px"><h3>Model Journey — 4 Element</h3>
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+    ${el4.map((x,i)=>`<div class="card" style="padding:12px 14px;border-top:3px solid var(--accent)"><div style="font-weight:700">${i+1}. ${esc(x[0])}</div><div class="tsub" style="margin-top:5px;white-space:normal">${esc(x[1])}</div></div>`).join("")}
+   </div></div>
+  <div class="grid panels" style="margin-top:14px">
+   <div class="card panel"><h3>MRM 5 Prensip (SS1/23)</h3><div class="list">
+    ${pr5.map(x=>`<div class="li-row"><span class="chip info" style="min-width:22px;justify-content:center">${x[0]}</span><div class="grow"><div class="t">${esc(x[1])}</div><div class="s">${esc(x[2])}</div></div></div>`).join("")}
+   </div></div>
+   <div class="card panel"><h3>Model Tanımı — Karar Ağacı</h3>
+    <div class="tree-flow">
+     <div class="tf-node">Girdi verisi / varsayım var mı?</div><div class="tf-arrow">↓ evet</div>
+     <div class="tf-node">İstatistiksel / matematiksel / AI-ML teknik uygulanıyor mu?</div><div class="tf-arrow">↓ evet</div>
+     <div class="tf-node">Nicel tahmin / skor / karar çıktısı üretiyor mu?</div><div class="tf-arrow">↓ evet</div>
+     <div class="tf-node on">MODEL → Register'a girer, sınıflandırılır ve valide edilir</div>
+     <div class="tsub" style="margin-top:8px;white-space:normal">Herhangi biri "hayır" ise: <b>araç/hesaplama</b> (model dışı) — yine de envanterde işaretlenebilir.</div>
+    </div></div>
+  </div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
     ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 11-7)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
@@ -1993,14 +2084,14 @@ window.riskCell=function(y,x){
 
 /* ============ YETKI MATRISI ============ */
 function viewYetki(v){
- const roles=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı","Model Risk Komitesi","3. Hat – İç Denetim"];
- const actions=Object.keys(PERMS).filter(a=>a!=="Salt-okur (denetim)");
- v.innerHTML=`<p class="vlead">Rol × işlem yetki matrisi (üç savunma hattı) — Archer <b>Access Roles</b> ve alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstten değişir; onay yalnız Model Risk Komitesi, validasyon önerisi yalnız 2. hat; 3. Hat – İç Denetim salt-okur.</p>
-  <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b>. Bu rolde yetkili işlemler yeşil satırlarda ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri (ör. onay) ilgili ekranlarda pasifleşir.</div>
-  <div class="tablewrap"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:96px">${esc(r).replace(" – ","<br>")}</th>`).join("")}</tr></thead><tbody>
-   ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
+ const roles=ROLES_PMJ;
+ const actions=Object.keys(PMJ_PERMS);
+ v.innerHTML=`<p class="vlead">PMJ <b>Rol × işlem yetki matrisi</b> (üç savunma hattı) — Prometeia Access Roles / alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstteki kullanıcı menüsünden değişir; onay ve validasyon önerisi yalnız <b>Model Risk Manager</b> (2. hat); <b>Internal Audit Officer</b> &amp; <b>APIUser</b> salt-okur.</p>
+  <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b> (savunma hattı: ${esc(activeHat())})${roleReadonly()?" — <b>salt-okur</b>: oluşturma/düzenleme kapalı.":""} Yetkili işlemler ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri ilgili ekranlarda pasifleşir.</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:92px">${esc(r)}</th>`).join("")}</tr></thead><tbody>
+   ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PMJ_PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
   </tbody></table></div>
-  <div class="footnote">Validasyon bağımsızlığı (ÖNERİ ≠ ONAY) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
+  <div class="footnote">Validasyon bağımsızlığı (1. hat kendi modelini onaylayamaz; ÖNERİ/ONAY 2. hatta) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Prometeia/Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
 }
 /* ============ DENETIM IZI ============ */
 function fmtTs(ts){try{return new Date(ts).toLocaleString("tr-TR");}catch(e){return ts;}}
@@ -2296,9 +2387,81 @@ window.enterApp=function(portal){
  document.getElementById("sso").style.display="none";
  document.getElementById("app").hidden=false;
  window.__portal=portal;
- const h=(location.hash||"").replace("#","");if(SUB2MOD[h])current=h;
+ if(portal==="admin"){current="ahome";}
+ else{const h=(location.hash||"").replace("#","");if(SUB2MOD[h])current=h;else current="envanter";}
  buildUserMenu();render();
 };
+/* ============ ADMIN PORTAL (P13) ============ */
+const ADMIN_CFG={attachMax:"2 GB",docFav:50,docRecent:50,issueFav:50,issueRecent:50,fileTypes:"doc, docx, xls, xlsx, pdf, ppt, pptx, csv, png, jpg, zip, ipynb, pkl"};
+function adminHome(v){
+ const M=state.models;
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Administrator Portal</div><div class="reg-sub">Prometeia Model Journey — sistem yönetimi (Halkbank Turkish Branch)</div></div></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px">
+   ${kpi("Kayıtlı Model",M.length,"Register","")}
+   ${kpi("Issue",state.findings.length,"Issues Mgmt","info")}
+   ${kpi("Validasyon",state.validations.length,"Reporting","info")}
+   ${kpi("Denetim Kaydı",(state.audit||[]).length,"Audit Tools","warn")}
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+   ${[["aregister","Register Configuration","Model taksonomisi, yaşam döngüsü fazları, kategoriler"],["areporting","Reporting","Rapor şablonları ve dışa aktarma"],["asettings","Settings","Sistem yapılandırması & Downloads"],["aaudit","Audit Tools","Denetim izi ve bütünlük kontrolleri"]].map(x=>`<div class="card" style="padding:14px;cursor:pointer" onclick="go('${x[0]}')"><div style="font-weight:700;color:var(--accent-ink)">${x[1]}</div><div class="tsub" style="margin-top:4px">${x[2]}</div></div>`).join("")}
+  </div>`;
+}
+function adminRegister(v){
+ const tiCount=t=>state.models.filter(m=>m.modelTipi===t).length;
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Register Configuration</div><div class="reg-sub">Model register taksonomi ve alan yapılandırması (salt-görünüm demo)</div></div></div>
+  <div class="section-h" style="margin-top:0">Model Yaşam Döngüsü Fazları (10)</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>#</th><th>Faz</th><th class="num">Zorunlu Alan</th><th class="num">Toplam Alan</th></tr></thead><tbody>
+   ${LC10.map((n,i)=>`<tr><td class="mono">${i+1}</td><td>${esc(n)}</td><td class="num">${phaseMandTotal(i+1)}</td><td class="num">${phaseTotal(i+1)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="section-h">Model Tipi & Statü & Sınıf</div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
+   <div class="card" style="padding:12px"><b>Model Tipi</b><div class="tsub" style="margin-top:6px">İLERİ ANALİTİK MODEL (${tiCount("İLERİ ANALİTİK MODEL")})<br>BASİT MODEL (${tiCount("BASİT MODEL")})</div></div>
+   <div class="card" style="padding:12px"><b>Statü</b><div class="tsub" style="margin-top:6px">Talep edildi · Geliştirmede · Validasyonda · Üretimde · Emekli</div></div>
+   <div class="card" style="padding:12px"><b>Risk Sınıfı</b><div class="tsub" style="margin-top:6px">Sınıf 1 (kırmızı) · 2 (turuncu) · 3 (sarı) · 4 (yeşil)</div></div>
+  </div>
+  <div class="section-h">Registry Alanları</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Alan</th><th>Tip</th><th>Zorunlu</th></tr></thead><tbody>
+   ${[["Code","Auto",""],["Model Adı","Text","✓"],["Version","Text","✓"],["Lifecycle phase","Values List","✓"],["Statü","Values List","✓"],["Model Tipi","Values List","✓"],["Modeli Geliştiren","Text",""],["Area Model","Cross-Ref",""],["Demand di riferimento","Text",""],["ID Progetto","Text",""]].map(r=>`<tr><td>${esc(r[0])}</td><td class="tsub">${esc(r[1])}</td><td>${r[2]?'<span class="chip good" style="padding:0 7px">✓</span>':'<span class="tsub">—</span>'}</td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+function adminReporting(v){
+ const reports=[["Model Envanteri Raporu","Tüm modeller · sınıf · statü · lifecycle","Registry"],["Validasyon Takvimi","Gecikmiş/yaklaşan revalidasyonlar","Dashboards"],["Issue / Remediation Raporu","Açık bulgular · SLA · öncelik","Issues"],["Tiering (Sınıf) Dağılımı","Sınıf 1-4 kırılımı ve materyalite","Dashboards"],["AI/ML & EU AI Act Uyum","Yüksek riskli AI envanteri","Documentation"],["Denetim İzi Dışa Aktarımı","Tüm aksiyon logu","Audit Tools"]];
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Reporting</div><div class="reg-sub">Rapor şablonları — oluştur / dışa aktar</div></div></div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Rapor</th><th>İçerik</th><th>Kaynak</th><th></th></tr></thead><tbody>
+   ${reports.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="tsub">${esc(r[1])}</td><td class="tsub">${esc(r[2])}</td><td><button class="tbtn ghost" onclick="alert('Rapor oluşturuldu (demo): ${esc(r[0])}')">Oluştur</button></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+function adminSettings(v){
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Settings — System Configuration</div><div class="reg-sub">PMJ sistem parametreleri</div></div></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px">
+   <div class="card panel"><div class="section-h" style="margin-top:0">Attachment & Document Area</div>
+    ${dl({"Attachment Max Size":ADMIN_CFG.attachMax,"Document Area — max favorites":ADMIN_CFG.docFav,"Max recent documents":ADMIN_CFG.docRecent,"Admitted attachment file types":ADMIN_CFG.fileTypes})}</div>
+   <div class="card panel"><div class="section-h" style="margin-top:0">Issues</div>
+    ${dl({"Issues — max favorites":ADMIN_CFG.issueFav,"Max recent issues":ADMIN_CFG.issueRecent})}
+    <div class="section-h">Downloads</div>
+    <div class="tsub" style="margin-bottom:8px">İndirilecek içerik: Item details + Lifecycle + Issues + Relation map</div>
+    <div style="display:flex;gap:8px"><button class="tbtn primary" onclick="alert('İndirme kuyruğa alındı (demo).')">Create</button><button class="tbtn ghost" onclick="alert('Kuyruk boş (demo).')">Open Queue</button></div>
+   </div>
+  </div>`;
+}
+function adminAudit(v){
+ const A=(state.audit||[]);
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Audit Tools</div><div class="reg-sub">Denetim izi & bütünlük — ${A.length} kayıt</div></div><button class="tbtn ghost" onclick="exportAudit()">⭳ Export</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px">
+   ${kpi("Toplam Log",A.length,"Değişmez iz","")}
+   ${kpi("Model",state.models.length,"Register bütünlüğü","good")}
+   ${kpi("Bugünkü Aksiyon",A.filter(a=>(a.ts||"").slice(0,10)===todayStr()).length,"Son 24s","info")}
+  </div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Zaman</th><th>Rol</th><th>Aksiyon</th><th>Varlık</th><th>Detay</th></tr></thead><tbody>
+   ${A.slice(0,60).map(a=>`<tr><td class="tsub mono">${esc((a.ts||"").slice(0,16).replace("T"," "))}</td><td class="tsub">${esc(a.role||"—")}</td><td>${esc(a.action)}</td><td class="tsub">${esc(a.entity||"—")}</td><td class="tsub" style="white-space:normal">${esc(a.detail||"")}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Kayıt yok.</div></td></tr>`}
+  </tbody></table></div>`;
+}
+window.exportAudit=function(){const A=(state.audit||[]);const lines=[["ts","role","action","entity","detail"]].concat(A.map(a=>[a.ts,a.role,a.action,a.entity,(a.detail||"").replace(/,/g,";")]));const csv=lines.map(r=>r.join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="pmj_audit.csv";el.click();};
 /* ============ INIT ============ */
 (function init(){
  const th=localStorage.getItem("mrm_theme");if(th)applyTheme(th);
