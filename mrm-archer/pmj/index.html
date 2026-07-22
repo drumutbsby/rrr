@@ -312,6 +312,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .issue-main{flex:1;min-width:0}
 .issue-desc{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:var(--ink)}
 .issue-side{width:230px;flex:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.admin-badge{background:#c0392b;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 8px;border-radius:20px;align-self:center;margin-right:6px}
 @media(max-width:720px){.issue-body{flex-direction:column}.issue-side{width:100%}}
 /* Model map */
 .mp-map{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
@@ -637,12 +638,20 @@ function badgeFor(id){
  if(id==="bildirim"){const c=genNotifications().filter(x=>x.sev==="crit").length;return c||"";}
  return "";
 }
+const ADMIN_MODULES=[["ahome","Home"],["aregister","Register Configuration"],["areporting","Reporting"],["asettings","Settings"],["aaudit","Audit Tools"]];
+function isAdmin(){return window.__portal==="admin";}
 function buildNav(){
- const modId=current==="_model"?"registry":(SUB2MOD[current]||"dashboards");const mod=MODULES.find(m=>m.id===modId);
  const tabs=document.getElementById("pmjtabs");
+ const sm=document.getElementById("submenu");
+ if(isAdmin()){
+  if(tabs){tabs.innerHTML=`<span class="admin-badge">ADMIN</span>`+ADMIN_MODULES.map(m=>`<a data-mod="${m[0]}" class="${m[0]===current?"active":""}">${m[1]}</a>`).join("");
+   tabs.querySelectorAll("a").forEach(a=>a.onclick=()=>go(a.dataset.mod));}
+  if(sm)sm.style.display="none";
+  return;
+ }
+ const modId=current==="_model"?"registry":(SUB2MOD[current]||"dashboards");const mod=MODULES.find(m=>m.id===modId);
  if(tabs){tabs.innerHTML=MODULES.map(m=>`<a data-mod="${m.id}" class="${m.id===modId?"active":""}">${m.t}</a>`).join("");
   tabs.querySelectorAll("a").forEach(a=>a.onclick=()=>goModule(a.dataset.mod));}
- const sm=document.getElementById("submenu");
  if(sm){sm.innerHTML=`<div class="sm-h">${mod.t}</div>`+mod.sub.map(s=>{const b=badgeFor(s[0]);return `<a data-id="${s[0]}" class="${s[0]===current?"active":""}">${s[1]}${b!==""&&b!==0?`<span class="badge">${b}</span>`:""}</a>`;}).join("");
   sm.querySelectorAll("a").forEach(a=>a.onclick=()=>go(a.dataset.id));
   sm.style.display=mod.sub.length>1?"block":"none";}
@@ -654,6 +663,7 @@ function render(){
  document.documentElement.setAttribute("data-ro",window.activeRole==="Internal Audit Officer"?"1":"0");
  const v=document.getElementById("view");if(!v)return;
  buildNav();
+ if(isAdmin()){({ahome:adminHome,aregister:adminRegister,areporting:adminReporting,asettings:adminSettings,aaudit:adminAudit}[current]||adminHome)(v);window.scrollTo(0,0);return;}
  if(current==="_model"){renderModelPage(v);return;}
  ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewEnvanter)(v);
  window.scrollTo(0,0);
@@ -2332,9 +2342,81 @@ window.enterApp=function(portal){
  document.getElementById("sso").style.display="none";
  document.getElementById("app").hidden=false;
  window.__portal=portal;
- const h=(location.hash||"").replace("#","");if(SUB2MOD[h])current=h;
+ if(portal==="admin"){current="ahome";}
+ else{const h=(location.hash||"").replace("#","");if(SUB2MOD[h])current=h;else current="envanter";}
  buildUserMenu();render();
 };
+/* ============ ADMIN PORTAL (P13) ============ */
+const ADMIN_CFG={attachMax:"2 GB",docFav:50,docRecent:50,issueFav:50,issueRecent:50,fileTypes:"doc, docx, xls, xlsx, pdf, ppt, pptx, csv, png, jpg, zip, ipynb, pkl"};
+function adminHome(v){
+ const M=state.models;
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Administrator Portal</div><div class="reg-sub">Prometeia Model Journey — sistem yönetimi (Halkbank Turkish Branch)</div></div></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px">
+   ${kpi("Kayıtlı Model",M.length,"Register","")}
+   ${kpi("Issue",state.findings.length,"Issues Mgmt","info")}
+   ${kpi("Validasyon",state.validations.length,"Reporting","info")}
+   ${kpi("Denetim Kaydı",(state.audit||[]).length,"Audit Tools","warn")}
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+   ${[["aregister","Register Configuration","Model taksonomisi, yaşam döngüsü fazları, kategoriler"],["areporting","Reporting","Rapor şablonları ve dışa aktarma"],["asettings","Settings","Sistem yapılandırması & Downloads"],["aaudit","Audit Tools","Denetim izi ve bütünlük kontrolleri"]].map(x=>`<div class="card" style="padding:14px;cursor:pointer" onclick="go('${x[0]}')"><div style="font-weight:700;color:var(--accent-ink)">${x[1]}</div><div class="tsub" style="margin-top:4px">${x[2]}</div></div>`).join("")}
+  </div>`;
+}
+function adminRegister(v){
+ const tiCount=t=>state.models.filter(m=>m.modelTipi===t).length;
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Register Configuration</div><div class="reg-sub">Model register taksonomi ve alan yapılandırması (salt-görünüm demo)</div></div></div>
+  <div class="section-h" style="margin-top:0">Model Yaşam Döngüsü Fazları (10)</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>#</th><th>Faz</th><th class="num">Zorunlu Alan</th><th class="num">Toplam Alan</th></tr></thead><tbody>
+   ${LC10.map((n,i)=>`<tr><td class="mono">${i+1}</td><td>${esc(n)}</td><td class="num">${phaseMandTotal(i+1)}</td><td class="num">${phaseTotal(i+1)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="section-h">Model Tipi & Statü & Sınıf</div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
+   <div class="card" style="padding:12px"><b>Model Tipi</b><div class="tsub" style="margin-top:6px">İLERİ ANALİTİK MODEL (${tiCount("İLERİ ANALİTİK MODEL")})<br>BASİT MODEL (${tiCount("BASİT MODEL")})</div></div>
+   <div class="card" style="padding:12px"><b>Statü</b><div class="tsub" style="margin-top:6px">Talep edildi · Geliştirmede · Validasyonda · Üretimde · Emekli</div></div>
+   <div class="card" style="padding:12px"><b>Risk Sınıfı</b><div class="tsub" style="margin-top:6px">Sınıf 1 (kırmızı) · 2 (turuncu) · 3 (sarı) · 4 (yeşil)</div></div>
+  </div>
+  <div class="section-h">Registry Alanları</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Alan</th><th>Tip</th><th>Zorunlu</th></tr></thead><tbody>
+   ${[["Code","Auto",""],["Model Adı","Text","✓"],["Version","Text","✓"],["Lifecycle phase","Values List","✓"],["Statü","Values List","✓"],["Model Tipi","Values List","✓"],["Modeli Geliştiren","Text",""],["Area Model","Cross-Ref",""],["Demand di riferimento","Text",""],["ID Progetto","Text",""]].map(r=>`<tr><td>${esc(r[0])}</td><td class="tsub">${esc(r[1])}</td><td>${r[2]?'<span class="chip good" style="padding:0 7px">✓</span>':'<span class="tsub">—</span>'}</td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+function adminReporting(v){
+ const reports=[["Model Envanteri Raporu","Tüm modeller · sınıf · statü · lifecycle","Registry"],["Validasyon Takvimi","Gecikmiş/yaklaşan revalidasyonlar","Dashboards"],["Issue / Remediation Raporu","Açık bulgular · SLA · öncelik","Issues"],["Tiering (Sınıf) Dağılımı","Sınıf 1-4 kırılımı ve materyalite","Dashboards"],["AI/ML & EU AI Act Uyum","Yüksek riskli AI envanteri","Documentation"],["Denetim İzi Dışa Aktarımı","Tüm aksiyon logu","Audit Tools"]];
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Reporting</div><div class="reg-sub">Rapor şablonları — oluştur / dışa aktar</div></div></div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Rapor</th><th>İçerik</th><th>Kaynak</th><th></th></tr></thead><tbody>
+   ${reports.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="tsub">${esc(r[1])}</td><td class="tsub">${esc(r[2])}</td><td><button class="tbtn ghost" onclick="alert('Rapor oluşturuldu (demo): ${esc(r[0])}')">Oluştur</button></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+function adminSettings(v){
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Settings — System Configuration</div><div class="reg-sub">PMJ sistem parametreleri</div></div></div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px">
+   <div class="card panel"><div class="section-h" style="margin-top:0">Attachment & Document Area</div>
+    ${dl({"Attachment Max Size":ADMIN_CFG.attachMax,"Document Area — max favorites":ADMIN_CFG.docFav,"Max recent documents":ADMIN_CFG.docRecent,"Admitted attachment file types":ADMIN_CFG.fileTypes})}</div>
+   <div class="card panel"><div class="section-h" style="margin-top:0">Issues</div>
+    ${dl({"Issues — max favorites":ADMIN_CFG.issueFav,"Max recent issues":ADMIN_CFG.issueRecent})}
+    <div class="section-h">Downloads</div>
+    <div class="tsub" style="margin-bottom:8px">İndirilecek içerik: Item details + Lifecycle + Issues + Relation map</div>
+    <div style="display:flex;gap:8px"><button class="tbtn primary" onclick="alert('İndirme kuyruğa alındı (demo).')">Create</button><button class="tbtn ghost" onclick="alert('Kuyruk boş (demo).')">Open Queue</button></div>
+   </div>
+  </div>`;
+}
+function adminAudit(v){
+ const A=(state.audit||[]);
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Audit Tools</div><div class="reg-sub">Denetim izi & bütünlük — ${A.length} kayıt</div></div><button class="tbtn ghost" onclick="exportAudit()">⭳ Export</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px">
+   ${kpi("Toplam Log",A.length,"Değişmez iz","")}
+   ${kpi("Model",state.models.length,"Register bütünlüğü","good")}
+   ${kpi("Bugünkü Aksiyon",A.filter(a=>(a.ts||"").slice(0,10)===todayStr()).length,"Son 24s","info")}
+  </div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>Zaman</th><th>Rol</th><th>Aksiyon</th><th>Varlık</th><th>Detay</th></tr></thead><tbody>
+   ${A.slice(0,60).map(a=>`<tr><td class="tsub mono">${esc((a.ts||"").slice(0,16).replace("T"," "))}</td><td class="tsub">${esc(a.role||"—")}</td><td>${esc(a.action)}</td><td class="tsub">${esc(a.entity||"—")}</td><td class="tsub" style="white-space:normal">${esc(a.detail||"")}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Kayıt yok.</div></td></tr>`}
+  </tbody></table></div>`;
+}
+window.exportAudit=function(){const A=(state.audit||[]);const lines=[["ts","role","action","entity","detail"]].concat(A.map(a=>[a.ts,a.role,a.action,a.entity,(a.detail||"").replace(/,/g,";")]));const csv=lines.map(r=>r.join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const el=document.createElement("a");el.href=URL.createObjectURL(blob);el.download="pmj_audit.csv";el.click();};
 /* ============ INIT ============ */
 (function init(){
  const th=localStorage.getItem("mrm_theme");if(th)applyTheme(th);
