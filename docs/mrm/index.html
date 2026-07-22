@@ -673,6 +673,9 @@ function viewEnvanter(v){
   <select id="f-unit"><option value="">Tüm Birim</option>${units.map(t=>`<option value="${esc(t)}" ${envFilter.unit===t?"selected":""}>${esc(t.length>30?t.slice(0,29)+"…":t)}</option>`).join("")}</select>
   <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="f-group" ${envFilter.group?"checked":""}> Birime göre grupla</label>
   <div class="sp"></div>
+  <button class="tbtn" id="expCsv" title="Envanteri CSV/Excel olarak indir">⭳ CSV</button>
+  <button class="tbtn" id="impCsv" title="CSV ile toplu model yükle">⭱ İçe Aktar</button>
+  <input type="file" id="impFileInv" accept=".csv,text/csv" style="display:none">
   <button class="tbtn" id="newBeyan" title="İş birimi modelini anket ile beyan et">🏛️ İş Birimi Yeni Giriş</button>
   <button class="tbtn primary" id="newModel">+ Yeni Model</button>
  </div>
@@ -682,6 +685,9 @@ function viewEnvanter(v){
  document.getElementById("f-group").onchange=upd;
  document.getElementById("newModel").onclick=()=>modelForm(null);
  document.getElementById("newBeyan").onclick=()=>beyanForm();
+ document.getElementById("expCsv").onclick=()=>exportInventoryCsv();
+ document.getElementById("impCsv").onclick=()=>document.getElementById("impFileInv").click();
+ document.getElementById("impFileInv").onchange=e=>{if(e.target.files[0])importInventoryCsv(e.target.files[0]);};
  document.querySelectorAll('#view tr[data-unit]').forEach(tr=>{tr.onclick=()=>{envFilter.unit=tr.dataset.unit;const s=document.getElementById("f-unit");if(s)s.value=tr.dataset.unit;renderEnvTable();document.getElementById("envtable").scrollIntoView({behavior:"smooth",block:"start"});};});
  renderEnvTable();
 }
@@ -881,6 +887,7 @@ function fld(lab,name,val,type,req,full){
 }
 function fldSel(lab,name,val,opts){return `<div class="field"><label>${lab}</label><select data-f="${name}">${opts.map(o=>`<option ${val===o?"selected":""}>${o}</option>`).join("")}</select></div>`;}
 window.saveModel=function(id){
+ if(!guardWrite())return;
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const ad=g("ad");if(!ad){alert("Model adı zorunludur.");return;}
  const kat=[...document.querySelectorAll('input[name="kat"]:checked')].map(x=>x.value);
@@ -902,6 +909,44 @@ window.saveModel=function(id){
  save();closeDrawer();render();
 };
 window.delModel=function(id){if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
+
+/* ============ CSV İÇE/DIŞA AKTARMA (Archer: Data Import/Feed + export) ============ */
+const KRIT_PRESET={"Düşük":2,"Orta":3,"Yüksek":4,"Kritik":5};
+function critFromLevel(lvl,duz,aiml){const n=KRIT_PRESET[lvl]||3;const c={};["M1","M2","M3","M4","M5","K1","K2","K3","K4","K5","K6","K7"].forEach(k=>c[k]=n);c.O1=aiml?2:0;c.B1=1;c.duzenleyici=!!duz;return c;}
+function levelFromMat(mat){mat=+mat||3;return mat<=2.2?"Düşük":mat<=3.2?"Orta":mat<=4.2?"Yüksek":"Kritik";}
+function csvEsc(x){x=String(x==null?"":x);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
+function parseCsv(text){const rows=[];let i=0,f="",row=[],q=false;const n=text.length;while(i<n){const c=text[i];if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i+=2;continue;}q=false;i++;continue;}f+=c;i++;continue;}if(c==='"'){q=true;i++;continue;}if(c===','){row.push(f);f="";i++;continue;}if(c==='\r'){i++;continue;}if(c==='\n'){row.push(f);rows.push(row);row=[];f="";i++;continue;}f+=c;i++;}if(f!==""||row.length){row.push(f);rows.push(row);}return rows;}
+window.exportInventoryCsv=function(){
+ const cols=["Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Metrik Çerçevesi","Düzenleyici","AI/ML","Genel Kritiklik","Son Validasyon","Tier","İçsel Risk","Kaynak"];
+ const lines=[cols.join(",")];
+ state.models.forEach(m=>{lines.push([m.ad,m.sahipBirim,m.sinif,modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.metricProfile||"",m.duzenleyici?"Evet":"Hayır",m.aiml?"Evet":"Hayır",levelFromMat(m.mat),m.sonValidasyon||"",m.tier,m.icsel,m.kaynak||"Seed"].map(csvEsc).join(","));});
+ const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="halkbank_model_envanteri.csv";a.click();logAudit("Envanter CSV dışa aktarıldı","envanter",state.models.length+" model");};
+window.importInventoryCsv=function(file){
+ const r=new FileReader();
+ r.onload=()=>{try{
+  const rows=parseCsv(r.result).filter(x=>x.length&&x.some(c=>String(c).trim()!==""));
+  if(rows.length<2){alert("Dosyada veri yok.");return;}
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const idx=name=>head.findIndex(h=>h.includes(name));
+  const iAd=idx("model ad"),iBirim=idx("birim"),iSinif=idx("sınıf"),iTip=idx("tip"),iKat=idx("kategori"),iDurum=idx("durum"),iMp=idx("metrik"),iDuz=idx("düzenley"),iAi=idx("ai"),iKrit=idx("kritik"),iSv=idx("son val");
+  if(iAd<0){alert("Zorunlu 'Model Adı' sütunu bulunamadı. Önce ⭳ CSV ile şablon indirin.");return;}
+  let added=0;
+  for(let ri=1;ri<rows.length;ri++){const row=rows[ri];const ad=((row[iAd]||"")+"").trim();if(!ad)continue;
+   const sinif=MODEL_SINIFLARI.includes(((row[iSinif]||"")+"").trim())?((row[iSinif])+"").trim():"Geleneksel";
+   let mp=((row[iMp]||"")+"").trim();
+   if(!METRIC_FRAMEWORKS[mp]){const byLab=Object.keys(METRIC_FRAMEWORKS).find(k=>METRIC_FRAMEWORKS[k].lab===mp);mp=byLab||(sinif==="ML/AI"?"ml_class":sinif==="Ekonometrik"?"ifrs9":"pd_rating");}
+   const duz=/evet|yes|^e$|^1$/i.test(((row[iDuz]||"")+"").trim());
+   const aiml=/evet|yes|^e$|^1$/i.test(((row[iAi]||"")+"").trim())||sinif==="ML/AI";
+   const lvlRaw=((row[iKrit]||"Orta")+"").trim();const lvl=KRIT_PRESET[lvlRaw]?lvlRaw:"Orta";
+   const crit=critFromLevel(lvl,duz,aiml);const s=scoreCrit(crit);
+   const m={id:uid("MDL-"),ad,sahipBirim:((row[iBirim]||"—")+"").trim()||"—",sinif,modelTipi:((row[iTip]||"")+"").trim()||modelTipiOf({aiml,sinif}),kategori:[((row[iKat]||"Diğer")+"").split(";")[0].trim()||"Diğer"],durum:((row[iDurum]||"İzlemede")+"").trim()||"İzlemede",metricProfile:mp,aiml,genai:false,duzenleyici:duz,tip:aiml?"AI/ML":"İstatistiksel",amac:"CSV içe aktarım",sahip:"CSV İçe Aktarım",gelistirici:"—",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",metodoloji:"—",barindiran:"—",sonValidasyon:((row[iSv]||"")+"").trim(),valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"CSV İçe Aktarım",crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};
+   state.models.push(m);genMetricsForModel(m);added++;
+  }
+  logAudit("CSV içe aktarım","envanter",added+" model");save();render();
+  alert(added+" model içe aktarıldı; Tier/metrik/validasyon takvimi dahil tüm hesaplamalar güncellendi.");
+ }catch(e){alert("İçe aktarım hatası: "+e.message);}};
+ r.readAsText(file,"utf-8");
+};
 
 /* ============ İŞ BİRİMİ MODEL BEYANI (dropdown anketi) ============ */
 const SCALE5=[["Çok Düşük",1],["Düşük",2],["Orta",3],["Yüksek",4],["Çok Yüksek",5]];
@@ -944,12 +989,15 @@ window.beyanForm=function(){
    ${bsel("metricProfile","Performans Metrik Çerçevesi",BEYAN_MP,true,"izleme metriklerini belirler")}
    ${bsel("lifecyclePhase","Yaşam Döngüsü Fazı",LC4,false)}
   </div>
-  <div class="beyan-sec">3 · Model Nitelikleri (bayraklar)</div>
+  <div class="beyan-sec">3 · Model Nitelikleri &amp; Kritiklik</div>
   <div class="form-grid">
    ${bsel("aiml","AI/ML modeli mi?",["Hayır","Evet"],false)}
    ${bsel("genai","GenAI / Temel Model mi?",["Hayır","Evet"],false)}
    ${bsel("duzenleyici","Düzenleyici / sermaye kullanımı?",["Hayır","Evet"],false,"IRB/İSEDES/TFRS9/piyasa")}
+   ${bsel("genelKrit","Genel Kritiklik Düzeyi",["Düşük","Orta","Yüksek","Kritik"],false,"basit: tek seçim → Tier")}
   </div>
+  <div style="margin:6px 0 2px"><button type="button" class="tbtn ghost" id="beyanAdvBtn" onclick="beyanToggleAdv()">⚙ Gelişmiş alanlar (ayrıntılı kritiklik + resmi envanter) ▾</button> <span class="tsub">Basit giriş için gerekli değil — yukarıdaki “Genel Kritiklik” yeterli.</span></div>
+  <div id="beyanAdv" style="display:none">
   <div class="beyan-sec">4 · Kritiklik — Materyalite (S.03.A)</div>
   <div class="form-grid">
    ${bscale("M1","Risk tutarı / portföy büyüklüğü / bilanço etkisi")}
@@ -999,9 +1047,15 @@ window.beyanForm=function(){
    ${bsel("dokuman","Model dokümanı bulunuyor mu?",OPT_EH)}
   </div>
   ${fld("Açıklama (Opsiyonel) (***)","aciklama","","textarea",false,true)}
+  </div>
   <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveBeyan()">Beyanı Kaydet &amp; İşle</button></div>`);
 };
+window.beyanToggleAdv=function(){const el=document.getElementById("beyanAdv");const btn=document.getElementById("beyanAdvBtn");if(!el)return;const show=el.style.display==="none";el.style.display=show?"block":"none";if(btn)btn.innerHTML=show?"⚙ Gelişmiş alanları gizle ▴":"⚙ Gelişmiş alanlar (ayrıntılı kritiklik + resmi envanter) ▾";};
+/* FLS / rol kısıtı: yazma yetkisi (Archer Access Roles) */
+function canWrite(){return !window.activeRole||PERMS["Yeni/Düzenle model"].includes(window.activeRole);}
+function guardWrite(){if(!canWrite()){alert("Bu işlem için yetkiniz yok. Aktif rol: "+(window.activeRole||"—")+". Model oluşturma/düzenleme yalnız 1. hat (Sahip/Geliştirici) ve 2. hat (MRM Programı) rollerindedir (Archer Access Roles/FLS).");return false;}return true;}
 window.saveBeyan=function(){
+ if(!guardWrite())return;
  const gb=n=>{const e=document.querySelector(`[data-b="${n}"]`);return e?e.value:"";};
  const gf=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const ad=gf("ad");if(!ad){alert("Model adı zorunludur.");return;}
@@ -1009,6 +1063,10 @@ window.saveBeyan=function(){
  for(const r of req){if(!gb(r[0])){alert(r[1]+" seçilmelidir.");return;}}
  const num=n=>{const v=gb(n);return v===""?0:+v;};
  const crit={M1:num("M1"),M2:num("M2"),M3:num("M3"),M4:num("M4"),M5:num("M5"),K1:num("K1"),K2:num("K2"),K3:num("K3"),K4:num("K4"),K5:num("K5"),K6:num("K6"),K7:num("K7"),O1:num("O1"),B1:num("B1"),duzenleyici:gb("duzenleyici")==="Evet",genai:gb("genai")==="Evet"};
+ // Basit mod: ayrıntılı M/K girilmemişse "Genel Kritiklik Düzeyi" presetini uygula
+ const mkSum=["M1","M2","M3","M4","M5","K1","K2","K3","K4","K5","K6","K7"].reduce((s,k)=>s+(crit[k]||0),0);
+ const gk=gb("genelKrit");
+ if(mkSum===0&&KRIT_PRESET[gk]){const p=critFromLevel(gk,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
  const bddk=gb("bddkKapsam")==="Evet";if(bddk)crit.duzenleyici=true;
  if((gb("etki")||"").startsWith("Doğrudan"))crit.O1=Math.max(crit.O1,3);
  const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama")};
@@ -2329,7 +2387,7 @@ const ROLES=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon"
  if(!load())seed();
  refreshMonitorStatus();
  buildNav();
- window.activeRole=localStorage.getItem("mrm_role")||"Model Risk Komitesi";
+ window.activeRole=localStorage.getItem("mrm_role")||"1. Hat – Sahip/Geliştirici";
  const rs=document.getElementById("roleSel");
  rs.innerHTML=ROLES.map(r=>`<option ${window.activeRole===r?"selected":""}>${r}</option>`).join("");
  rs.onchange=()=>{window.activeRole=rs.value;localStorage.setItem("mrm_role",rs.value);render();};
