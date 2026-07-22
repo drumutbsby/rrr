@@ -1,4 +1,4 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Prometeia Model Journey — Halkbank MRM Simülasyonu</title></head><body>
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Halkbank Model Journey — MRM Simülasyonu</title></head><body>
 <style>
 :root{
   --paper:#f7f8fa; --surface:#ffffff; --surface-2:#f0f3f7; --ink:#1b2333; --muted:#5b6474;
@@ -331,9 +331,9 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 </style>
 
 <div class="sso" id="sso">
-  <div class="sso-top"><span class="pm-logo"><span class="leaf">🌿</span>prometeia</span><span class="lnk active">SSO</span><span class="lnk">Home</span><span class="lnk">Admin</span></div>
+  <div class="sso-top"><span class="pm-logo"><span style="display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#e2001a;color:#fff;font-weight:900;font-size:13px;margin-right:3px">H</span><span style="color:#fff">halk</span><span style="color:#ff6b78">bank</span></span><span class="lnk active">SSO</span><span class="lnk">Home</span><span class="lnk">Admin</span></div>
   <div class="sso-body">
-    <h1>Welcome to Prometeia's Enterprise Management Solution</h1>
+    <h1>Halkbank — Model Risk Yönetimi · Kurumsal Yönetim Çözümü</h1>
     <div class="sso-tiles">
       <button class="sso-tile" onclick="enterApp('admin')"><span class="ic">🛡️</span>Administrator Portal</button>
       <button class="sso-tile" onclick="enterApp('user')"><span class="ic">👥</span>User Portal</button>
@@ -346,7 +346,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 </div>
 <div class="pmj" id="app" hidden>
   <header class="pmjnav">
-    <span class="pm-logo" onclick="goModule('registry')"><span class="leaf">🌿</span>prometeia</span>
+    <span class="pm-logo" onclick="goModule('registry')"><span style="display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#e2001a;color:#fff;font-weight:900;font-size:13px;margin-right:3px">H</span><span style="color:#fff">halk</span><span style="color:#ff6b78">bank</span></span>
     <nav class="pmjtabs" id="pmjtabs"></nav>
     <div class="pm-user" id="pmUser"></div>
   </header>
@@ -1551,7 +1551,7 @@ function viewHakkinda(v){
  const el4=[["Governance & Yönetişim","Politika, rol/onay, üç savunma hattı"],["Model Envanteri (Registry)","Banka geneli tek doğruluk kaynağı; kod/versiyon/lifecycle"],["360° Validasyon","Bağımsız gözden geçirme; test kataloğu; öneri≠onay"],["İzleme & Raporlama","Performans/drift, bulgu/remediation, dışa aktarma"]];
  const pr5=[["1","Model tanımı & envanter","Model neyin modeli — tek envanterde"],["2","Yönetişim & sorumluluk","Rol, onay, politika, kayıt"],["3","Geliştirme, uygulama, kullanım","Yaşam döngüsü + kontroller"],["4","Bağımsız validasyon","Etkin sorgulama; öneri≠onay"],["5","Risk azaltıcı / kayıt","PMA, istisna, koşullu onay"]];
  v.innerHTML=`
-  <div class="callout"><b>Prometeia Model Journey (PMJ) — Halkbank simülasyonu.</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin PMJ ürün yapısı (Registry · Model Journey/Lifecycle · Tiering · Issues · Dashboards) üzerinde uçtan uca nasıl işlediğini canlandırır. Mevcut zengin MRM işlevselliği korunur; UI ve süreç yapısı PMJ'ye hizalanmıştır.</div>
+  <div class="callout"><b>Halkbank Model Journey (PMJ) — MRM simülasyonu.</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin PMJ ürün yapısı (Registry · Model Journey/Lifecycle · Tiering · Issues · Dashboards) üzerinde uçtan uca nasıl işlediğini canlandırır. Mevcut zengin MRM işlevselliği korunur; UI ve süreç yapısı PMJ'ye hizalanmıştır.</div>
   <div class="card panel"><h3>PMJ — 3 Modül</h3>
    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
     ${el3.map(x=>`<div class="card" style="padding:12px 14px"><div style="font-weight:800;color:var(--accent-ink);font-size:15px">${esc(x[0])}</div><div class="tsub" style="margin-top:5px;white-space:normal">${esc(x[1])}</div></div>`).join("")}
@@ -2086,12 +2086,12 @@ window.riskCell=function(y,x){
 function viewYetki(v){
  const roles=ROLES_PMJ;
  const actions=Object.keys(PMJ_PERMS);
- v.innerHTML=`<p class="vlead">PMJ <b>Rol × işlem yetki matrisi</b> (üç savunma hattı) — Prometeia Access Roles / alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstteki kullanıcı menüsünden değişir; onay ve validasyon önerisi yalnız <b>Model Risk Manager</b> (2. hat); <b>Internal Audit Officer</b> &amp; <b>APIUser</b> salt-okur.</p>
+ v.innerHTML=`<p class="vlead">PMJ <b>Rol × işlem yetki matrisi</b> (üç savunma hattı) — Halkbank Access Roles / alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstteki kullanıcı menüsünden değişir; onay ve validasyon önerisi yalnız <b>Model Risk Manager</b> (2. hat); <b>Internal Audit Officer</b> &amp; <b>APIUser</b> salt-okur.</p>
   <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b> (savunma hattı: ${esc(activeHat())})${roleReadonly()?" — <b>salt-okur</b>: oluşturma/düzenleme kapalı.":""} Yetkili işlemler ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri ilgili ekranlarda pasifleşir.</div>
   <div class="tablewrap reg-grid"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:92px">${esc(r)}</th>`).join("")}</tr></thead><tbody>
    ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PMJ_PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
   </tbody></table></div>
-  <div class="footnote">Validasyon bağımsızlığı (1. hat kendi modelini onaylayamaz; ÖNERİ/ONAY 2. hatta) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Prometeia/Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
+  <div class="footnote">Validasyon bağımsızlığı (1. hat kendi modelini onaylayamaz; ÖNERİ/ONAY 2. hatta) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Halkbank/Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
 }
 /* ============ DENETIM IZI ============ */
 function fmtTs(ts){try{return new Date(ts).toLocaleString("tr-TR");}catch(e){return ts;}}
@@ -2364,7 +2364,7 @@ window.importJSON=function(file){
 /* ============ KULLANICI / ROL MENUSU ============ */
 function buildUserMenu(){
  const u=document.getElementById("pmUser");if(!u)return;
- u.innerHTML=`<div class="u-name">Gizem Atasoy<div class="u-sub">${esc(window.activeRole)} · Turkish Branch</div></div><div class="u-av">GA</div>`;
+ u.innerHTML=`<div class="u-name">Umut Okan Başbay<div class="u-sub">${esc(window.activeRole)} · Turkish Branch</div></div><div class="u-av">UÖB</div>`;
  u.onclick=toggleUserMenu;
 }
 function toggleUserMenu(){
@@ -2396,7 +2396,7 @@ const ADMIN_CFG={attachMax:"2 GB",docFav:50,docRecent:50,issueFav:50,issueRecent
 function adminHome(v){
  const M=state.models;
  v.innerHTML=`
-  <div class="reg-top"><div><div class="reg-title">Administrator Portal</div><div class="reg-sub">Prometeia Model Journey — sistem yönetimi (Halkbank Turkish Branch)</div></div></div>
+  <div class="reg-top"><div><div class="reg-title">Administrator Portal</div><div class="reg-sub">Halkbank Model Journey — sistem yönetimi (Halkbank Turkish Branch)</div></div></div>
   <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px">
    ${kpi("Kayıtlı Model",M.length,"Register","")}
    ${kpi("Issue",state.findings.length,"Issues Mgmt","info")}

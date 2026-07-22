@@ -1,4 +1,4 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MRM Konsolu — Model Riski Yönetimi Simülasyonu</title></head><body>
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MRM Konsolu — Halkbank Model Riski Yönetimi Simülasyonu</title></head><body>
 <style>
 :root{
   --paper:#f7f8fa; --surface:#ffffff; --surface-2:#f0f3f7; --ink:#1b2333; --muted:#5b6474;
@@ -190,15 +190,27 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .menu-btn{display:none}
 .ro-note{display:none}
 :root[data-ro="1"] .ro-note{display:flex}
-:root[data-ro="1"] .tbtn.primary{opacity:.4;pointer-events:none}
+:root[data-ro="1"] .tbtn.primary,:root[data-ro="1"] #newBeyan{opacity:.4;pointer-events:none}
+.beyan-sec{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-ink);font-weight:800;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.beyan-sec:first-of-type{margin-top:4px}
+/* Halkbank marka */
+.hb-logo{display:flex;align-items:center;gap:2px;font-weight:800;font-size:17px;letter-spacing:-.4px;line-height:1}
+.hb-logo .hb-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#e2001a,#b0001a);display:grid;place-items:center;color:#fff;font-size:15px;font-weight:900;flex:none;margin-right:7px}
+.hb-logo .hb-w1{color:#004a93}.hb-logo .hb-w2{color:#e2001a}
+:root[data-theme="dark"] .hb-logo .hb-w1{color:#6ea8e6}
+.user-chip{display:flex;align-items:center;gap:9px;padding:4px 10px 4px 4px;background:var(--surface);border:1px solid var(--line);border-radius:24px}
+.user-chip .u-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#004a93,#0a63b8);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.user-chip .u-tx b{font-size:12.5px;line-height:1.1;display:block}
+.user-chip .u-tx span{font-size:10.5px;color:var(--muted)}
+@media(max-width:720px){.user-chip .u-tx{display:none}}
 </style>
 
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <div class="logo">MR</div>
-      <div><b>MRM Konsolu</b><span>Model Riski Yönetimi · Simülasyon</span></div>
+      <div class="hb-logo"><span class="hb-mark">H</span><span class="hb-w1">halk</span><span class="hb-w2">bank</span></div>
     </div>
+    <div style="padding:0 4px 10px"><b style="font-size:13px">MRM Konsolu</b><br><span style="font-size:11px;color:var(--muted)">Model Riski Yönetimi · Simülasyon</span></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
       Prototip v1 · Archer mimarisi<br>Veriler tarayıcıda (localStorage) tutulur.
@@ -212,6 +224,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
       <select id="roleSel" title="Aktif rol — üç savunma hattı" style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;color:var(--ink);max-width:220px"></select>
       <button class="tbtn ghost" id="themeBtn" title="Tema">◐ Tema</button>
       <button class="tbtn" id="seedBtn" title="Örnek veriyi yükle">↺ Örnek Veri</button>
+      <div class="user-chip"><span class="u-av">UÖB</span><div class="u-tx"><b>Umut Okan Başbay</b><span>Model Risk · Turkish Branch</span></div></div>
     </header>
     <div class="ro-note" style="align-items:center;gap:8px;background:var(--warn-bg);color:var(--warn);padding:8px 22px;font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line)">🔒 3. Hat – İç Denetim: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim.</div>
     <div class="view" id="view"></div>
@@ -426,6 +439,30 @@ function genSeedMetrics(){
      }});});
  refreshMonitorStatus();
 }
+/* Tek modele performans metrik serisi üret (yeni giriş → izleme/dashboard'ları besler) */
+function genMetricsForModel(m){
+ const fw=METRIC_FRAMEWORKS[m.metricProfile];if(!fw)return;
+ const months=["2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01","2026-07-01"];
+ state.metrics=state.metrics||[];
+ (state.metrics=state.metrics.filter(x=>x.modelId!==m.id));
+ let maxId=0;state.metrics.forEach(x=>{const mm=(x.id||"").match(/(\d+)/);if(mm)maxId=Math.max(maxId,+mm[1]);});
+ fw.metrics.forEach(t=>{const d=METRIC_DEF[t];const base=METRIC_BASE[t];
+   for(let i=0;i<months.length;i++){
+     let noise=(Math.random()-0.5)*(d.dir==="band"?0.3:(base*0.12+0.008));
+     let val=base+noise;
+     if(m._degrade&&i>=months.length-2){if(d.dir==="low")val=d.esik*1.18;else if(d.dir==="high")val=d.esik*0.9;else val=d.band[1]+0.35;val+=noise*0.25;}
+     val=t==="VaRexc"?Math.round(Math.max(0,val)):+val.toFixed(t==="DW"?2:3);
+     const esik=(TIER_THRESH[m.tier]&&TIER_THRESH[m.tier][t]!=null)?TIER_THRESH[m.tier][t]:d.esik;
+     state.metrics.push({id:"MET-"+String(++maxId).padStart(4,"0"),modelId:m.id,tarih:months[i],tur:t,deger:val,esik});
+   }});
+ refreshMonitorStatus();
+}
+/* PMJ sunumu harmanı: Risk Sınıfı 1-4 (Tier ile tutarlı) + Model Tipi */
+const SINIF_MAP={"Tier 1":{l:"Sınıf 1",c:"t1"},"Tier 2":{l:"Sınıf 2",c:"t2"},"Tier 3":{l:"Sınıf 3",c:"t3"},"İhmal Edilebilir":{l:"Sınıf 4",c:"t0"}};
+function sinifOf(m){return SINIF_MAP[m.tier]||SINIF_MAP["Tier 2"];}
+function sinifChip(m){const s=sinifOf(m);return `<span class="chip ${s.c}" title="PMJ Risk Sınıfı (${esc(m.tier)})">${s.l}</span>`;}
+function modelTipiOf(m){return m.modelTipi||((m.aiml||m.genai||m.sinif==="Ekonometrik"||m.sinif==="ML/AI")?"İLERİ ANALİTİK MODEL":"BASİT MODEL");}
+const LC4=["İş İhtiyaç ve Gereksinim Analizi","Model Geliştirme","İmplementasyon","Yayımlaştırma ve Kullanım"];
 
 /* ============ ROUTER ============ */
 const NAV=[
@@ -572,6 +609,7 @@ function viewEnvanter(v){
   <select id="f-unit"><option value="">Tüm Birim</option>${units.map(t=>`<option value="${esc(t)}" ${envFilter.unit===t?"selected":""}>${esc(t.length>30?t.slice(0,29)+"…":t)}</option>`).join("")}</select>
   <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="f-group" ${envFilter.group?"checked":""}> Birime göre grupla</label>
   <div class="sp"></div>
+  <button class="tbtn" id="newBeyan" title="İş birimi modelini anket ile beyan et">🏛️ İş Birimi Yeni Giriş</button>
   <button class="tbtn primary" id="newModel">+ Yeni Model</button>
  </div>
  <div id="envtable"></div>`;
@@ -579,6 +617,7 @@ function viewEnvanter(v){
  ["f-q","f-sinif","f-tier","f-durum","f-unit"].forEach(id=>{const e=document.getElementById(id);e.oninput=upd;e.onchange=upd;});
  document.getElementById("f-group").onchange=upd;
  document.getElementById("newModel").onclick=()=>modelForm(null);
+ document.getElementById("newBeyan").onclick=()=>beyanForm();
  document.querySelectorAll('#view tr[data-unit]').forEach(tr=>{tr.onclick=()=>{envFilter.unit=tr.dataset.unit;const s=document.getElementById("f-unit");if(s)s.value=tr.dataset.unit;renderEnvTable();document.getElementById("envtable").scrollIntoView({behavior:"smooth",block:"start"});};});
  renderEnvTable();
 }
@@ -624,7 +663,7 @@ window.modelDetail=function(id){
  const downs=state.models.filter(x=>(x.upstream||[]).includes(id)).map(x=>x.ad);
  openDrawer(`
   <div style="flex:1">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${tierChip(m.tier)} ${statusChip(m.durum)} <span class="chip ${m.sinif==='ML/AI'?'warn':'info'}">${esc(m.sinif||"—")}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${m.duzenleyici?`<span class="chip info">Düzenleyici</span>`:""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':''}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${sinifChip(m)} ${tierChip(m.tier)} ${statusChip(m.durum)} <span class="chip ${m.sinif==='ML/AI'?'warn':'info'}">${esc(m.sinif||"—")}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${m.duzenleyici?`<span class="chip info">Düzenleyici</span>`:""} ${m.kaynak==="İş Birimi Beyanı"?'<span class="chip warn">🏛️ İş Birimi Beyanı</span>':""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':''}</div>
     <h2 style="margin:8px 0 2px;font-size:19px">${esc(m.ad)}</h2>
     <div class="id">${m.id} · ${esc(m.sahipBirim||"")}</div>
   </div>
@@ -635,7 +674,7 @@ window.modelDetail=function(id){
    ${["Genel","Performans","Kritiklik","Metodoloji & Veri","Yaşam Döngüsü","İlişkiler & Linkler"].map((t,i)=>`<button class="${i===0?"active":""}" onclick="mtab(this,${i})">${t}</button>`).join("")}
   </div>
   <div class="mtab" data-i="0">
-    ${dl({"Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi":m.tip,"Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
+    ${dl({"Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
     <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
     <div class="section-h">Hızlı Erişim</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -778,6 +817,102 @@ window.saveModel=function(id){
  save();closeDrawer();render();
 };
 window.delModel=function(id){if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
+
+/* ============ İŞ BİRİMİ MODEL BEYANI (dropdown anketi) ============ */
+const SCALE5=[["Çok Düşük",1],["Düşük",2],["Orta",3],["Yüksek",4],["Çok Yüksek",5]];
+const BEYAN_UNITS=["Kredi Risk İzleme ve Yasal Takip GMY","Kredi Tahsis ve Yönetimi GMY","Finansal Yönetim ve Planlama GMY","Hazine Yönetimi ve Uluslararası Bankacılık GMY","Perakende Bankacılık GMY","Kurumsal ve Ticari Pazarlama GMY","Operasyonel İşlemler ve Destek Hizmetleri GMY","İç Sistemler Grup Başkanlığı","Bilgi Teknolojileri Grup Başkanlığı","Dijital Dönüşüm Ofisi Daire Başkanlığı"];
+const BEYAN_KAT=["Kredi/IRB","Piyasa/VaR","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Operasyonel/AMA","Fiyatlama/Değerleme","Diğer"];
+const BEYAN_MET=["Skorkart / Lojistik Regresyon","PD / LGD / EAD","VaR / Tarihsel Simülasyon","Zaman Serisi / Repricing","Makro / Ekonometrik Regresyon","Gradient Boosting (GBM)","Random Forest","Sinir Ağı / Derin Öğrenme","LLM / GenAI (RAG)","Kümeleme / Isolation Forest","Kural Tabanlı / Deterministik"];
+const BEYAN_MP=[["pd_rating","PD / Derecelendirme (Gini, KS, PSI, HHI)"],["lgd_ead","LGD / EAD (RMSE, MAE, R²)"],["ifrs9","IFRS9 BKZ — ekonometrik (RMSE, MAPE, R², PSI)"],["alm_irrbb","ALM / IRRBB — zaman serisi (RMSE, MAPE, DW)"],["var_market","Piyasa / Karşı Taraf — VaR (VaR aşımı)"],["stress","Stres testi — ekonometrik (RMSE, MAPE, R²)"],["ml_class","ML Sınıflandırma (AUC, Gini, KS, F1, PSI)"],["ml_reg","ML Regresyon (RMSE, MAE, R², PSI)"],["aml_fraud","AML / Suistimal (Precision, Recall, PSI)"],["genai","GenAI (Halüsinasyon, Toksisite, Faithfulness)"]];
+const BEYAN_AMAC=["Kredi kararı / limit","Temerrüt olasılığı (PD) / derecelendirme","Beklenen kredi zararı (BKZ/IFRS9)","Yasal/ekonomik sermaye","Piyasa riski / VaR","Likidite / faiz riski (IRRBB)","Suistimal / AML tespiti","Fiyatlama / değerleme","Pazarlama / churn / segmentasyon","Operasyonel otomasyon / OCR","Metin/özet (GenAI)","Diğer"];
+const BEYAN_SONVAL=[["taze","Bu yıl (0-6 ay)"],["1y","Geçen yıl (~12 ay)"],["2y","2 yıl önce"],["yok","Henüz valide edilmedi"]];
+function bsel(name,lab,opts,req,hint){
+ return `<div class="field"><label>${lab}${req?' <span style="color:var(--crit)">*</span>':''}${hint?` <span class="tsub" style="font-weight:400">${hint}</span>`:''}</label><select data-b="${name}"><option value="">— seçiniz —</option>${opts.map(o=>{const val=Array.isArray(o)?o[0]:o;const t=Array.isArray(o)?o[1]:o;return `<option value="${esc(val)}">${esc(t)}</option>`;}).join("")}</select></div>`;
+}
+function bscale(name,lab){return bsel(name,lab,SCALE5.map(x=>[x[1],x[0]]));}
+window.beyanForm=function(){
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">İş Birimi — Yeni Model Beyanı</h2><div class="id">Model bilgileri anket (dropdown) olarak alınır → tüm MRM hesaplamalarına işlenir</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  <div class="callout">İş biriminiz tarafından geliştirilen/kullanılan bir modeli beyan edin. Verdiğiniz yanıtlar <b>kritiklik/Tier</b>, <b>Risk Sınıfı</b>, <b>performans metrikleri</b>, <b>validasyon takvimi</b> ve <b>dashboard/ısı haritası</b> dahil tüm konsol hesaplarını günceller.</div>
+  <div class="beyan-sec">1 · Kimlik &amp; Sahiplik</div>
+  <div class="form-grid">
+   ${fld("Model Adı","ad","","text",true,true)}
+   ${bsel("unit","Beyan Eden İş Birimi",BEYAN_UNITS,true)}
+   ${bsel("koken","Köken",["İç Geliştirme","Satıcı/Vendor","Grup-Ana Model"],false)}
+   ${bsel("durum","Model Durumu",["Geliştirme","Validasyonda","Onaylı/Prod","İzlemede"],true)}
+  </div>
+  <div class="beyan-sec">2 · Model Tanımı (PMJ taksonomi)</div>
+  <div class="form-grid">
+   ${bsel("sinif","Model Sınıfı",MODEL_SINIFLARI,true,"Geleneksel / Ekonometrik / ML-AI")}
+   ${bsel("modelTipi","Model Tipi",["İLERİ ANALİTİK MODEL","BASİT MODEL"],true)}
+   ${bsel("kategori","Model Kategorisi",BEYAN_KAT,true)}
+   ${bsel("amac","Amaç / Kullanım",BEYAN_AMAC,true)}
+   ${bsel("metodoloji","Metodoloji Ailesi",BEYAN_MET,false)}
+   ${bsel("metricProfile","Performans Metrik Çerçevesi",BEYAN_MP,true,"izleme metriklerini belirler")}
+   ${bsel("lifecyclePhase","Yaşam Döngüsü Fazı",LC4,false)}
+  </div>
+  <div class="beyan-sec">3 · Model Nitelikleri (bayraklar)</div>
+  <div class="form-grid">
+   ${bsel("aiml","AI/ML modeli mi?",["Hayır","Evet"],false)}
+   ${bsel("genai","GenAI / Temel Model mi?",["Hayır","Evet"],false)}
+   ${bsel("duzenleyici","Düzenleyici / sermaye kullanımı?",["Hayır","Evet"],false,"IRB/İSEDES/TFRS9/piyasa")}
+  </div>
+  <div class="beyan-sec">4 · Kritiklik — Materyalite (S.03.A)</div>
+  <div class="form-grid">
+   ${bscale("M1","Risk tutarı / portföy büyüklüğü / bilanço etkisi")}
+   ${bscale("M2","Etkilenen müşteri / işlem sayısı")}
+   ${bscale("M3","Kararlara etki (fiyatlama/karşılık/sermaye/onay)")}
+   ${bscale("M4","Ödeme gücü / yasal sermaye / finansal raporlama etkisi")}
+   ${bscale("M5","İtibar / müşteri / davranışsal etki")}
+  </div>
+  <div class="beyan-sec">5 · Kritiklik — Karmaşıklık &amp; Belirsizlik (S.03.B)</div>
+  <div class="form-grid">
+   ${bscale("K1","Girdi veri niteliği/kalitesi (alternatif/yapılandırılmamış?)")}
+   ${bscale("K2","Metodoloji / varsayım karmaşıklığı")}
+   ${bscale("K3","Uygulama bütünlüğü / entegrasyon karmaşıklığı")}
+   ${bscale("K4","Kullanım sıklığı ve yaygınlığı")}
+   ${bscale("K5","Açıklanabilirlik / şeffaflık (opaklık)")}
+   ${bscale("K6","Tasarımcı / veri yanlılığı potansiyeli")}
+   ${bscale("K7","Otonomi / dinamik yeniden kalibrasyon")}
+   ${bsel("O1","Otonomi düzeyi",[[0,"İnsan onaylı (0)"],[1,"Karar destek (1)"],[2,"Yarı otonom (2)"],[3,"Tam otonom (3)"]],false)}
+   ${bsel("B1","Downstream (beslenen) bağımlılık",[[0,"Yok (0)"],[1,"Az (1)"],[2,"Orta (2)"],[3,"Çok (3)"]],false)}
+  </div>
+  <div class="beyan-sec">6 · Validasyon Takvimi</div>
+  <div class="form-grid">
+   ${bsel("sonVal","Son validasyon ne zaman?",BEYAN_SONVAL,false)}
+   ${bsel("valFrekans","Validasyon Frekansı",["(Tier'dan otomatik)","Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"],false)}
+  </div>
+  <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveBeyan()">Beyanı Kaydet &amp; İşle</button></div>`);
+};
+window.saveBeyan=function(){
+ const gb=n=>{const e=document.querySelector(`[data-b="${n}"]`);return e?e.value:"";};
+ const gf=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
+ const ad=gf("ad");if(!ad){alert("Model adı zorunludur.");return;}
+ const req=[["unit","Beyan Eden İş Birimi"],["durum","Model Durumu"],["sinif","Model Sınıfı"],["modelTipi","Model Tipi"],["kategori","Model Kategorisi"],["amac","Amaç"],["metricProfile","Performans Metrik Çerçevesi"]];
+ for(const r of req){if(!gb(r[0])){alert(r[1]+" seçilmelidir.");return;}}
+ const num=n=>{const v=gb(n);return v===""?0:+v;};
+ const crit={M1:num("M1"),M2:num("M2"),M3:num("M3"),M4:num("M4"),M5:num("M5"),K1:num("K1"),K2:num("K2"),K3:num("K3"),K4:num("K4"),K5:num("K5"),K6:num("K6"),K7:num("K7"),O1:num("O1"),B1:num("B1"),duzenleyici:gb("duzenleyici")==="Evet",genai:gb("genai")==="Evet"};
+ const s=scoreCrit(crit);
+ const sonVal=gb("sonVal"),sv={taze:addDays(todayStr(),-90),"1y":addDays(todayStr(),-365),"2y":addDays(todayStr(),-730),yok:""}[sonVal]||"";
+ const aiml=gb("aiml")==="Evet"||gb("genai")==="Evet"||gb("sinif")==="ML/AI";
+ const vf=gb("valFrekans");const valFrekans=(!vf||vf==="(Tier'dan otomatik)")?tierFreq(s.tier):vf;
+ const m={
+  id:uid("MDL-"),ad,tip:gb("genai")==="Evet"?"GenAI/Temel Model":(aiml?"AI/ML":"İstatistiksel"),
+  sinif:gb("sinif"),modelTipi:gb("modelTipi"),kategori:[gb("kategori")],amac:gb("amac"),metodoloji:gb("metodoloji"),
+  metricProfile:gb("metricProfile"),lifecyclePhase:gb("lifecyclePhase")||"",aiml,genai:gb("genai")==="Evet",
+  deterministik:gb("metodoloji")==="Kural Tabanlı / Deterministik",duzenleyici:crit.duzenleyici,
+  sahipBirim:gb("unit"),sahip:"İş Birimi Beyanı",gelistirici:gb("koken")==="Satıcı/Vendor"?"Satıcı/Vendor":"İş Birimi",
+  validator:"Bağımsız Validasyon Birimi",koken:gb("koken")||"İç Geliştirme",barindiran:"—",algoritma:gb("metodoloji"),
+  durum:gb("durum"),gelistirmeTarihi:"",prodTarihi:"",sonValidasyon:sv,valFrekans,
+  izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"İş Birimi Beyanı",crit,
+  mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece
+ };
+ state.models.push(m);
+ genMetricsForModel(m);
+ logAudit("İş birimi model beyanı","MDL "+m.id,esc(ad)+" · "+m.sahipBirim+" · "+m.tier);
+ save();closeDrawer();
+ alert(`Beyan kaydedildi: “${ad}”\nRisk Sınıfı: ${sinifOf(m).l} (${m.tier}) · İçsel risk ${m.icsel}\nPerformans metrikleri üretildi; izleme, dashboard ve ısı haritası güncellendi.`);
+ render();
+};
 
 /* ============ KRITIKLIK HESAPLAYICI ============ */
 let critState={modelId:"",c:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K6:3,K7:3,B1:1,O1:0,duzenleyici:false,genai:false}};
