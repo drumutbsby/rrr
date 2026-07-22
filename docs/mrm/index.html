@@ -237,7 +237,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 /* ============ DURUM / KALICILIK ============ */
 const KEY="mrm_sim_v1";
 const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[],audit:[]};
-["metrics","pmas","changes","audit"].forEach(k=>{if(!state[k])state[k]=[];});
+["metrics","pmas","changes","audit","guardrails"].forEach(k=>{if(!state[k])state[k]=[];});
 function logAudit(action,entity,detail){state.audit=state.audit||[];state.audit.unshift({ts:new Date().toISOString(),role:window.activeRole||"—",action,entity,detail:detail||""});if(state.audit.length>500)state.audit.length=500;}
 const PERMS={
  "Yeni/Düzenle model":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
@@ -375,6 +375,13 @@ function seed(){
  state.changes=[
   {id:"CHG-0001",modelId:"MDL-0003",versiyon:"v2.1",tur:"Retraining",aciklama:"Çeyreklik retraining; yeni özellikler eklendi.",materyalite:"Materyal Değil",revalidasyon:"Hayır",onay:"Onaylandı",tarih:"2026-04-01"},
   {id:"CHG-0002",modelId:"MDL-0001",versiyon:"v3.0",tur:"Rekalibrasyon",aciklama:"PSI artışı nedeniyle rekalibrasyon önerisi.",materyalite:"Materyal",revalidasyon:"Evet",onay:"Beklemede",tarih:""},
+ ];
+ state.guardrails=[
+  {id:"GRD-0001",modelId:"MDL-0006",tarih:"2026-06-10",tur:"Prompt Injection",sonuc:"Geçti",siddet:"—",detay:"50 saldırı örneği; guardrail 48/50 engelledi, 2 kısmi — kural güncellendi."},
+  {id:"GRD-0002",modelId:"MDL-0006",tarih:"2026-06-10",tur:"Jailbreak",sonuc:"Kaldı",siddet:"Yüksek",detay:"Rol-yapma senaryosunda politika dışı çıktı; sistem promptu sıkılaştırıldı, re-test planlandı."},
+  {id:"GRD-0003",modelId:"MDL-0006",tarih:"2026-06-11",tur:"Toksisite",sonuc:"Geçti",siddet:"—",detay:"Toksisite filtresi eşik 0.10 altında."},
+  {id:"GRD-0004",modelId:"MDL-0023",tarih:"2026-05-20",tur:"Veri Sızıntısı (PII)",sonuc:"Geçti",siddet:"—",detay:"PII maskeleme doğrulandı; sızıntı gözlenmedi."},
+  {id:"GRD-0005",modelId:"MDL-0023",tarih:"2026-05-20",tur:"Halüsinasyon (Red-team)",sonuc:"Kaldı",siddet:"Orta",detay:"Kaynak dışı iddia üretimi; RAG faithfulness eşiği eklenmesi önerildi (bulgu açıldı)."}
  ];
  state.audit=[];logAudit("Örnek veri yüklendi","sistem",state.models.length+" model");
  save();
@@ -530,6 +537,7 @@ const NAV=[
  {id:"kritiklik",t:"Kritiklik Değerlendirmesi",ic:"◈",sub:"Materyalite × Karmaşıklık → Tier"},
  {id:"aiml",t:"AI/ML Ek Değerlendirme",ic:"◆",sub:"AI/ML & GenAI ek kontrolleri"},
  {id:"euai",t:"EU AI Act Uyum",ic:"§",sub:"Yüksek-risk yükümlülük izleyici"},
+ {id:"vendor",t:"Vendor & GenAI Güvence",ic:"⛨",sub:"3. taraf durum tespiti & guardrail/red-team"},
  {id:"validasyon",t:"Model Validasyonu",ic:"✓",sub:"Bağımsız validasyon kayıtları"},
  {id:"valplan",t:"Validasyon Planı",ic:"📅",sub:"Risk-bazlı takvim & kapasite"},
  {id:"izleme",t:"İzleme & Metrikler",ic:"◎",sub:"Performans/drift metrikleri, eşikler"},
@@ -579,7 +587,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,valplan:viewValplan,bddk:viewBddk,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,valplan:viewValplan,bddk:viewBddk,vendor:viewVendor,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1710,6 +1718,70 @@ function viewValplan(v){
   </div>`;
  v.querySelectorAll("[data-mon]").forEach(el=>el.onclick=()=>{const k=el.dataset.mon;const arr=byMonth[k]||[];const ml=document.getElementById("monthList");if(!arr.length){ml.innerHTML="";return;}ml.innerHTML=`<div class="section-h">${monthLabel(k)} — ${arr.length} validasyon</div><div class="list">${arr.sort((a,b)=>new Date(a.next)-new Date(b.next)).map(x=>`<div class="li-row"><span class="chip ${x.o.c}" style="padding:0 7px">${x.next}</span><div class="grow"><div class="t">${esc(x.m.ad)}</div><div class="s">${tierChip(x.m.tier)} · ${esc(x.m.validator||"—")}</div></div><button class="tbtn ghost" onclick="modelDetail('${x.m.id}')">Aç</button></div>`).join("")}</div>`;ml.scrollIntoView({behavior:"smooth",block:"nearest"});});
 }
+/* ============ VENDOR & GENAI GÜVENCE (Archer: sub-form kayıtları) ============ */
+function vendorModels(){return state.models.filter(m=>m.koken==="Satıcı/Vendor"||m.tedarikci);}
+function genaiModels(){return state.models.filter(m=>m.genai);}
+const GRD_TURLER=["Prompt Injection","Jailbreak","Toksisite","Veri Sızıntısı (PII)","Yanlılık (Bias)","Halüsinasyon (Red-team)","Aşırı Yetki (Agency)"];
+function viewVendor(v){
+ const vm=vendorModels();const gm=genaiModels();const G=state.guardrails||[];
+ const ddYok=vm.filter(m=>!(m.vendor&&/Yapıldı/.test(m.vendor.dueDiligence||""))).length;
+ const grdFail=G.filter(g=>g.sonuc==="Kaldı").length;
+ v.innerHTML=`<p class="vlead"><b>Üçüncü taraf (vendor) model yönetişimi</b> ve <b>GenAI guardrail / red-team</b> güvence kaydı. Vendor modeller için durum tespiti, sözleşme/SLA, çıkış stratejisi ve kara-kutu validasyon kısıtı; GenAI için prompt injection/jailbreak/toksisite/red-team test logu (EU AI Act Md.15 · NIST GenAI profili · EBA outsourcing). <span class="tsub">Archer: model alt-formu (sub-form) kayıtları.</span></p>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Vendor Model",vm.length,"3. taraf/dış kaynak","info")}
+   ${kpi("Durum Tespiti Eksik",ddYok,"Due diligence yapılmalı","crit")}
+   ${kpi("GenAI Model",gm.length,"Guardrail zorunlu","warn")}
+   ${kpi("Guardrail Başarısız",grdFail,"Red-team bulgusu","crit")}
+  </div>
+  <div class="card panel">
+   <h3>Üçüncü Taraf (Vendor) Model Yönetişimi <span class="cnt">${vm.length} model</span></h3>
+   <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Model</th><th>Tedarikçi</th><th>Şeffaflık</th><th>Sözleşme/SLA</th><th>Çıkış Stratejisi</th><th>Durum Tespiti</th><th></th></tr></thead><tbody>
+    ${vm.map(m=>{const vd=m.vendor||{};return `<tr><td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}</div></td><td class="tsub">${esc(m.tedarikci||vd.tedarikci||"—")}</td><td class="tsub">${esc(vd.kutuTipi||(m.genai?"Kara kutu":"—"))}</td><td class="tsub">${esc(vd.sla||"—")}</td><td class="tsub">${esc(vd.cikisStrateji||"—")}</td><td>${vd.dueDiligence?`<span class="chip ${/Uygun$/.test(vd.dueDiligence)?'good':/Şartlı/.test(vd.dueDiligence)?'warn':'crit'}">${esc(vd.dueDiligence)}</span>`:'<span class="chip crit">Yapılmadı</span>'}</td><td><button class="tbtn ghost" onclick="vendorForm('${m.id}')">Düzenle</button></td></tr>`;}).join("")||`<tr><td colspan="7"><div class="empty">Vendor/3. taraf model yok.</div></td></tr>`}
+   </tbody></table></div>
+  </div>
+  <div class="card panel" style="margin-top:16px">
+   <h3>GenAI Guardrail / Red-Team Kaydı <span class="cnt">${G.length} test</span></h3>
+   <div class="toolbar" style="padding-top:0"><div class="sp"></div><button class="tbtn primary" id="newGrd">+ Test Kaydı</button></div>
+   <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>ID</th><th>Model</th><th>Tarih</th><th>Test Türü</th><th>Sonuç</th><th>Şiddet</th><th>Detay</th></tr></thead><tbody>
+    ${G.slice().sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).map(g=>{const m=state.models.find(x=>x.id===g.modelId);return `<tr onclick="grdForm('${g.id}')"><td class="id">${g.id}</td><td class="tsub">${esc(m?m.ad:"—")}</td><td class="tsub">${esc(g.tarih)}</td><td>${esc(g.tur)}</td><td><span class="chip ${g.sonuc==='Geçti'?'good':'crit'}">${esc(g.sonuc)}</span></td><td>${g.siddet&&g.siddet!=="—"?`<span class="chip ${g.siddet==='Yüksek'?'crit':'warn'}">${esc(g.siddet)}</span>`:'<span class="tsub">—</span>'}</td><td class="tsub" style="white-space:normal;font-size:11.5px;max-width:280px">${esc(g.detay||"")}</td></tr>`;}).join("")||`<tr><td colspan="7"><div class="empty">Test kaydı yok.</div></td></tr>`}
+   </tbody></table></div>
+   <div class="footnote" style="border:none;padding-top:8px">Başarısız (Kaldı) testler için bulgu açılıp remediation izlenmelidir. GenAI modeller üretim öncesi ve periyodik red-team’e tabidir (EU AI Act Md.15 sağlamlık · NIST AI 600-1 GenAI profili).</div>
+  </div>`;
+ const nb=document.getElementById("newGrd");if(nb)nb.onclick=()=>grdForm(null);
+}
+window.vendorForm=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const vd=m.vendor||{};
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">Vendor Yönetişimi</h2><div class="id">${esc(m.ad)}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  <div class="form-grid">
+   ${fld("Tedarikçi / Firma","tedarikci",m.tedarikci||vd.tedarikci,"text")}
+   ${fldSel("Model Şeffaflığı","kutuTipi",vd.kutuTipi,["Kara kutu","Gri kutu","Şeffaf"])}
+   ${fld("Sözleşme / SLA","sla",vd.sla,"text")}
+   ${fld("Çıkış Stratejisi (exit)","cikisStrateji",vd.cikisStrateji,"textarea",false,true)}
+   ${fld("Kara-kutu Validasyon Kısıtı","kutuKisit",vd.kutuKisit,"textarea",false,true)}
+   ${fldSel("Durum Tespiti (Due Diligence)","dueDiligence",vd.dueDiligence,["Yapılmadı","Yapıldı — Şartlı","Yapıldı — Uygun"])}
+   ${fld("Son Gözden Geçirme","sonGozden",vd.sonGozden,"date")}
+  </div>
+  <div class="callout" style="margin-top:10px">EBA outsourcing & SR 11-7: vendor modeller iç modellerle aynı MRM standardına tabidir; kara-kutu erişim kısıtı validasyon yaklaşımını belirler, çıkış stratejisi zorunludur.</div>
+  <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVendor('${id}')">Kaydet</button></div>`);
+};
+window.saveVendor=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(g("tedarikci"))m.tedarikci=g("tedarikci");m.vendor={tedarikci:g("tedarikci"),kutuTipi:g("kutuTipi"),sla:g("sla"),cikisStrateji:g("cikisStrateji"),kutuKisit:g("kutuKisit"),dueDiligence:g("dueDiligence"),sonGozden:g("sonGozden")};logAudit("Vendor yönetişim güncelle","MDL "+id,m.ad+" · "+g("dueDiligence"));save();closeDrawer();render();};
+window.grdForm=function(id){const g=id?JSON.parse(JSON.stringify((state.guardrails||[]).find(x=>x.id===id))):{sonuc:"Geçti",siddet:"—",tarih:todayStr()};
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Guardrail / Red-Team Testi":"Yeni Test Kaydı"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  <div class="form-grid">
+   <div class="field full"><label>Model (GenAI) *</label><select data-f="modelId">${genaiModels().map(m=>`<option value="${m.id}" ${g.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")||'<option value="">GenAI model yok</option>'}</select></div>
+   ${fldSel("Test Türü","tur",g.tur,GRD_TURLER)}
+   ${fld("Tarih","tarih",g.tarih,"date")}
+   ${fldSel("Sonuç","sonuc",g.sonuc,["Geçti","Kaldı"])}
+   ${fldSel("Şiddet (Kaldıysa)","siddet",g.siddet,["—","Düşük","Orta","Yüksek"])}
+   ${fld("Detay / Bulgu","detay",g.detay,"textarea",false,true)}
+  </div>
+  <div class="callout" style="margin-top:10px">Sonuç "Kaldı" ise otomatik bir bulgu (Yüksek/Orta) açmak için Kaydet sonrası "Bulgu üret" önerilir.</div>
+  <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delGrd('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveGrd('${id||""}')">Kaydet</button></div>`);
+};
+window.saveGrd=function(id){const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(!g("modelId")){alert("GenAI model seçilmeli.");return;}const obj={id:id||uid("GRD-"),modelId:g("modelId"),tur:g("tur"),tarih:g("tarih")||todayStr(),sonuc:g("sonuc"),siddet:g("siddet"),detay:g("detay")};if(id){const i=state.guardrails.findIndex(x=>x.id===id);state.guardrails[i]=obj;}else state.guardrails.push(obj);
+ if(obj.sonuc==="Kaldı"){const m=state.models.find(x=>x.id===obj.modelId);const title="[Guardrail] "+obj.tur+" başarısız";if(!state.findings.some(f=>f.modelId===obj.modelId&&f.baslik===title)){const onem=obj.siddet==="Yüksek"?"Yüksek":"Orta";state.findings.push({id:uid("FND-"),modelId:obj.modelId,baslik:title,kaynak:"AI/ML Değerlendirme",onem,durum:"Açık",sahip:m?m.sahip:"",olusturma:todayStr(),hedefTarih:addDays(todayStr(),SLA_DAYS[onem]),aksiyon:"",kanit:""});}}
+ logAudit(id?"Guardrail testi güncelle":"Guardrail testi kaydı","GRD "+obj.id,obj.tur+" · "+obj.sonuc);save();closeDrawer();render();};
+window.delGrd=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.guardrails=state.guardrails.filter(x=>x.id!==id);save();closeDrawer();render();};
+
 /* ============ BDDK / İSEDES KANIT PAKETİ (Archer: cross-reference + reporting) ============ */
 const ISEDES_MAP={"Kredi/IRB":"Kredi Riski (1. Yapısal Blok)","TFRS9 BKZ":"Kredi Riski / Karşılık","Piyasa/VaR":"Piyasa Riski (1. Yapısal Blok)","Karşı Taraf/CVA":"Karşı Taraf Kredi Riski","ALM/IRRBB":"IRRBB (2. Yapısal Blok)","İSEDES Sermaye":"İSEDES/ICAAP — Sermaye Planlaması","Operasyonel/AMA":"Operasyonel Risk"};
 function isedesUse(m){
@@ -2243,7 +2315,7 @@ window.importJSON=function(file){
  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.models))throw 0;
    const base={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[]};
    Object.keys(state).forEach(k=>delete state[k]);Object.assign(state,base,d);
-   ["metrics","pmas","changes","audit"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+   ["metrics","pmas","changes","audit","guardrails"].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
    logAudit("Veri içe aktar","sistem",state.models.length+" model");
    save();buildNav();render();alert("Veri içe aktarıldı.");
  }catch(e){alert("Geçersiz veya bozuk JSON dosyası.");}};
