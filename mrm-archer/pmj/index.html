@@ -626,6 +626,21 @@ const MODULES=[
 ];
 const SUB2MOD={};MODULES.forEach(m=>m.sub.forEach(s=>SUB2MOD[s[0]]=m.id));
 const ROLES_PMJ=["Model Owner","Model Developer","Model User","Model Risk Manager","Internal Audit Officer","APIUser"];
+const ROLE_HAT={"Model Owner":"1. Hat – Sahip/Geliştirici","Model Developer":"1. Hat – Sahip/Geliştirici","Model User":"1. Hat – Sahip/Geliştirici","Model Risk Manager":"2. Hat – MRM Programı","Internal Audit Officer":"3. Hat – İç Denetim","APIUser":"3. Hat – İç Denetim"};
+function activeHat(){return ROLE_HAT[window.activeRole]||window.activeRole;}
+function roleReadonly(){return ["Internal Audit Officer","APIUser","Model User"].includes(window.activeRole);}
+const ROLE_RONOTE={"Internal Audit Officer":"🔒 Internal Audit Officer: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim (3. savunma hattı).","APIUser":"🔒 APIUser: salt-okur / API erişimi — arayüzden oluşturma/düzenleme kapalı.","Model User":"🔒 Model User: model kullanıcısı — görüntüleme yetkisi; oluşturma/düzenleme kapalı."};
+const PMJ_PERMS={
+ "Model kaydı oluştur/düzenle (Registry)":["Model Owner","Model Developer","Model Risk Manager"],
+ "Faz formu doldur / Lifecycle ilerlet":["Model Owner","Model Developer","Model Risk Manager"],
+ "Kritiklik / Risk Sınıfı belirle":["Model Owner","Model Risk Manager"],
+ "Validasyon önerisi / test":["Model Risk Manager"],
+ "Onay kararı (Model Risk Komitesi)":["Model Risk Manager"],
+ "İzleme ölçümü gir":["Model Owner","Model Developer","Model Risk Manager"],
+ "Issue / remediation":["Model Owner","Model Developer","Model Risk Manager"],
+ "Model kullan / görüntüle":["Model Owner","Model Developer","Model User","Model Risk Manager","APIUser","Internal Audit Officer"],
+ "API erişimi (okuma)":["APIUser","Model Risk Manager"],
+ "Salt-okur denetim erişimi":["Internal Audit Officer"]};
 function badgeFor(id){
  if(id==="envanter")return state.models.length;
  if(id==="aiml")return state.models.filter(m=>m.aiml).length;
@@ -660,7 +675,8 @@ function goModule(modId){const m=MODULES.find(x=>x.id===modId);if(m)go(m.sub[0][
 let current="envanter";
 function go(id){current=id;location.hash=id;render();}
 function render(){
- document.documentElement.setAttribute("data-ro",window.activeRole==="Internal Audit Officer"?"1":"0");
+ document.documentElement.setAttribute("data-ro",(!isAdmin()&&roleReadonly())?"1":"0");
+ const ron=document.querySelector(".ro-note");if(ron)ron.innerHTML=ROLE_RONOTE[window.activeRole]||"🔒 Salt-okur görünüm.";
  const v=document.getElementById("view");if(!v)return;
  buildNav();
  if(isAdmin()){({ahome:adminHome,aregister:adminRegister,areporting:adminReporting,asettings:adminSettings,aaudit:adminAudit}[current]||adminHome)(v);window.scrollTo(0,0);return;}
@@ -1337,8 +1353,8 @@ window.valForm=function(id){
     ${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delVal('${id}')">Sil</button>`:""}
     <div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVal('${id||""}')">Kaydet</button>
    </div>`);
- if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){["onayKarar","onayMakam"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Onay kararı yalnız 'Model Risk Komitesi' rolünde düzenlenebilir";}});}
- if(window.activeRole&&!(window.activeRole==="2. Hat – Bağımsız Validasyon"||window.activeRole==="Model Risk Komitesi")){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi yalnız bağımsız validasyon rolünde düzenlenebilir";}});}
+ if(window.activeRole&&window.activeRole!=="Model Risk Manager"){["onayKarar","onayMakam"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Onay kararı yalnız 'Model Risk Manager' (2. hat/komite) rolünde düzenlenebilir";}});}
+ if(window.activeRole&&window.activeRole!=="Model Risk Manager"){["oneri","rating","eskSorgu","backtest","ayrimGucu"].forEach(n=>{const e=document.querySelector('[data-f="'+n+'"]');if(e){e.disabled=true;e.title="Validasyon önerisi/testi yalnız 'Model Risk Manager' (bağımsız 2. hat) rolünde düzenlenebilir";}});}
 };
 window.saveVal=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
@@ -2039,14 +2055,14 @@ window.riskCell=function(y,x){
 
 /* ============ YETKI MATRISI ============ */
 function viewYetki(v){
- const roles=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon","2. Hat – MRM Programı","Model Risk Komitesi","3. Hat – İç Denetim"];
- const actions=Object.keys(PERMS).filter(a=>a!=="Salt-okur (denetim)");
- v.innerHTML=`<p class="vlead">Rol × işlem yetki matrisi (üç savunma hattı) — Archer <b>Access Roles</b> ve alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstten değişir; onay yalnız Model Risk Komitesi, validasyon önerisi yalnız 2. hat; 3. Hat – İç Denetim salt-okur.</p>
-  <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b>. Bu rolde yetkili işlemler yeşil satırlarda ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri (ör. onay) ilgili ekranlarda pasifleşir.</div>
-  <div class="tablewrap"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:96px">${esc(r).replace(" – ","<br>")}</th>`).join("")}</tr></thead><tbody>
-   ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
+ const roles=ROLES_PMJ;
+ const actions=Object.keys(PMJ_PERMS);
+ v.innerHTML=`<p class="vlead">PMJ <b>Rol × işlem yetki matrisi</b> (üç savunma hattı) — Prometeia Access Roles / alan-seviyesi güvenlik (FLS) karşılığı. ✓ = yetkili. Aktif rol sağ üstteki kullanıcı menüsünden değişir; onay ve validasyon önerisi yalnız <b>Model Risk Manager</b> (2. hat); <b>Internal Audit Officer</b> &amp; <b>APIUser</b> salt-okur.</p>
+  <div class="callout">Aktif rol: <b>${esc(window.activeRole||"—")}</b> (savunma hattı: ${esc(activeHat())})${roleReadonly()?" — <b>salt-okur</b>: oluşturma/düzenleme kapalı.":""} Yetkili işlemler ✓ ile işaretlidir; yetkisiz aksiyon düğmeleri ilgili ekranlarda pasifleşir.</div>
+  <div class="tablewrap reg-grid"><table><thead><tr><th>İşlem</th>${roles.map(r=>`<th style="text-align:center;font-size:10px;white-space:normal;min-width:92px">${esc(r)}</th>`).join("")}</tr></thead><tbody>
+   ${actions.map(a=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(a)}</td>${roles.map(r=>{const ok=PMJ_PERMS[a].includes(r);const active=r===window.activeRole;return `<td style="text-align:center;${active?'background:var(--accent-weak)':''}">${ok?'<span class="chip good" style="padding:0 8px">✓</span>':'<span class="tsub" style="opacity:.35">·</span>'}</td>`;}).join("")}</tr>`).join("")}
   </tbody></table></div>
-  <div class="footnote">Validasyon bağımsızlığı (ÖNERİ ≠ ONAY) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
+  <div class="footnote">Validasyon bağımsızlığı (1. hat kendi modelini onaylayamaz; ÖNERİ/ONAY 2. hatta) ve iç denetimin salt-okur erişimi bu simülasyonda sistemsel olarak zorlanır; gerçek Prometeia/Archer’da field-level read/update privilege’ları ile uygulanır.</div>`;
 }
 /* ============ DENETIM IZI ============ */
 function fmtTs(ts){try{return new Date(ts).toLocaleString("tr-TR");}catch(e){return ts;}}
