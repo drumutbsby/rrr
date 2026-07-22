@@ -530,6 +530,7 @@ const NAV=[
  {id:"aiml",t:"AI/ML Ek Değerlendirme",ic:"◆",sub:"AI/ML & GenAI ek kontrolleri"},
  {id:"euai",t:"EU AI Act Uyum",ic:"§",sub:"Yüksek-risk yükümlülük izleyici"},
  {id:"validasyon",t:"Model Validasyonu",ic:"✓",sub:"Bağımsız validasyon kayıtları"},
+ {id:"valplan",t:"Validasyon Planı",ic:"📅",sub:"Risk-bazlı takvim & kapasite"},
  {id:"izleme",t:"İzleme & Metrikler",ic:"◎",sub:"Performans/drift metrikleri, eşikler"},
  {id:"degisiklik",t:"Model Değişiklik",ic:"⇄",sub:"Değişiklik & revalidasyon tetiği"},
  {id:"pma",t:"PMA / İstisna",ic:"⊘",sub:"Azaltıcılar: overlay, kısıt, istisna"},
@@ -576,7 +577,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,valplan:viewValplan,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1661,6 +1662,52 @@ window.saveChg=function(id){
 window.delChg=function(id){if(!confirm("Değişiklik kaydı silinsin mi?"))return;state.changes=state.changes.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ PMA / ISTISNA ============ */
+/* ============ VALIDASYON PLANI / TAKVIM (risk-bazlı) ============ */
+function monthKey(ds){return ds?ds.slice(0,7):"";}
+function monthLabel(k){const [y,m]=k.split("-");return ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"][(+m)-1]+" "+y;}
+function viewValplan(v){
+ const M=state.models.slice();
+ const rows=M.map(m=>({m,next:nextVal(m),o:overdue(nextVal(m))}));
+ const planned=rows.filter(x=>x.next);
+ const unplanned=rows.filter(x=>!x.next);
+ const overdueR=planned.filter(x=>x.o.c==="crit").sort((a,b)=>new Date(a.next)-new Date(b.next));
+ const soonR=planned.filter(x=>x.o.c==="warn").sort((a,b)=>new Date(a.next)-new Date(b.next));
+ // 12 aylık takvim
+ const today=new Date();const months=[];for(let i=0;i<12;i++){const d=new Date(today.getFullYear(),today.getMonth()+i,1);months.push(d.toISOString().slice(0,7));}
+ const byMonth={};planned.forEach(x=>{const k=monthKey(x.next);(byMonth[k]=byMonth[k]||[]).push(x);});
+ const maxM=Math.max(1,...months.map(k=>(byMonth[k]||[]).length));
+ // validatör kapasitesi
+ const cap={};planned.forEach(x=>{const val=x.m.validator||"—";cap[val]=cap[val]||{n:0,od:0,y12:0};cap[val].n++;if(x.o.c==="crit")cap[val].od++;if(months.includes(monthKey(x.next)))cap[val].y12++;});
+ const capArr=Object.entries(cap).sort((a,b)=>b[1].y12-a[1].y12);
+ const maxCap=Math.max(1,...capArr.map(c=>c[1].y12));
+ v.innerHTML=`<p class="vlead">Risk-bazlı <b>yeniden validasyon planı</b> — sonraki validasyon tarihleri tier frekansından türetilir (Tier 1 yıllık · Tier 2 iki yıllık · Tier 3 üç yıllık · İhmal olay-tetikli). Gecikme uyarıları, 12 aylık takvim ve validatör kapasitesi. <span class="tsub">Archer: DATEADD hesaplanan alan + Notifications + iView takvim.</span></p>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Gecikmiş",overdueR.length,"Hemen planla","crit")}
+   ${kpi("Yaklaşan (45 gün)",soonR.length,"Öncelik ver","warn")}
+   ${kpi("12 Ay İçinde",planned.filter(x=>months.includes(monthKey(x.next))).length,"Plan kapsamı","info")}
+   ${kpi("Planlanmamış",unplanned.length,"Son validasyon/frekans eksik","warn")}
+  </div>
+  <div class="card panel">
+   <h3>12 Aylık Validasyon Takvimi <span class="cnt">aya tıkla → modeller</span></h3>
+   <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:150px;margin-top:6px">
+    ${months.map(k=>{const arr=byMonth[k]||[];const od=arr.filter(x=>x.o.c==="crit").length;const h=arr.length/maxM*100;return `<div data-mon="${k}" title="${monthLabel(k)}: ${arr.length} model" style="display:flex;flex-direction:column;justify-content:flex-end;height:100%;cursor:${arr.length?'pointer':'default'}"><div style="background:${od?'var(--crit)':'var(--accent)'};opacity:${arr.length?0.9:0.15};height:${Math.max(arr.length?8:2,h)}%;border-radius:6px 6px 0 0;position:relative"><span style="position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:var(--ink)">${arr.length||""}</span></div></div>`;}).join("")}
+   </div>
+   <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-top:6px">${months.map(k=>`<div style="font-size:9.5px;color:var(--muted);text-align:center;transform:rotate(-35deg);transform-origin:center">${monthLabel(k).replace(" 20","'")}</div>`).join("")}</div>
+   <div id="monthList" style="margin-top:22px"></div>
+  </div>
+  <div class="grid panels" style="margin-top:16px">
+   <div class="card panel">
+    <h3>Gecikmiş & Yaklaşan <span class="cnt">${overdueR.length+soonR.length}</span></h3>
+    <div class="list">${[...overdueR,...soonR].slice(0,12).map(x=>`<div class="li-row"><span class="chip ${x.o.c}">${x.o.t}</span><div class="grow"><div class="t">${esc(x.m.ad)}</div><div class="s">${tierChip(x.m.tier)} · ${x.m.valFrekans||tierFreq(x.m.tier)} · sonraki ${x.next}</div></div><button class="tbtn ghost" onclick="modelDetail('${x.m.id}')">Aç</button></div>`).join("")||`<div class="empty">Gecikmiş/yaklaşan yok.</div>`}</div>
+   </div>
+   <div class="card panel">
+    <h3>Validatör Kapasitesi <span class="cnt">12 ay içinde yük</span></h3>
+    <div class="bars">${capArr.map(([val,d])=>`<div class="bar" style="grid-template-columns:180px 1fr 70px"><span style="font-size:11.5px;white-space:normal">${esc(val)}</span><div class="track"><div class="fill" style="width:${d.y12/maxCap*100}%;background:${d.od?'var(--crit)':'var(--accent)'}"></div></div><span class="v">${d.y12} val${d.od?` · ${d.od}⚠`:""}</span></div>`).join("")||'<div class="empty">Veri yok.</div>'}</div>
+    <div class="footnote" style="border:none;padding-top:8px">Kapasite planlaması: her validatörün 12 aylık iş yükü; ⚠ gecikmiş adet. Yük dengelemesi için modeller yeniden atanabilir.</div>
+   </div>
+  </div>`;
+ v.querySelectorAll("[data-mon]").forEach(el=>el.onclick=()=>{const k=el.dataset.mon;const arr=byMonth[k]||[];const ml=document.getElementById("monthList");if(!arr.length){ml.innerHTML="";return;}ml.innerHTML=`<div class="section-h">${monthLabel(k)} — ${arr.length} validasyon</div><div class="list">${arr.sort((a,b)=>new Date(a.next)-new Date(b.next)).map(x=>`<div class="li-row"><span class="chip ${x.o.c}" style="padding:0 7px">${x.next}</span><div class="grow"><div class="t">${esc(x.m.ad)}</div><div class="s">${tierChip(x.m.tier)} · ${esc(x.m.validator||"—")}</div></div><button class="tbtn ghost" onclick="modelDetail('${x.m.id}')">Aç</button></div>`).join("")}</div>`;ml.scrollIntoView({behavior:"smooth",block:"nearest"});});
+}
 function pmaOnay(p){return p.onayDurum||(p.durum==="Aktif"?"Onaylandı":"Onay Bekliyor");}
 const PMA_ONAY_CLS={"Onay Bekliyor":"warn","Onaylandı":"good","Koşullu Onaylı":"warn","Reddedildi":"crit"};
 function viewPma(v){
