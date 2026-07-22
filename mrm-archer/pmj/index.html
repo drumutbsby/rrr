@@ -894,13 +894,13 @@ window.openModel=function(id,section){
  current="_model";location.hash="model/"+id;
  render();
 };
-const MODEL_SECTIONS=[["lifecycle","Lifecycle","◔"],["map","Map","🗺"],["history","History","⭮"],["details","Details","▤"],["issues","Issues","⚑"],["documentation","Documentation","📄"]];
+const MODEL_SECTIONS=[["lifecycle","Lifecycle","◔"],["map","Map","🗺"],["history","History","⭮"],["details","Details","▤"],["results","Sonuçlar","📊"],["issues","Issues","⚑"],["documentation","Documentation","📄"]];
 function renderModelPage(v){
  const m=state.models.find(x=>x.id===modelPage.id);
  if(!m){current="envanter";return viewEnvanter(v);}
  const prog=phaseProgress(m);
  const av=(m.versions||[]).find(x=>x.active)||(m.versions||[])[0]||{v:m.version};
- const secBody={lifecycle:sec_lifecycle,map:sec_map,history:sec_history,details:sec_details,issues:sec_issues,documentation:sec_documentation}[modelPage.section]||sec_lifecycle;
+ const secBody={lifecycle:sec_lifecycle,map:sec_map,history:sec_history,details:sec_details,results:sec_results,issues:sec_issues,documentation:sec_documentation}[modelPage.section]||sec_lifecycle;
  v.innerHTML=`
  <div class="mp-crumb"><a onclick="go('envanter')">Registry</a> ▸ <span>${esc(m.area||"Cat_test_gp")}</span> ▸ <a onclick="go('envanter')">${esc(m.ad)}</a> ▸ <b>${esc(av.v||m.version)} · ${esc(av.date||m.modelUpdate||"—")}</b></div>
  <div class="mp-head">
@@ -1014,6 +1014,43 @@ function sec_documentation(el,m){
    ${(m.phases||[]).map(p=>`<tr><td>Step ${p.n} · ${esc(p.name)}</td><td class="tsub">${p.status==="Completed"?esc(m.code)+"_S"+String(p.n).padStart(2,"0")+"_rapor.pdf":"—"}</td><td>${p.status==="Completed"?'<span class="chip good">Yüklü</span>':'<span class="chip muted">Bekliyor</span>'}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
+/* --- SONUÇLAR & PERFORMANS METRİKLERİ (P7: S.04.A/B/C) --- */
+function sec_results(el,m){
+ const fw=METRIC_FRAMEWORKS[m.metricProfile];
+ const better=(v,d)=>d.dir==="low"?+(v*0.9).toFixed(3):d.dir==="high"?+(Math.min(1,v*1.03)).toFixed(3):v;
+ const worse=(v,d)=>d.dir==="low"?+(v*1.12).toFixed(3):d.dir==="high"?+(v*0.95).toFixed(3):v;
+ const auto=fw?fw.metrics.map(t=>{const l=latestMetric(m.id,t);const d=METRIC_DEF[t];if(!l)return null;const test=+l.deger;return {date:l.tarih,name:d.lab,tur:t,train:better(test,d),test:test,oot:worse(test,d),esik:+l.esik,br:isBreach(t,l.deger,l.esik)};}).filter(Boolean):[];
+ const manual=(m.perfRows||[]).map(r=>({date:r.date,name:r.name,tur:"",train:r.train,test:r.test,oot:r.oot,esik:"",br:false,manual:true}));
+ const rows=auto.concat(manual);
+ // S.04 özet
+ const finds=state.findings.filter(f=>f.modelId===m.id);
+ const s04b=finds.filter(f=>f.kaynak==="İzleme"||f.kaynak==="İç Denetim");
+ const s04c=finds.filter(f=>f.kaynak==="Model Validasyonu");
+ const pmas=(state.pmas||[]).filter(p=>p.modelId===m.id);
+ const ek=m.aimlEk||{};
+ el.innerHTML=`
+  <div class="section-h" style="margin-top:0">S.04 — Model Riski Sonuçları</div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px">
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.A · Model Riskini Azaltma <span class="tsub">(5. Faz)</span></div>
+     <div class="tsub" style="margin-top:6px">${pmas.length?esc(pmas.length+" PMA/istisna aktif"):"PMA/istisna yok"}${ek.insanGozetim?" · İnsan gözetimi: "+esc(ek.insanRol||"var"):""}${m.durum==="Koşullu Onaylı"?" · Koşullu onay koşulları izleniyor":""}</div></div>
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.B · 3.–4. Seviye Bulguları <span class="tsub">(9. Faz)</span></div>
+     <div style="margin-top:6px"><span class="chip ${s04b.length?'warn':'good'}">${s04b.length} bulgu</span> <span class="tsub">${s04b.map(f=>esc(f.baslik)).slice(0,1).join("")||"izleme/denetim bulgusu yok"}</span></div></div>
+   <div class="card" style="padding:12px 14px"><div class="s04-h">S.04.C · Validasyon Bulguları <span class="tsub">(5, 8. Faz)</span></div>
+     <div style="margin-top:6px"><span class="chip ${s04c.length?'crit':'good'}">${s04c.length} düzenleyici/validasyon bulgusu</span></div></div>
+  </div>
+  <div style="display:flex;align-items:center;margin-bottom:8px"><div class="section-h" style="margin:0">Performans Metrikleri <span class="cnt">${fw?esc(fw.lab):"—"}</span></div><div style="flex:1"></div>
+    <button class="tbtn ghost" onclick="addPerfRow('${m.id}')">+ Add Row</button><button class="tbtn ghost" onclick="exportPerf('${m.id}')">⭳ Export CSV</button></div>
+  ${rows.length?`<div class="tablewrap reg-grid"><table><thead><tr><th>Metric Date</th><th>Metric Name</th><th class="num">Train Score</th><th class="num">Test Score</th><th class="num">OOT</th><th class="num">Eşik</th><th>Durum</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr><td class="tsub">${esc(r.date||"—")}</td><td>${esc(r.name)}${r.manual?' <span class="chip muted" style="padding:0 6px">manuel</span>':""}</td><td class="num mono">${r.train??"—"}</td><td class="num mono"><b>${r.test??"—"}</b></td><td class="num mono">${r.oot??"—"}</td><td class="num mono tsub">${r.esik!==""?r.esik:"—"}</td><td>${r.tur?`<span class="chip ${r.br?'crit':'good'}" style="padding:0 7px">${r.br?'Aşım':'Normal'}</span>`:'<span class="tsub">—</span>'}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="tsub" style="margin-top:8px">Train/Test/OOT: modele/tipe uygun performans metrikleri (${esc(m.sinif||"—")}). Support Fields — eşik tier'a göre uyarlanır.</div>`:`<div class="empty">Bu model için tanımlı performans metrik çerçevesi yok. “Add Row” ile manuel metrik girebilirsiniz.</div>`}
+  <div style="margin-top:12px"><button class="tbtn" onclick="izlSel='${m.id}';go('izleme')">İzleme ekranında tüm zaman serisini aç →</button></div>`;
+}
+window.addPerfRow=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const name=prompt("Metrik adı:","Özel Metrik");if(name===null)return;const test=prompt("Test skoru:","0.80");m.perfRows=m.perfRows||[];m.perfRows.push({date:todayStr(),name:name||"Özel Metrik",train:test,test:test,oot:test});logAudit("Performans satırı eklendi","results",id+" · "+name);save();renderModelPage(document.getElementById("view"));};
+window.exportPerf=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;const fw=METRIC_FRAMEWORKS[m.metricProfile];const lines=[["Metric Date","Metric Name","Train","Test","OOT"]];
+ if(fw)fw.metrics.forEach(t=>{const l=latestMetric(m.id,t);const d=METRIC_DEF[t];if(l)lines.push([l.tarih,d.lab,l.deger,l.deger,l.deger]);});
+ (m.perfRows||[]).forEach(r=>lines.push([r.date,r.name,r.train,r.test,r.oot]));
+ const csv=lines.map(r=>r.join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=m.code+"_performans.csv";a.click();logAudit("Performans dışa aktarıldı","results",id);};
 /* --- FAZ FORM MOTORU (S.xx) --- */
 const PF_DEFOPTS=["Tamamlandı","Devam Ediyor","Uygulanmadı"];
 function phaseFormBody(m,n){
