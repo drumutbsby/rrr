@@ -463,6 +463,60 @@ function sinifChip(m){const s=sinifOf(m);return `<span class="chip ${s.c}" title
 function modelTipiOf(m){return m.modelTipi||((m.aiml||m.genai||m.sinif==="Ekonometrik"||m.sinif==="ML/AI")?"İLERİ ANALİTİK MODEL":"BASİT MODEL");}
 const LC4=["İş İhtiyaç ve Gereksinim Analizi","Model Geliştirme","İmplementasyon","Yayımlaştırma ve Kullanım"];
 
+/* ===== TOPLAM MODEL RİSKİ ENDEKSİ & RİSK İŞTAHI (Archer: hesaplanan alan + iView gösterge) ===== */
+const APPETITE_DEF={overdue:0,highFindings:3,breach:2,pending:5,amber:40,red:60};
+function appetite(){return Object.assign({},APPETITE_DEF,state.appetite||{});}
+function totalModelRisk(){
+ const M=state.models;const n=M.length||1;
+ const tw={"Tier 1":1,"Tier 2":0.66,"Tier 3":0.33,"İhmal Edilebilir":0.1};
+ const avgTier=M.reduce((s,m)=>s+(tw[m.tier]||0.33),0)/n;
+ const overdueV=M.filter(m=>overdue(nextVal(m)).c==="crit").length;
+ const highF=state.findings.filter(f=>f.onem==="Yüksek"&&f.durum!=="Kapandı").length;
+ const breach=M.filter(m=>modelBreaching(m.id)).length;
+ const cond=M.filter(m=>m.durum==="Koşullu Onaylı").length;
+ const pend=M.filter(m=>m.wf&&m.wf!=="aktif"&&m.wf!=="red").length;
+ const clamp=x=>Math.max(0,Math.min(1,x));
+ const cStruct=avgTier*40;
+ const cOverdue=clamp(overdueV/Math.max(1,n*0.15))*20;
+ const cFind=clamp(highF/5)*15;
+ const cBreach=clamp(breach/Math.max(1,n*0.15))*15;
+ const cCond=clamp(cond/3)*10;
+ const index=Math.round(cStruct+cOverdue+cFind+cBreach+cCond);
+ const a=appetite();
+ const rag=index>=a.red?"crit":index>=a.amber?"warn":"good";
+ const comps=[
+  ["Yapısal risk (tier karması)",Math.round(cStruct),40],
+  ["Gecikmiş validasyon",Math.round(cOverdue),20],
+  ["Açık yüksek bulgu",Math.round(cFind),15],
+  ["İzleme eşik aşımı",Math.round(cBreach),15],
+  ["Koşullu onay yükü",Math.round(cCond),10]];
+ const limits=[
+  ["Gecikmiş validasyon",overdueV,a.overdue],
+  ["Açık yüksek bulgu",highF,a.highFindings],
+  ["İzleme eşik aşımı",breach,a.breach],
+  ["Onay bekleyen model",pend,a.pending]];
+ return {index,rag,comps,limits,overdueV,highF,breach,cond,pend};
+}
+
+/* ===== ÇOK KULLANICILI ONAY AKIŞI (Archer: Advanced Workflow + record permission + History Log) ===== */
+const WF_STAGES=[{id:"mrm",label:"MRM Programı İncelemesi",role:"2. Hat – MRM Programı"},{id:"komite",label:"Model Risk Komitesi Onayı",role:"Model Risk Komitesi"}];
+function wfStageIndex(id){return WF_STAGES.findIndex(s=>s.id===id);}
+function wfPending(m){return m.wf&&m.wf!=="aktif"&&m.wf!=="red";}
+function wfLabel(wf){if(wf==="aktif")return "Onaylı — Aktif";if(wf==="red")return "Reddedildi";const s=WF_STAGES.find(x=>x.id===wf);return s?s.label+" bekliyor":"—";}
+window.wfApprove=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const idx=wfStageIndex(m.wf);const stage=WF_STAGES[idx];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü onaylayabilir (görevler ayrılığı).");return;}const next=WF_STAGES[idx+1];m.wf=next?next.id:"aktif";logAudit("Onay akışı — "+stage.label+" ONAY","MDL "+id,m.ad+" → "+(m.wf==="aktif"?"Aktif (envanterde onaylı)":wfLabel(m.wf)));save();closeDrawer();render();};
+window.wfReject=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const stage=WF_STAGES[wfStageIndex(m.wf)];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü işleyebilir.");return;}m.wf="red";logAudit("Onay akışı — REDDEDİLDİ","MDL "+id,m.ad+" ("+stage.label+")");save();closeDrawer();render();};
+window.wfReset=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;m.wf="mrm";logAudit("Onay akışı — yeniden başlatıldı","MDL "+id,m.ad);save();closeDrawer();render();};
+function wfBlock(m){
+ if(!m.wf)return "";
+ const idx=wfStageIndex(m.wf),done=m.wf==="aktif",red=m.wf==="red";
+ const stepper=WF_STAGES.map((s,i)=>{const st=red?"red":(done||i<idx)?"done":i===idx?"cur":"todo";const cls=st==="done"?"good":st==="cur"?"warn":st==="red"?"crit":"muted";return `<span class="chip ${cls}" style="padding:0 8px">${i+1}. ${esc(s.label)}${st==="done"?" ✓":""}</span>`;}).join(' <span class="tsub">→</span> ');
+ let actions="";
+ if(!done&&!red){const stage=WF_STAGES[idx];const can=!window.activeRole||window.activeRole===stage.role;
+  actions=`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="tbtn primary" ${can?"":`disabled title="Yalnız ${esc(stage.role)} onaylayabilir"`} onclick="wfApprove('${m.id}')">✓ Onayla — ${esc(stage.role)}</button><button class="tbtn" ${can?"":"disabled"} style="color:var(--crit);border-color:var(--crit)" onclick="wfReject('${m.id}')">Reddet</button>${can?"":`<span class="tsub" style="align-self:center">Aktif rol yetkili değil (görevler ayrılığı)</span>`}</div>`;
+ } else if(red){actions=`<div style="margin-top:8px"><button class="tbtn ghost" onclick="wfReset('${m.id}')">Akışı yeniden başlat</button></div>`;}
+ return `<div class="callout" style="background:${red?'var(--warn-bg)':done?'var(--good-bg)':'var(--accent-weak)'};border-color:var(--line)"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>Onay Akışı:</b> ${done?'<span class="chip good">Onaylı — Aktif</span>':red?'<span class="chip crit">Reddedildi</span>':stepper}</div><div class="tsub" style="margin-top:5px">Archer <b>Advanced Workflow</b> + record permission; her onay/ret zaman-rol damgasıyla History Log’a yazılır (kanıt).</div>${actions}</div>`;
+}
+
 /* ============ ROUTER ============ */
 const NAV=[
  {grp:"İzleme"},
@@ -633,7 +687,7 @@ function renderEnvTable(){
  const el=document.getElementById("envtable");
  if(!rows.length){el.innerHTML=`<div class="card empty">Kriterlere uyan model yok.</div>`;return;}
  const rowHtml=m=>{const nv=nextVal(m),o=overdue(nv);const iz=m.izlemeDurumu||"Normal";return `<tr onclick="modelDetail('${m.id}')">
-   <td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}${m.aiml?` · <span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""}</div></td>
+   <td><div class="tname">${esc(m.ad)}${wfPending(m)?' <span class="chip warn" style="padding:0 6px">onay bekliyor</span>':m.wf==="red"?' <span class="chip crit" style="padding:0 6px">reddedildi</span>':""}</div><div class="id">${m.id}${m.aiml?` · <span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""}${m.kaynak==="İş Birimi Beyanı"?' · 🏛️ beyan':""}</div></td>
    <td><span class="chip ${m.sinif==='ML/AI'?'warn':'info'}" style="padding:0 8px">${esc(m.sinif||"—")}</span></td>
    <td class="tsub">${(m.kategori||[]).join(", ")}</td>
    <td>${tierChip(m.tier)}</td>
@@ -673,6 +727,7 @@ window.modelDetail=function(id){
    ${["Genel","Performans","Kritiklik","Metodoloji & Veri","Yaşam Döngüsü","İlişkiler & Linkler","Envanter Beyanı"].map((t,i)=>`<button class="${i===0?"active":""}" onclick="mtab(this,${i})">${t}</button>`).join("")}
   </div>
   <div class="mtab" data-i="0">
+    ${wfBlock(m)}
     ${dl({"Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
     <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
     <div class="section-h">Hızlı Erişim</div>
@@ -958,7 +1013,7 @@ window.saveBeyan=function(){
   sahipBirim:gb("unit"),sahip:"İş Birimi Beyanı",gelistirici:envanter.gelistiriciAd||(gb("koken")==="Satıcı/Vendor"?"Satıcı/Vendor":"İş Birimi"),
   validator:"Bağımsız Validasyon Birimi",koken:gb("koken")||"İç Geliştirme",barindiran:envanter.platform||"—",algoritma:envanter.algoritma||gb("metodoloji"),
   durum:gb("durum"),gelistirmeTarihi:gf("gtarih")||"",prodTarihi:"",sonValidasyon:sv,valFrekans,
-  izlemeDurumu:"Normal",upstream:[],links:(envanter.dokuman==="Evet"?{doc:"#/model-dok/beyan"}:{}),kaynak:"İş Birimi Beyanı",crit,envanter,amacDetay:envanter.amacDetay,
+  izlemeDurumu:"Normal",upstream:[],links:(envanter.dokuman==="Evet"?{doc:"#/model-dok/beyan"}:{}),kaynak:"İş Birimi Beyanı",wf:"mrm",crit,envanter,amacDetay:envanter.amacDetay,
   mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece
  };
  state.models.push(m);
@@ -1711,8 +1766,33 @@ function viewRisk(v){
  const bu={};M.forEach(m=>{const b=m.sahipBirim||"—";bu[b]=bu[b]||{n:0,t1:0,exp:0};bu[b].n++;if(m.tier==="Tier 1")bu[b].t1++;bu[b].exp+=(+m.icsel||0);});
  const buArr=Object.entries(bu).sort((a,b)=>b[1].exp-a[1].exp).slice(0,6);
  const appetiteOk=overdueV===0;
+ const tmr=totalModelRisk();
+ const ragText={good:"İştah dahilinde",warn:"İzlemede (amber)",crit:"İştah AŞILDI"}[tmr.rag];
  v.innerHTML=`
   <div class="toolbar"><div class="sp"></div><button class="tbtn" onclick="window.print()">⎙ Board raporunu yazdır</button></div>
+  <div class="card panel" style="margin-bottom:16px">
+   <h3>Toplam Model Riski Endeksi (Board) <span class="cnt">Archer: hesaplanan alan + iView</span></h3>
+   <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+    <div style="text-align:center;min-width:150px">
+      <div style="font-size:52px;font-weight:800;line-height:1;color:var(--${tmr.rag})">${tmr.index}<span style="font-size:20px;color:var(--muted)">/100</span></div>
+      <div class="chip ${tmr.rag}" style="margin-top:6px">${ragText}</div>
+      <div class="tsub" style="margin-top:4px">İştah: amber ${appetite().amber} · kırmızı ${appetite().red}</div>
+    </div>
+    <div style="flex:1;min-width:260px">
+      <div style="height:14px;border-radius:20px;overflow:hidden;background:var(--surface-2);position:relative;margin-bottom:12px">
+        <div style="position:absolute;inset:0;width:${tmr.index}%;background:var(--${tmr.rag})"></div>
+        <div style="position:absolute;top:0;bottom:0;left:${appetite().amber}%;width:2px;background:var(--warn)"></div>
+        <div style="position:absolute;top:0;bottom:0;left:${appetite().red}%;width:2px;background:var(--crit)"></div>
+      </div>
+      <div class="bars">${tmr.comps.map(c=>`<div class="bar" style="grid-template-columns:200px 1fr 54px"><span style="font-size:11.5px;white-space:normal">${esc(c[0])}</span><div class="track"><div class="fill" style="width:${c[1]/c[2]*100}%"></div></div><span class="v">${c[1]}/${c[2]}</span></div>`).join("")}</div>
+    </div>
+    <div style="min-width:230px">
+      <div class="section-h" style="margin-top:0">Risk İştahı Eşikleri</div>
+      <table style="width:100%;font-size:12px"><tbody>${tmr.limits.map(l=>{const ok=l[1]<=l[2];return `<tr><td class="tsub" style="padding:3px 0">${esc(l[0])}</td><td style="text-align:right;padding:3px 0"><b>${l[1]}</b> <span class="tsub">/ ${l[2]}</span> <span class="chip ${ok?'good':'crit'}" style="padding:0 6px">${ok?'✓':'aşım'}</span></td></tr>`;}).join("")}</tbody></table>
+    </div>
+   </div>
+   <div class="footnote" style="border:none;padding-top:8px">Endeks; tier karması, gecikmiş validasyon, açık yüksek bulgu, izleme eşik aşımı ve koşullu onay yükünü toplulaştırır (SR 11-7 “aggregate model risk” · PRA SS1/23 — model riski ayrı risk türü). Eşikler <b>Model Risk İştahı Beyanı</b> ile belirlenir; Archer’da cross-referenced model kayıtlarından hesaplanan alan olarak türetilir.</div>
+  </div>
   <div class="grid kpis">
    ${kpi("Toplulaştırılmış Risk Skoru",exposure,"Σ içsel risk (materyalite×karmaşıklık)","info")}
    ${kpi("Tier 1 Model",t1,"En yoğun gözetim","crit")}
