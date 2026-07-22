@@ -367,8 +367,8 @@ function seed(){
  genSeedMetrics();
  // PMA / istisna
  state.pmas=[
-  {id:"PMA-0001",modelId:"MDL-0002",tur:"PMA/Overlay",gerekce:"Makroekonomik belirsizlik için ömür boyu ECL üzerine muhafazakâr overlay.",materyalite:"Yüksek",hesaplama:"Senaryo ağırlıklı ek yüzde; komite kararıyla",kaldirma:"Makro göstergeler normalleşince kademeli azalt",onayMakam:"Risk Komitesi",bagimsizGozden:"Yapıldı — gerekçe ve girdi doğrulandı",durum:"Aktif"},
-  {id:"PMA-0002",modelId:"MDL-0006",tur:"Kullanım İstisnası",gerekce:"Halüsinasyon eşiği aşımı nedeniyle yalnız insan onayıyla kullanım.",materyalite:"Orta",hesaplama:"—",kaldirma:"Guardrail eşiği içine dönünce kaldır",onayMakam:"Model Risk Komitesi",bagimsizGozden:"Yapıldı",durum:"Aktif"},
+  {id:"PMA-0001",modelId:"MDL-0002",tur:"TFRS9 BKZ Overlay",yon:"Muhafazakâr artış (+BKZ)",etkiTutar:"+%8 ömür boyu ECL",tfrs9Asama:"Aşama 2",senaryo:"Ağırlıklı makro (kötümser %40)",gerekce:"Makroekonomik belirsizlik için ömür boyu ECL üzerine muhafazakâr overlay.",materyalite:"Yüksek",hesaplama:"Senaryo ağırlıklı ek yüzde; komite kararıyla",kaldirma:"Makro göstergeler normalleşince kademeli azalt",onayMakam:"Model Risk Komitesi",bagimsizGozdenDurum:"Yapıldı — Uygun",durum:"Aktif",onayDurum:"Onaylandı"},
+  {id:"PMA-0002",modelId:"MDL-0006",tur:"Kullanım İstisnası",gerekce:"Halüsinasyon eşiği aşımı nedeniyle yalnız insan onayıyla kullanım.",materyalite:"Orta",hesaplama:"—",kaldirma:"Guardrail eşiği içine dönünce kaldır",onayMakam:"Model Risk Komitesi",bagimsizGozdenDurum:"Yapıldı — Şartlı",durum:"Aktif",onayDurum:"Onaylandı"},
  ];
  // model degisiklik
  state.changes=[
@@ -1640,41 +1640,64 @@ window.saveChg=function(id){
 window.delChg=function(id){if(!confirm("Değişiklik kaydı silinsin mi?"))return;state.changes=state.changes.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ PMA / ISTISNA ============ */
+function pmaOnay(p){return p.onayDurum||(p.durum==="Aktif"?"Onaylandı":"Onay Bekliyor");}
+const PMA_ONAY_CLS={"Onay Bekliyor":"warn","Onaylandı":"good","Koşullu Onaylı":"warn","Reddedildi":"crit"};
 function viewPma(v){
- v.innerHTML=`<p class="vlead">Model riski azaltıcıları — model sonrası düzeltme (PMA/overlay), kullanım kısıtı ve istisna. Materyal PMA’lar üst yönetim/komite onayına ve <b>bağımsız gözden geçirmeye</b> tabidir; PMA’lı/PMA’sız raporlanır (SS1/23 P5).</p>
-  <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newPma">+ Yeni PMA / İstisna</button></div>
-  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Model</th><th>Tür</th><th>Materyalite</th><th>Onay Makamı</th><th>Bağımsız Gözden Geçirme</th><th>Durum</th></tr></thead><tbody>
-   ${(state.pmas||[]).map(p=>{const m=state.models.find(x=>x.id===p.modelId);return `<tr onclick="pmaForm('${p.id}')">
-     <td class="id">${p.id}</td><td class="tsub">${esc(m?m.ad:"—")}</td><td>${esc(p.tur)}</td>
+ const P=state.pmas||[];
+ const overlay=P.filter(p=>/Overlay|TFRS9/.test(p.tur));
+ const pend=P.filter(p=>pmaOnay(p)==="Onay Bekliyor").length;
+ v.innerHTML=`<p class="vlead">Model riski azaltıcıları — <b>TFRS9 BKZ overlay (post-model adjustment)</b>, yönetim overlay'i, override, kullanım/performans istisnası. Materyal overlay'ler <b>Model Risk Komitesi onayına</b> ve <b>bağımsız gözden geçirmeye</b> tabidir; overlay'li/overlay'siz raporlanır (SS1/23 P5 · TFRS9 §B5.5). <span class="tsub">Archer: sub-form + Advanced Workflow onay.</span></p>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Toplam Kayıt",P.length,overlay.length+" overlay","")}
+   ${kpi("Onay Bekleyen",pend,"Komite onayına tabi","warn")}
+   ${kpi("Aktif Azaltıcı",P.filter(p=>p.durum==="Aktif").length,"Yürürlükte","info")}
+   ${kpi("Materyal (Yüksek)",P.filter(p=>p.materyalite==="Yüksek").length,"Bağımsız gözden geçirme","crit")}
+  </div>
+  <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newPma">+ Yeni Overlay / İstisna</button></div>
+  <div class="tablewrap"><table><thead><tr><th>ID</th><th>Model</th><th>Tür</th><th>Materyalite</th><th>Etki (yön/tutar)</th><th>Bağımsız G.G.</th><th>Onay</th><th>Durum</th></tr></thead><tbody>
+   ${P.map(p=>{const m=state.models.find(x=>x.id===p.modelId);const oy=pmaOnay(p);return `<tr onclick="pmaForm('${p.id}')">
+     <td class="id">${p.id}</td><td class="tsub">${esc(m?m.ad:"—")}</td><td>${/TFRS9/.test(p.tur)?'<span class="chip info" style="padding:0 7px">TFRS9</span> ':""}${esc(p.tur)}</td>
      <td><span class="chip ${p.materyalite==='Yüksek'?'crit':p.materyalite==='Orta'?'warn':'muted'}">${esc(p.materyalite)}</span></td>
-     <td class="tsub">${esc(p.onayMakam||"—")}</td><td class="tsub">${esc(p.bagimsizGozden||"—")}</td>
-     <td><span class="chip ${p.durum==='Aktif'?'info':p.durum==='Kaldırıldı'?'good':'warn'}">${esc(p.durum)}</span></td></tr>`;}).join("")||`<tr><td colspan="7"><div class="empty">PMA / istisna kaydı yok.</div></td></tr>`}
+     <td class="tsub">${esc(p.yon||"—")}${p.etkiTutar?" · "+esc(p.etkiTutar):""}</td>
+     <td class="tsub">${esc(p.bagimsizGozdenDurum||p.bagimsizGozden||"—")}</td>
+     <td><span class="chip ${PMA_ONAY_CLS[oy]||'muted'}">${esc(oy)}</span></td>
+     <td><span class="chip ${p.durum==='Aktif'?'info':p.durum==='Kaldırıldı'?'good':'warn'}">${esc(p.durum)}</span></td></tr>`;}).join("")||`<tr><td colspan="8"><div class="empty">Overlay / istisna kaydı yok.</div></td></tr>`}
   </tbody></table></div>`;
  document.getElementById("newPma").onclick=()=>pmaForm(null);
 }
 window.pmaForm=function(id){
- const p=id?JSON.parse(JSON.stringify((state.pmas||[]).find(x=>x.id===id))):{tur:"PMA/Overlay",materyalite:"Orta",durum:"Aktif"};
- openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"PMA / İstisna Düzenle":"Yeni PMA / İstisna"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+ const p=id?JSON.parse(JSON.stringify((state.pmas||[]).find(x=>x.id===id))):{tur:"TFRS9 BKZ Overlay",materyalite:"Orta",durum:"Aktif",onayDurum:"Onay Bekliyor"};
+ const oy=pmaOnay(p);const isTfrs9=/TFRS9/.test(p.tur||"");
+ const canApprove=!window.activeRole||window.activeRole==="Model Risk Komitesi";
+ openDrawer(`<div style="flex:1"><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip ${PMA_ONAY_CLS[oy]||'muted'}">${esc(oy)}</span></div><h2 style="margin:6px 0 2px;font-size:18px">${id?"Overlay / İstisna":"Yeni Overlay / İstisna"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+   ${oy==="Onay Bekliyor"?`<div class="callout" style="background:var(--warn-bg)"><b>Model Risk Komitesi onayı bekliyor.</b> ${canApprove?"":`<span class="tsub">Onay yetkisi yalnız 'Model Risk Komitesi' rolündedir.</span>`}<div style="margin-top:8px;display:flex;gap:8px"><button class="tbtn primary" ${canApprove?"":"disabled"} onclick="pmaApprove('${id||""}','Onaylandı')">✓ Onayla</button><button class="tbtn" ${canApprove?"":"disabled"} onclick="pmaApprove('${id||""}','Koşullu Onaylı')">Koşullu</button><button class="tbtn" ${canApprove?"":"disabled"} style="color:var(--crit);border-color:var(--crit)" onclick="pmaApprove('${id||""}','Reddedildi')">Reddet</button></div><div class="tsub" style="margin-top:6px">Önce kaydedin, sonra onaylayın. Archer: Advanced Workflow — karar History Log'a yazılır.</div></div>`:""}
    <div class="form-grid">
     <div class="field full"><label>Model / Portföy *</label><select data-f="modelId">${state.models.map(m=>`<option value="${m.id}" ${p.modelId===m.id?"selected":""}>${esc(m.ad)}</option>`).join("")}</select></div>
-    ${fldSel("Tür","tur",p.tur,["PMA/Overlay","Yönetim Overlay'i","Override","Kullanım İstisnası","Performans İstisnası"])}
+    ${fldSel("Tür","tur",p.tur,["TFRS9 BKZ Overlay","Yönetim Overlay'i","Override","Kullanım İstisnası","Performans İstisnası"])}
     ${fldSel("Materyalite","materyalite",p.materyalite,["Yüksek","Orta","Düşük"])}
+    ${fldSel("Etki Yönü","yon",p.yon,["Muhafazakâr artış (+BKZ)","Azalış (−BKZ)","Nötr"])}
+    ${fld("Etki Tutarı (₺ / BKZ etkisi)","etkiTutar",p.etkiTutar,"text")}
+    ${fldSel("TFRS9 Aşaması","tfrs9Asama",p.tfrs9Asama,["—","Aşama 1","Aşama 2","Aşama 3","Tüm Aşamalar"])}
+    ${fld("Makro Senaryo Bağı","senaryo",p.senaryo,"text")}
     ${fld("Gerekçe / Justifikasyon","gerekce",p.gerekce,"textarea",false,true)}
     ${fld("Hesaplama Metodolojisi","hesaplama",p.hesaplama,"textarea",false,true)}
     ${fld("Azaltma / Kaldırma Kriteri","kaldirma",p.kaldirma,"textarea",false,true)}
     ${fldSel("Onay Makamı","onayMakam",p.onayMakam,["Model Risk Komitesi","Risk Komitesi","Üst Yönetim","Denetim Komitesi"])}
-    ${fld("Bağımsız Gözden Geçirme","bagimsizGozden",p.bagimsizGozden,"text")}
+    ${fldSel("Bağımsız Gözden Geçirme","bagimsizGozdenDurum",p.bagimsizGozdenDurum,["Yapılmadı","Yapıldı — Uygun","Yapıldı — Şartlı","Yapıldı — Uygun Değil"])}
     ${fldSel("Durum","durum",p.durum,["Aktif","Beklemede","Kaldırıldı"])}
    </div>
    <div class="formfoot">${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delPma('${id}')">Sil</button>`:""}<div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="savePma('${id||""}')">Kaydet</button></div>`);
 };
 window.savePma=function(id){
  const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
- const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozden:g("bagimsizGozden"),durum:g("durum")};
+ const prev=id?(state.pmas||[]).find(x=>x.id===id):null;
+ const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),yon:g("yon"),etkiTutar:g("etkiTutar"),tfrs9Asama:g("tfrs9Asama"),senaryo:g("senaryo"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozdenDurum:g("bagimsizGozdenDurum"),durum:g("durum"),onayDurum:prev?prev.onayDurum:"Onay Bekliyor"};
+ if(!obj.onayDurum)obj.onayDurum="Onay Bekliyor";
  if(id){const i=state.pmas.findIndex(x=>x.id===id);state.pmas[i]=obj;}else state.pmas.push(obj);
- logAudit(id?"PMA/istisna güncelle":"PMA/istisna oluştur","PMA "+obj.id,obj.tur+" · "+obj.durum);
+ logAudit(id?"Overlay/istisna güncelle":"Overlay/istisna oluştur","PMA "+obj.id,obj.tur+" · "+obj.materyalite);
  save();closeDrawer();render();
 };
+window.pmaApprove=function(id,karar){if(!id){alert("Önce kaydı oluşturun (Kaydet), sonra onaylayın.");return;}const p=(state.pmas||[]).find(x=>x.id===id);if(!p)return;if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){alert("Overlay onayı yalnız 'Model Risk Komitesi' rolündedir.");return;}p.onayDurum=karar;if(karar==="Reddedildi")p.durum="Beklemede";logAudit("Overlay onay kararı — "+karar,"PMA "+id,(p.tur||"")+" · "+(p.materyalite||""));save();closeDrawer();render();};
 window.delPma=function(id){if(!confirm("Kayıt silinsin mi?"))return;state.pmas=state.pmas.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ YASAM DONGUSU / IS AKISI ============ */
