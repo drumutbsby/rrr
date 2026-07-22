@@ -307,6 +307,12 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .sc-cell.on{opacity:1;box-shadow:0 0 0 2px var(--surface),0 0 0 4px currentColor;transform:scale(1.05)}
 .sc-cell.t1{background:var(--t1);color:var(--t1)}.sc-cell.t2{background:var(--t2);color:var(--t2)}
 .sc-cell.t3{background:var(--t3);color:var(--t3)}.sc-cell.t0{background:var(--t0);color:var(--t0)}
+/* Issue detay */
+.issue-body{display:flex;gap:16px;align-items:flex-start}
+.issue-main{flex:1;min-width:0}
+.issue-desc{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.issue-side{width:230px;flex:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+@media(max-width:720px){.issue-body{flex-direction:column}.issue-side{width:100%}}
 /* Model map */
 .mp-map{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
 .mp-map-col .mm-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:8px}
@@ -1316,36 +1322,87 @@ function findingSla(f){
  if(days<0)return{t:"Gecikmiş",c:"crit"};if(days<14)return{t:"Yaklaşan",c:"warn"};return{t:"Zamanında",c:"good"};
 }
 let bulFilter="";
+/* PMJ Issue eşlemeleri */
+const ISSUE_PRIO={"Yüksek":"Major","Orta":"Minor","Düşük":"Trivial"};
+const ISSUE_PRIO_CLASS={"Blocker":"crit","Major":"crit","Minor":"warn","Trivial":"muted"};
+function issuePriority(f){if(f.onem==="Yüksek"&&findingSla(f).c==="crit")return "Blocker";return ISSUE_PRIO[f.onem]||"Minor";}
+function issueStatus(f){return f.durum==="Kapandı"?"Closed":f.durum==="Devam Ediyor"?"In Progress":"Open";}
+function issueStatusClass(s){return s==="Closed"?"good":s==="In Progress"?"info":"warn";}
+function issueResolution(f){return f.durum==="Kapandı"?"Done":"—";}
+const ISSUE_FILTERS=[["open","Open"],["reported","Reported Open"],["assigned","Assigned Open"],["closed","Recently Closed"],["recent","Recent"],["favorite","Favorite"],["gopen","Generic Open"],["gclosed","Generic Closed"]];
+function issueRows(filter){
+ const F=state.findings.slice();const open=f=>f.durum!=="Kapandı";
+ let rows;
+ switch(filter){
+  case"closed":rows=F.filter(f=>!open(f)).sort((a,b)=>new Date(b.hedefTarih||0)-new Date(a.hedefTarih||0));break;
+  case"gclosed":rows=F.filter(f=>!open(f));break;
+  case"assigned":rows=F.filter(f=>open(f)&&f.sahip);break;
+  case"reported":rows=F.filter(f=>open(f));break;
+  case"recent":rows=F.slice().sort((a,b)=>new Date(b.olusturma||0)-new Date(a.olusturma||0));break;
+  case"favorite":rows=F.filter(f=>f.fav);break;
+  default:rows=F.filter(open);
+ }
+ const ord={crit:0,warn:1,muted:2,good:3};
+ return rows.sort((a,b)=>(ord[findingSla(a).c]-ord[findingSla(b).c])||(new Date(a.hedefTarih||"2100-01-01")-new Date(b.hedefTarih||"2100-01-01")));
+}
 function viewBulgular(v){
  const F=state.findings;const openF=F.filter(f=>f.durum!=="Kapandı");
- const overdueN=openF.filter(f=>findingSla(f).c==="crit");const soon=openF.filter(f=>findingSla(f).c==="warn");
- let rows=F.slice();
- if(bulFilter==="acik")rows=openF.slice();
- else if(bulFilter==="gecikmis")rows=F.filter(f=>findingSla(f).c==="crit");
- else if(bulFilter==="yaklasan")rows=F.filter(f=>findingSla(f).c==="warn");
- const ord={crit:0,warn:1,muted:2,good:3};
- rows.sort((a,b)=>(ord[findingSla(a).c]-ord[findingSla(b).c])||(new Date(a.hedefTarih||"2100-01-01")-new Date(b.hedefTarih||"2100-01-01")));
- v.innerHTML=`<p class="vlead">Validasyon, izleme ve AI/ML boşluklarından doğan bulgular ve <b>remediation takvimi</b>. SLA önem seviyesine göre türetilir: Yüksek 30 gün · Orta 60 · Düşük 90. Mevcut Archer <code class="k">Bulgular (Issues Management)</code> karşılığı.</p>
-  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-    ${kpi("Açık Bulgu",openF.length,"Remediation izleniyor","")}
+ if(!ISSUE_FILTERS.some(x=>x[0]===bulFilter))bulFilter="open";
+ const overdueN=openF.filter(f=>findingSla(f).c==="crit");
+ const cnt=id=>issueRows(id).length;
+ v.innerHTML=`
+  <div class="reg-top"><div><div class="reg-title">Issues</div><div class="reg-sub">Model risk bulguları / remediation — validasyon, izleme ve AI/ML boşlukları</div></div><button class="tbtn primary" id="newFind">+ New Issue</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px">
+    ${kpi("Açık Issue",openF.length,"Remediation izleniyor","")}
     ${kpi("SLA Gecikmiş",overdueN.length,"Hedef tarih aşıldı","crit")}
-    ${kpi("Yaklaşan (14 gün)",soon.length,"Öncelik verilmeli","warn")}
-    ${kpi("Kapanan",F.length-openF.length,"Tamamlandı","good")}
+    ${kpi("Blocker/Major",F.filter(f=>["Blocker","Major"].includes(issuePriority(f))&&f.durum!=="Kapandı").length,"Yüksek öncelik","warn")}
+    ${kpi("Kapanan",F.length-openF.length,"Resolution: Done","good")}
   </div>
-  <div class="toolbar">
-   <select id="bul-f"><option value="">Tüm bulgular</option><option value="acik" ${bulFilter==="acik"?"selected":""}>Açık</option><option value="gecikmis" ${bulFilter==="gecikmis"?"selected":""}>SLA gecikmiş</option><option value="yaklasan" ${bulFilter==="yaklasan"?"selected":""}>Yaklaşan</option></select>
-   <div class="sp"></div><button class="tbtn primary" id="newFind">+ Yeni Bulgu</button>
-  </div>
-  <div class="tablewrap"><table><thead><tr><th>Bulgu</th><th>Model</th><th>Kaynak</th><th>Önem</th><th>Durum</th><th>Hedef</th><th>SLA</th><th>Sahip</th></tr></thead><tbody>
-   ${rows.map(f=>{const m=state.models.find(x=>x.id===f.modelId);const s=findingSla(f);return `<tr onclick="findForm('${f.id}')">
-     <td><div class="tname" style="white-space:normal">${esc(f.baslik)}</div><div class="id">${f.id}</div></td><td class="tsub">${esc(m?m.ad:"—")}</td>
-     <td>${esc(f.kaynak)}</td><td><span class="chip ${f.onem==='Yüksek'?'crit':f.onem==='Orta'?'warn':'muted'}">${esc(f.onem)}</span></td>
-     <td><span class="chip ${f.durum==='Kapandı'?'good':f.durum==='Devam Ediyor'?'info':'warn'}">${esc(f.durum)}</span></td>
-     <td>${f.hedefTarih||"—"}</td><td><span class="chip ${s.c}" style="padding:0 8px">${s.t}</span></td><td>${esc(f.sahip||"—")}</td></tr>`;}).join("")||`<tr><td colspan="8"><div class="empty">Kayıt yok.</div></td></tr>`}
-  </tbody></table></div>`;
- document.getElementById("bul-f").onchange=e=>{bulFilter=e.target.value;render();};
+  <div class="reg-wrap">
+   <aside class="reg-tree">
+    <div class="rt-h">Filtreler</div>
+    ${ISSUE_FILTERS.map(f=>`<a data-if="${f[0]}" class="reg-cat ${bulFilter===f[0]?"active":""}">${f[1]}<span class="rc-n">${cnt(f[0])}</span></a>`).join("")}
+   </aside>
+   <div class="reg-main">
+    <div class="tablewrap reg-grid"><table><thead><tr><th>ID</th><th>Title</th><th>Priority</th><th>Status</th><th>Type</th><th>Related Items</th><th>Assignee</th><th>Due Date</th></tr></thead><tbody>
+     ${issueRows(bulFilter).map(f=>{const m=state.models.find(x=>x.id===f.modelId);const pr=issuePriority(f);const st=issueStatus(f);return `<tr onclick="issueDetail('${f.id}')">
+       <td class="mono">${esc(f.id)}</td>
+       <td><div class="tname" style="white-space:normal">${esc(f.baslik)}</div><div class="id">${esc(f.kaynak)}</div></td>
+       <td><span class="chip ${ISSUE_PRIO_CLASS[pr]}">${pr}</span></td>
+       <td><span class="chip ${issueStatusClass(st)}">${st}</span></td>
+       <td><span class="chip muted">Task</span></td>
+       <td class="tsub">${m?esc(m.code)+" · "+esc((m.ad||"").slice(0,22)):"—"}</td>
+       <td class="tsub">${esc(f.sahip||"—")}</td>
+       <td class="tsub">${esc(f.hedefTarih||"—")} <span class="chip ${findingSla(f).c}" style="padding:0 6px">${findingSla(f).t}</span></td></tr>`;}).join("")||`<tr><td colspan="8"><div class="empty">Bu filtrede issue yok.</div></td></tr>`}
+    </tbody></table></div>
+   </div>
+  </div>`;
+ v.querySelectorAll(".reg-cat[data-if]").forEach(a=>a.onclick=()=>{bulFilter=a.dataset.if;render();});
  document.getElementById("newFind").onclick=()=>findForm(null);
 }
+window.issueDetail=function(id){
+ const f=state.findings.find(x=>x.id===id);if(!f)return;const m=state.models.find(x=>x.id===f.modelId);
+ const pr=issuePriority(f),st=issueStatus(f),sla=findingSla(f);
+ openDrawer(`<div style="flex:1"><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip ${ISSUE_PRIO_CLASS[pr]}">${pr}</span><span class="chip ${issueStatusClass(st)}">${st}</span><span class="chip muted">Task</span></div><h2 style="margin:8px 0 2px;font-size:18px">${esc(f.baslik)}</h2><div class="id">${esc(f.id)}</div></div><button class="tbtn" onclick="findForm('${f.id}')">✎ Düzenle</button><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+   <div class="issue-body">
+    <div class="issue-main">
+     <div class="section-h" style="margin-top:0">Description</div>
+     <div class="issue-desc">${esc(f.aciklama||f.baslik)}${f.kaynak?`<div class="tsub" style="margin-top:6px">Kaynak: ${esc(f.kaynak)}</div>`:""}</div>
+     <div class="section-h">Attachment</div><div class="tsub">${f.durum==="Kapandı"?esc(f.id)+"_remediation.pdf":"— (yok)"}</div>
+     <div class="section-h">Comments</div>
+     <div class="list">${(f.comments||[{by:f.sahip||"MRM",txt:"Bulgu açıldı; remediation planı hazırlanıyor.",ts:f.olusturma||""}]).map(c=>`<div class="li-row"><span class="chip muted" style="padding:0 7px">${esc((c.ts||"").slice(0,10)||"—")}</span><div class="grow"><div class="t">${esc(c.by||"—")}</div><div class="s" style="white-space:normal">${esc(c.txt||"")}</div></div></div>`).join("")}</div>
+    </div>
+    <aside class="issue-side">
+     <div class="section-h" style="margin-top:0">Details</div>
+     ${dl({"Creation":f.olusturma||"—","Last Update":f.hedefTarih||f.olusturma||"—","Issue Connection":m?m.code:"—","Related Items":m?(m.ad+" · "+m.version):"—","Reporter":f.kaynak||"—","Assignee":f.sahip||"—","Status":st,"Priority":pr,"Resolution":issueResolution(f),"Type":"Task","Due Date":f.hedefTarih||"—","SLA":sla.t})}
+     <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      ${m?`<button class="tbtn ghost" onclick="closeDrawer();openModel('${m.id}','issues')">Modele git →</button>`:""}
+      ${f.durum!=="Kapandı"?`<button class="tbtn" onclick="closeIssue('${f.id}')">Resolve (Done)</button>`:""}
+     </div>
+    </aside>
+   </div>`);
+};
+window.closeIssue=function(id){const f=state.findings.find(x=>x.id===id);if(!f)return;f.durum="Kapandı";logAudit("Issue kapatıldı","finding",id);save();closeDrawer();buildNav();render();};
 window.findForm=function(id,preId){
  const f=id?JSON.parse(JSON.stringify(state.findings.find(x=>x.id===id))):{kaynak:"Model Validasyonu",onem:"Orta",durum:"Planlanıyor",modelId:preId||""};
  openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Bulgu Düzenle":"Yeni Bulgu"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
