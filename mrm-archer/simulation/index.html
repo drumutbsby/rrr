@@ -538,6 +538,7 @@ const NAV=[
  {id:"baglanti",t:"Bağımlılık & Etki",ic:"⧓",sub:"Model bağımlılık ağı, etki analizi"},
  {id:"bulgular",t:"Bulgular",ic:"⚑",sub:"Validasyon & izleme bulguları"},
  {grp:"Yönetişim"},
+ {id:"bddk",t:"BDDK / İSEDES Kanıt",ic:"🏛️",sub:"İSEDES/ICAAP bağı & kanıt paketi"},
  {id:"yetki",t:"Yetki Matrisi",ic:"⊞",sub:"Rol × işlem (FLS)"},
  {id:"denetim",t:"Denetim İzi",ic:"❑",sub:"İşlem / audit kaydı"},
  {id:"feed",t:"Veri Feed / API",ic:"⇅",sub:"Archer entegrasyonu (simülasyon)"},
@@ -577,7 +578,7 @@ function render(){
  buildNav();
  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.dataset.id===current));
  const v=document.getElementById("view");
- ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,valplan:viewValplan,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
+ ({dashboard:viewDashboard,risk:viewRisk,govern:viewGovern,bildirim:viewBildirim,envanter:viewEnvanter,kritiklik:viewKritiklik,aiml:viewAiml,euai:viewEuai,validasyon:viewValidasyon,valplan:viewValplan,bddk:viewBddk,izleme:viewIzleme,degisiklik:viewDegisiklik,pma:viewPma,yasam:viewYasam,baglanti:viewBaglanti,bulgular:viewBulgular,yetki:viewYetki,denetim:viewDenetim,feed:viewFeed,gereklilik:viewGereklilik,regulasyon:viewRegulasyon,hakkinda:viewHakkinda}[current]||viewDashboard)(v);
  document.getElementById("sidebar").classList.remove("open");
  window.scrollTo(0,0);
 }
@@ -1708,6 +1709,45 @@ function viewValplan(v){
   </div>`;
  v.querySelectorAll("[data-mon]").forEach(el=>el.onclick=()=>{const k=el.dataset.mon;const arr=byMonth[k]||[];const ml=document.getElementById("monthList");if(!arr.length){ml.innerHTML="";return;}ml.innerHTML=`<div class="section-h">${monthLabel(k)} — ${arr.length} validasyon</div><div class="list">${arr.sort((a,b)=>new Date(a.next)-new Date(b.next)).map(x=>`<div class="li-row"><span class="chip ${x.o.c}" style="padding:0 7px">${x.next}</span><div class="grow"><div class="t">${esc(x.m.ad)}</div><div class="s">${tierChip(x.m.tier)} · ${esc(x.m.validator||"—")}</div></div><button class="tbtn ghost" onclick="modelDetail('${x.m.id}')">Aç</button></div>`).join("")}</div>`;ml.scrollIntoView({behavior:"smooth",block:"nearest"});});
 }
+/* ============ BDDK / İSEDES KANIT PAKETİ (Archer: cross-reference + reporting) ============ */
+const ISEDES_MAP={"Kredi/IRB":"Kredi Riski (1. Yapısal Blok)","TFRS9 BKZ":"Kredi Riski / Karşılık","Piyasa/VaR":"Piyasa Riski (1. Yapısal Blok)","Karşı Taraf/CVA":"Karşı Taraf Kredi Riski","ALM/IRRBB":"IRRBB (2. Yapısal Blok)","İSEDES Sermaye":"İSEDES/ICAAP — Sermaye Planlaması","Operasyonel/AMA":"Operasyonel Risk"};
+function isedesUse(m){
+ if(!m.duzenleyici)return [];
+ const out=[...new Set((m.kategori||[]).map(k=>ISEDES_MAP[k]).filter(Boolean))];
+ return out.length?out:["İSEDES/ICAAP — Sermaye Planlaması"];
+}
+function isedesModels(){return state.models.filter(m=>isedesUse(m).length);}
+function viewBddk(v){
+ const M=state.models;const reg=isedesModels();
+ const valGuncel=reg.filter(m=>overdue(nextVal(m)).c!=="crit").length;
+ const acikBulgu=reg.filter(m=>state.findings.some(f=>f.modelId===m.id&&f.durum!=="Kapandı")).length;
+ // İSEDES bileşen × model
+ const comps=[...new Set(reg.flatMap(m=>isedesUse(m)))].sort();
+ v.innerHTML=`<p class="vlead"><b>BDDK / İSEDES-ICAAP kanıt paketi</b> — düzenleyici/sermaye kullanımındaki modellerin İSEDES bileşenlerine bağı, validasyon güncelliği, açık bulgu ve overlay durumu. Denetime hazır tek derleme. <span class="tsub">Archer: model↔İSEDES senaryo cross-reference + reporting/mail-merge; sabit kanıt çıktısı.</span></p>
+  <div class="toolbar"><div class="sp"></div><button class="tbtn" onclick="exportBddkCsv()">⭳ CSV</button><button class="tbtn primary" onclick="window.print()">⎙ Kanıt paketi (PDF)</button></div>
+  <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   ${kpi("Düzenleyici Model",reg.length,M.length+" modelin "+Math.round(reg.length/Math.max(1,M.length)*100)+"%'i","info")}
+   ${kpi("Validasyonu Güncel",valGuncel,reg.length-valGuncel+" gecikmiş","crit")}
+   ${kpi("Açık Bulgusu Olan",acikBulgu,"Remediation izleniyor","warn")}
+   ${kpi("BDDK Kapsamı İşaretli",M.filter(m=>m.envanter&&m.envanter.bddkKapsam==="Evet").length,"Beyanda işaretlendi","")}
+  </div>
+  <div class="card panel">
+   <h3>İSEDES / ICAAP Bileşen Bağı <span class="cnt">${comps.length} bileşen</span></h3>
+   <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>İSEDES Bileşeni</th><th class="num" style="text-align:center">Model</th><th class="num" style="text-align:center">Tier 1</th><th style="text-align:center">Modeller</th></tr></thead><tbody>
+    ${comps.map(c=>{const ms=reg.filter(m=>isedesUse(m).includes(c));return `<tr><td class="tsub">${esc(c)}</td><td class="num" style="text-align:center"><b>${ms.length}</b></td><td class="num" style="text-align:center">${ms.filter(m=>m.tier==="Tier 1").length||'<span style="opacity:.3">·</span>'}</td><td class="tsub" style="font-size:11.5px">${ms.slice(0,3).map(m=>esc(m.ad)).join(", ")}${ms.length>3?` +${ms.length-3}`:""}</td></tr>`;}).join("")}
+   </tbody></table></div>
+  </div>
+  <div class="card panel" style="margin-top:16px">
+   <h3>Kanıt Paketi — Düzenleyici Model Kaydı <span class="cnt">${reg.length} model</span></h3>
+   <div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Model</th><th>Tier</th><th>İSEDES Bağı</th><th>Son Val.</th><th>Sonraki Val.</th><th>Açık Bulgu</th><th>Overlay</th><th>Doküman</th></tr></thead><tbody>
+    ${reg.map(m=>{const nv=nextVal(m),o=overdue(nv);const fn=state.findings.filter(f=>f.modelId===m.id&&f.durum!=="Kapandı").length;const ov=(state.pmas||[]).filter(p=>p.modelId===m.id&&p.durum==="Aktif").length;const dok=m.envanter?m.envanter.dokuman:(Object.keys(m.links||{}).length?"Evet":"—");return `<tr onclick="modelDetail('${m.id}')"><td><div class="tname">${esc(m.ad)}</div><div class="id">${m.id}</div></td><td>${tierChip(m.tier)}</td><td class="tsub" style="font-size:11.5px">${isedesUse(m).join("; ")}</td><td class="tsub">${m.sonValidasyon||"—"}</td><td>${nv?`${nv} <span class="chip ${o.c}" style="padding:0 6px">${o.t}</span>`:'<span class="chip warn" style="padding:0 6px">plansız</span>'}</td><td>${fn?`<span class="chip warn" style="padding:0 7px">${fn}</span>`:'<span class="chip good" style="padding:0 7px">0</span>'}</td><td class="tsub" style="text-align:center">${ov||"—"}</td><td>${dok==="Evet"?'<span class="chip good" style="padding:0 7px">✓</span>':'<span class="tsub">—</span>'}</td></tr>`;}).join("")}
+   </tbody></table></div>
+   <div class="footnote" style="border:none;padding-top:8px">İSEDES/ICAAP (BDDK İç Sistemler ve İSEDES Yönetmeliği) — sermaye planlamasına girdi veren modeller ayrı bir gözetim katmanına tabidir; validasyon güncelliği ve açık bulgular denetimde ilk sorgulanan alanlardır.</div>
+  </div>`;
+}
+window.exportBddkCsv=function(){const reg=isedesModels();const lines=[["Model ID","Model","Tier","İSEDES Bağı","Son Validasyon","Sonraki Validasyon","Durum","Açık Bulgu","Aktif Overlay"]];
+ reg.forEach(m=>{const nv=nextVal(m);const fn=state.findings.filter(f=>f.modelId===m.id&&f.durum!=="Kapandı").length;const ov=(state.pmas||[]).filter(p=>p.modelId===m.id&&p.durum==="Aktif").length;lines.push([m.id,(m.ad||"").replace(/,/g,";"),m.tier,isedesUse(m).join(" | "),m.sonValidasyon||"",nv||"",overdue(nv).t,fn,ov]);});
+ const csv=lines.map(r=>r.join(",")).join("\n");const blob=new Blob(["﻿"+csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="BDDK_ISEDES_kanit_paketi.csv";a.click();logAudit("BDDK kanıt paketi dışa aktarıldı","bddk",reg.length+" model");};
 function pmaOnay(p){return p.onayDurum||(p.durum==="Aktif"?"Onaylandı":"Onay Bekliyor");}
 const PMA_ONAY_CLS={"Onay Bekliyor":"warn","Onaylandı":"good","Koşullu Onaylı":"warn","Reddedildi":"crit"};
 function viewPma(v){
