@@ -209,7 +209,8 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .rel-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
 .rel-panel{display:flex;gap:12px;align-items:stretch}
 .rel-list{flex:1;max-height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface)}
-.rel-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;font-size:12.5px;cursor:pointer}
+.rel-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;font-size:12.5px;cursor:pointer;font-weight:500;color:var(--ink)}
+.rel-item input[type="checkbox"]{width:auto!important;flex:none;margin:0}
 .rel-item:hover{background:var(--surface-2)}
 .rel-side{width:210px;flex:none;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-y:auto;max-height:170px}
 .rel-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:7px}
@@ -1037,14 +1038,18 @@ window.modelForm=function(id){
    ${fld("Algoritma","algoritma",m.algoritma,"text")}
    ${fld("Barındıran Sistem","barindiran",m.barindiran,"text")}
    ${fld("Amaç / Kullanım","amac",m.amac,"textarea",false,true)}
-   <div class="field full"><label>Kategori (çoklu)</label><div class="checks">${cats.map(c=>`<label><input type="checkbox" name="kat" value="${c}" ${(m.kategori||[]).includes(c)?"checked":""}>${c}</label>`).join("")}</div></div>
+   <div class="field full"><label>Kategori (çoklu)</label>
+    <div class="rel-panel">
+     <div class="rel-list" style="max-height:200px">${cats.map(c=>`<label class="rel-item"><input type="checkbox" name="kat" value="${c}" data-ad="${c}" ${(m.kategori||[]).includes(c)?"checked":""}><span>${c}</span></label>`).join("")}</div>
+     <aside class="rel-side"><div class="rel-h">Seçilen Kategoriler</div><div id="katSel" class="rel-sel"></div></aside>
+    </div></div>
   </div>
   <div class="beyan-sec">3 · Model Nitelikleri (bayraklar)</div>
-  <div class="field full"><div class="checks">
-     <label><input type="checkbox" id="fx-aiml" ${m.aiml?"checked":""}>AI/ML</label>
-     <label><input type="checkbox" id="fx-genai" ${m.genai?"checked":""}>GenAI/Temel Model</label>
-     <label><input type="checkbox" id="fx-det" ${m.deterministik?"checked":""}>Deterministik/EUC</label>
-     <label><input type="checkbox" id="fx-duz" ${m.duzenleyici?"checked":""}>Düzenleyici/Sermaye kullanımı</label>
+  <div class="field full"><div class="rel-list" style="max-height:none">
+     <label class="rel-item"><input type="checkbox" id="fx-aiml" ${m.aiml?"checked":""}><span>AI/ML</span><span class="tsub" style="margin-left:auto">makine öğrenmesi modeli</span></label>
+     <label class="rel-item"><input type="checkbox" id="fx-genai" ${m.genai?"checked":""}><span>GenAI / Temel Model</span><span class="tsub" style="margin-left:auto">üretken yapay zekâ / LLM</span></label>
+     <label class="rel-item"><input type="checkbox" id="fx-det" ${m.deterministik?"checked":""}><span>Deterministik / EUC</span><span class="tsub" style="margin-left:auto">kural tabanlı / son kullanıcı hesaplaması</span></label>
+     <label class="rel-item"><input type="checkbox" id="fx-duz" ${m.duzenleyici?"checked":""}><span>Düzenleyici / Sermaye kullanımı</span><span class="tsub" style="margin-left:auto">IRB · İSEDES · TFRS9 · piyasa — min. Tier 2</span></label>
   </div></div>
   <div class="beyan-sec">4 · İlişkili NOTA Süreci</div>
   <div class="form-grid">
@@ -1090,8 +1095,8 @@ window.modelForm=function(id){
    <button class="tbtn primary" onclick="saveModel('${id||""}')">Kaydet</button>
   </div>
  `);
- const updSel=()=>{["ups","downs"].forEach(nm=>{const box=document.getElementById(nm+"Sel");if(!box)return;const sel=[...document.querySelectorAll('input[name="'+nm+'"]:checked')].map(x=>`<span class="chip info" style="margin:2px 3px 2px 0;padding:0 8px;white-space:normal">${esc(x.dataset.ad)}</span>`);box.innerHTML=sel.join("")||'<span class="tsub">Seçim yok</span>';});};
- document.querySelectorAll('input[name="ups"],input[name="downs"]').forEach(e=>e.onchange=updSel);
+ const updSel=()=>{[["ups","upsSel"],["downs","downsSel"],["kat","katSel"]].forEach(([nm,bid])=>{const box=document.getElementById(bid);if(!box)return;const sel=[...document.querySelectorAll('input[name="'+nm+'"]:checked')].map(x=>`<span class="chip info" style="margin:2px 3px 2px 0;padding:0 8px;white-space:normal">${esc(x.dataset.ad||x.value)}</span>`);box.innerHTML=sel.join("")||'<span class="tsub">Seçim yok</span>';});};
+ document.querySelectorAll('input[name="ups"],input[name="downs"],input[name="kat"]').forEach(e=>e.onchange=updSel);
  updSel();
 };
 function fld(lab,name,val,type,req,full){
