@@ -203,6 +203,16 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 .user-chip .u-tx b{font-size:12.5px;line-height:1.1;display:block}
 .user-chip .u-tx span{font-size:10.5px;color:var(--muted)}
 @media(max-width:720px){.user-chip .u-tx{display:none}}
+/* Yeni Model — bağımlılık ilişki panelleri */
+.rel-block{margin-bottom:14px}
+.rel-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.rel-panel{display:flex;gap:12px;align-items:stretch}
+.rel-list{flex:1;max-height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface)}
+.rel-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;font-size:12.5px;cursor:pointer}
+.rel-item:hover{background:var(--surface-2)}
+.rel-side{width:210px;flex:none;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-y:auto;max-height:170px}
+.rel-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:7px}
+.rel-sel{display:flex;flex-wrap:wrap;align-content:flex-start}
 /* Model Journey (10 faz) */
 .mp-prog{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 14px}
 .mp-prog-l{font-size:12px;color:var(--muted)}
@@ -269,7 +279,7 @@ function diffFields(oldO,newO,labels){const out=[];for(const k in labels){let a=
  a=a==null?"":String(a);b=b==null?"":String(b);
  if(a!==b)out.push({alan:labels[k],eski:a||"—",yeni:b||"—"});}
  return out;}
-const MODEL_FL={ad:"Model Adı",tip:"Model Tipi",sinif:"Model Sınıfı",amac:"Amaç",kategori:"Kategori",koken:"Köken",tedarikci:"Tedarikçi",sahipBirim:"Sahip Birim",sahip:"Model Sahibi",gelistirici:"Geliştirici",validator:"Validatör",metodoloji:"Metodoloji",algoritma:"Algoritma",barindiran:"Barındıran Sistem",durum:"Durum",gelistirmeTarihi:"Geliştirme Tarihi",prodTarihi:"Prod Tarihi",sonValidasyon:"Son Validasyon",valFrekans:"Validasyon Frekansı",varsayim:"Varsayımlar",sinirlama:"Sınırlamalar",aiml:"AI/ML",genai:"GenAI",deterministik:"Deterministik",duzenleyici:"Düzenleyici",tier:"Tier",icsel:"İçsel Risk",upstream:"Upstream Bağımlılık"};
+const MODEL_FL={ad:"Model Adı",tip:"Model Tipi",sinif:"Model Sınıfı",amac:"Amaç",kategori:"Kategori",koken:"Köken",tedarikci:"Tedarikçi",sahipBirim:"Sahip Birim",sahip:"Model Sahibi",gelistirici:"Geliştirici",validator:"Validatör",metodoloji:"Metodoloji",algoritma:"Algoritma",barindiran:"Barındıran Sistem",durum:"Durum",gelistirmeTarihi:"Geliştirme Tarihi",prodTarihi:"Prod Tarihi",sonValidasyon:"Son Validasyon",valFrekans:"Validasyon Frekansı",notaSurec:"İlişkili NOTA Süreci",metricProfile:"Metrik Çerçevesi",varsayim:"Varsayımlar",sinirlama:"Sınırlamalar",aiml:"AI/ML",genai:"GenAI",deterministik:"Deterministik",duzenleyici:"Düzenleyici",tier:"Tier",icsel:"İçsel Risk",upstream:"Upstream Bağımlılık"};
 const VAL_FL={baslik:"Başlık",tur:"Validasyon Türü",tetik:"Tetik",validator:"Validatör",bagimsizlik:"Bağımsızlık",backtest:"Backtesting",ayrimGucu:"Ayrım Gücü",eskSorgu:"Etkin Sorgulama",oneri:"Öneri",rating:"Rating",onayKarar:"Onay Kararı",onayMakam:"Onay Makamı",raporTarihi:"Rapor Tarihi",durum:"Durum"};
 const FND_FL={baslik:"Başlık",kaynak:"Kaynak",onem:"Önem",durum:"Remediation Durumu",sahip:"Sorumlu",olusturma:"Oluşturma",hedefTarih:"Hedef Tarih",aksiyon:"Aksiyon Planı",kanit:"Kanıt/Re-test"};
 const PMA_FL={tur:"Tür",materyalite:"Materyalite",yon:"Etki Yönü",etkiTutar:"Etki Tutarı",tfrs9Asama:"TFRS9 Aşaması",senaryo:"Senaryo",gerekce:"Gerekçe",hesaplama:"Hesaplama",kaldirma:"Kaldırma Kriteri",onayMakam:"Onay Makamı",bagimsizGozdenDurum:"Bağımsız G.G.",durum:"Durum"};
@@ -405,6 +415,8 @@ function seed(){
  state.models.forEach(m=>{if(aug2[m.id])m.aimlEk=aug2[m.id];});
  const deps2={"MDL-0002":["MDL-0001","MDL-0013"],"MDL-0018":["MDL-0001"],"MDL-0011":["MDL-0001"],"MDL-0014":["MDL-0013"]};
  state.models.forEach(m=>{if(deps2[m.id])m.upstream=deps2[m.id];});
+ const notaMap={"MDL-0001":"1.1.2. Kurumsal/Ticari Kredi Tahsis Süreci","MDL-0002":"2.2. Karşılık / TFRS9 (BKZ) Süreci","MDL-0003":"4.1. AML / Şüpheli İşlem ve Suistimal İzleme Süreci","MDL-0004":"2.3. Piyasa Riski Yönetimi Süreci","MDL-0006":"5.3. Dijital Kanallar ve Operasyonel Otomasyon Süreci","MDL-0014":"2.1. Sermaye Yeterliliği (İSEDES) Süreci","MDL-0024":"5.3. Dijital Kanallar ve Operasyonel Otomasyon Süreci"};
+ state.models.forEach(m=>{if(notaMap[m.id])m.notaSurec=notaMap[m.id];});
  genSeedMetrics();
  // PMA / istisna
  state.pmas=[
@@ -905,7 +917,7 @@ window.modelDetail=function(id){
   </div>
   <div class="mtab" data-i="0">
     ${wfBlock(m)}
-    ${dl({"Benzersiz Model ID (MUID — değiştirilemez)":m.muid||"—","Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
+    ${dl({"Benzersiz Model ID (MUID — değiştirilemez)":m.muid||"—","İlişkili NOTA Süreci":m.notaSurec||"—","Model İhtiyacı Gerekçesi":m.ihtiyacGerekce||"—","Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
     <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
     <div class="section-h">Hızlı Erişim</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -960,6 +972,7 @@ function envanterTab(m){
  return `
   <div class="callout">Halkbank Model Envanteri — resmi beyan alanları${e._auto?" <b>(mevcut envanter verisinden otomatik türetildi — iş birimi teyidi bekleniyor)</b>":" (iş birimi girişi)"}.</div>
   ${e.amacDetay?`<div class="section-h" style="margin-top:0">Model Amacı</div><div class="tsub" style="white-space:normal;line-height:1.6">${esc(e.amacDetay)}</div>`:""}
+  ${e.ihtiyacGerekce?`<div class="section-h">Model İhtiyacı Gerekçesi</div><div class="tsub" style="white-space:normal;line-height:1.6">${esc(e.ihtiyacGerekce)}</div>`:""}
   <div class="section-h">Süreç & Sınıflandırma</div>
   ${dl({"Kullanıldığı İş Süreci":e.isSurec,"İş Kararı Üzerindeki Etkisi":e.etki,"Model Türü":e.modelTuru,"Modelleme Yaklaşımı":e.yaklasim})}
   <div class="section-h">Teknik</div>
@@ -997,42 +1010,78 @@ function perfTab(m){
 window.modelForm=function(id){
  const m=id?JSON.parse(JSON.stringify(state.models.find(x=>x.id===id))):{kategori:[],crit:{},durum:"Taslak",koken:"İç Geliştirme"};
  const cats=["Kredi/IRB","Piyasa/VaR","Operasyonel/AMA","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Fiyatlama/Değerleme","Generative AI","Agentic AI","Diğer"];
- openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Model Düzenle":"Yeni Model"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+ const others=state.models.filter(x=>x.id!==(m.id||""));
+ const curDowns=id?state.models.filter(x=>(x.upstream||[]).includes(id)).map(x=>x.id):[];
+ const birimOpts=(m.sahipBirim&&!BEYAN_UNITS.includes(m.sahipBirim)?[m.sahipBirim]:[]).concat(BEYAN_UNITS);
+ const relRow=(x,nm,list)=>`<label class="rel-item"><input type="checkbox" name="${nm}" value="${x.id}" data-ad="${esc(x.ad)}" ${list.includes(x.id)?"checked":""}><span style="white-space:normal">${esc(x.ad)}</span><span class="tsub" style="margin-left:auto;flex:none">${x.id}</span></label>`;
+ openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Model Düzenle":"Yeni Model"}</h2><div class="id">${id?id+" · "+esc(m.muid||""):"Yeni kayıt — bölümlü uzman formu"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  <div class="callout">İş birimi beyanındaki gibi <b>bölümlü yapı</b> — uzman (tam) model formu. Kritiklik skorları “Kritiklik Değerlendirmesi” ekranından hesaplanır; yeni model <b>onay akışına</b> girer.</div>
+  <div class="beyan-sec">1 · Kimlik &amp; Sahiplik</div>
   <div class="form-grid">
    ${fld("Model Adı","ad",m.ad,"text",true,true)}
+   ${fldSel("Sahip Birim","sahipBirim",m.sahipBirim,birimOpts)}
+   ${fld("Model Sahibi","sahip",m.sahip,"text")}
+   ${fldSel("Köken","koken",m.koken,["İç Geliştirme","Satıcı/Vendor","Grup-Ana Model"])}
+   ${fld("Tedarikçi","tedarikci",m.tedarikci,"text")}
+   ${fldSel("Durum","durum",m.durum,Object.keys(STATUS_CLASS))}
+   ${fld("Geliştirici","gelistirici",m.gelistirici,"text")}
+   ${fld("Validatör","validator",m.validator,"text")}
+  </div>
+  <div class="beyan-sec">2 · Model Tanımı</div>
+  <div class="form-grid">
    ${fldSel("Model Tipi","tip",m.tip,["İstatistiksel","AI/ML","GenAI/Temel Model","Deterministik/Kural","Hibrit"])}
    ${fldSel("Model Sınıfı","sinif",m.sinif,MODEL_SINIFLARI)}
+   <div class="field"><label>Performans Metrik Çerçevesi <span class="tsub" style="font-weight:400">izleme metriklerini belirler</span></label><select data-f="metricProfile"><option value="">—</option>${BEYAN_MP.map(p=>`<option value="${p[0]}" ${m.metricProfile===p[0]?"selected":""}>${esc(p[1])}</option>`).join("")}</select></div>
+   ${fld("Metodoloji","metodoloji",m.metodoloji,"text")}
+   ${fld("Algoritma","algoritma",m.algoritma,"text")}
+   ${fld("Barındıran Sistem","barindiran",m.barindiran,"text")}
    ${fld("Amaç / Kullanım","amac",m.amac,"textarea",false,true)}
    <div class="field full"><label>Kategori (çoklu)</label><div class="checks">${cats.map(c=>`<label><input type="checkbox" name="kat" value="${c}" ${(m.kategori||[]).includes(c)?"checked":""}>${c}</label>`).join("")}</div></div>
-   <div class="field full"><label>Bayraklar</label><div class="checks">
+  </div>
+  <div class="beyan-sec">3 · Model Nitelikleri (bayraklar)</div>
+  <div class="field full"><div class="checks">
      <label><input type="checkbox" id="fx-aiml" ${m.aiml?"checked":""}>AI/ML</label>
      <label><input type="checkbox" id="fx-genai" ${m.genai?"checked":""}>GenAI/Temel Model</label>
      <label><input type="checkbox" id="fx-det" ${m.deterministik?"checked":""}>Deterministik/EUC</label>
      <label><input type="checkbox" id="fx-duz" ${m.duzenleyici?"checked":""}>Düzenleyici/Sermaye kullanımı</label>
-   </div></div>
-   ${fldSel("Köken","koken",m.koken,["İç Geliştirme","Satıcı/Vendor","Grup-Ana Model"])}
-   ${fld("Tedarikçi","tedarikci",m.tedarikci,"text")}
-   ${fld("Sahip Birim","sahipBirim",m.sahipBirim,"text")}
-   ${fld("Model Sahibi","sahip",m.sahip,"text")}
-   ${fld("Geliştirici","gelistirici",m.gelistirici,"text")}
-   ${fld("Validatör","validator",m.validator,"text")}
-   ${fld("Metodoloji","metodoloji",m.metodoloji,"text")}
-   ${fld("Algoritma","algoritma",m.algoritma,"text")}
-   ${fld("Barındıran Sistem","barindiran",m.barindiran,"text")}
-   ${fldSel("Durum","durum",m.durum,Object.keys(STATUS_CLASS))}
+  </div></div>
+  <div class="beyan-sec">4 · İlişkili NOTA Süreci</div>
+  <div class="form-grid">
+   <div class="field full"><label>İlişkili NOTA Süreci <span class="tsub" style="font-weight:400">banka süreç kataloğu — Archer NOTA ekranı ile cross-reference</span></label>
+    <select data-f="notaSurec"><option value="">— seçiniz —</option>${NOTA_SURECLERI.map(n=>`<option ${m.notaSurec===n?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+  </div>
+  <div class="beyan-sec">5 · Bağımlılık &amp; Süreç İlişkilendirme</div>
+  <div class="rel-block">
+   <div class="rel-title">⬆ Besleyen Modeller (Upstream) — bu modele girdi sağlar</div>
+   <div class="rel-panel">
+    <div class="rel-list">${others.map(x=>relRow(x,"ups",m.upstream||[])).join("")||'<span class="tsub" style="padding:6px">Başka model yok</span>'}</div>
+    <aside class="rel-side"><div class="rel-h">Seçilen Upstream</div><div id="upsSel" class="rel-sel"></div></aside>
+   </div>
+  </div>
+  <div class="rel-block">
+   <div class="rel-title">⬇ Beslenen Modeller (Downstream) — bu modelin çıktısını kullanır</div>
+   <div class="rel-panel">
+    <div class="rel-list">${others.map(x=>relRow(x,"downs",curDowns)).join("")||'<span class="tsub" style="padding:6px">Başka model yok</span>'}</div>
+    <aside class="rel-side"><div class="rel-h">Seçilen Downstream</div><div id="downsSel" class="rel-sel"></div></aside>
+   </div>
+  </div>
+  <div class="callout" style="margin-top:2px">Kurulan upstream/downstream ilişkileri <b>Bağımlılık &amp; Etki</b> sayfasındaki ağ grafiğine anında yansır ve <b>denetim izine içerikli</b> (önceki → yeni ilişki listesi) yazılır. Downstream seçimi karşı modelin upstream kaydına çift yönlü işlenir.</div>
+  <div class="beyan-sec">6 · Tarihler &amp; Validasyon</div>
+  <div class="form-grid">
    ${fld("Geliştirme Tarihi","gelistirmeTarihi",m.gelistirmeTarihi,"date")}
    ${fld("Prod'a Alınma Tarihi","prodTarihi",m.prodTarihi,"date")}
    ${fld("Son Validasyon Tarihi","sonValidasyon",m.sonValidasyon,"date")}
    ${fldSel("Validasyon Frekansı","valFrekans",m.valFrekans,["Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"])}
+  </div>
+  <div class="beyan-sec">7 · Dokümantasyon &amp; Linkler</div>
+  <div class="form-grid">
    ${fld("Varsayımlar","varsayim",m.varsayim,"textarea",false,true)}
    ${fld("Sınırlamalar","sinirlama",m.sinirlama,"textarea",false,true)}
    ${fld("Link — Model Dokümanı","lk_doc",(m.links||{}).doc,"text")}
    ${fld("Link — İzleme Panosu","lk_monitor",(m.links||{}).monitor,"text")}
    ${fld("Link — Kod Deposu","lk_repo",(m.links||{}).repo,"text")}
    ${fld("Link — Validasyon Raporu","lk_val",(m.links||{}).val,"text")}
-   <div class="field full"><label>Besleyen Modeller (Upstream) — bağımlılık</label><div class="checks">${state.models.filter(x=>x.id!==(m.id||"")).map(x=>`<label style="font-weight:500"><input type="checkbox" name="ups" value="${x.id}" ${(m.upstream||[]).includes(x.id)?"checked":""}> ${esc(x.ad)}</label>`).join("")||'<span class="tsub">Başka model yok</span>'}</div></div>
   </div>
-  <div class="field full" style="margin-top:8px"><span class="hint">Kritiklik skorları (Materyalite/Karmaşıklık/Tier) “Kritiklik Değerlendirmesi” ekranından hesaplanır; yeni modelde varsayılan orta değerlerle başlar.</span></div>
   <div class="formfoot">
    ${id?`<button class="tbtn" style="color:var(--crit);border-color:var(--crit)" onclick="delModel('${id}')">Sil</button>`:""}
    <div class="sp" style="flex:1"></div>
@@ -1040,6 +1089,9 @@ window.modelForm=function(id){
    <button class="tbtn primary" onclick="saveModel('${id||""}')">Kaydet</button>
   </div>
  `);
+ const updSel=()=>{["ups","downs"].forEach(nm=>{const box=document.getElementById(nm+"Sel");if(!box)return;const sel=[...document.querySelectorAll('input[name="'+nm+'"]:checked')].map(x=>`<span class="chip info" style="margin:2px 3px 2px 0;padding:0 8px;white-space:normal">${esc(x.dataset.ad)}</span>`);box.innerHTML=sel.join("")||'<span class="tsub">Seçim yok</span>';});};
+ document.querySelectorAll('input[name="ups"],input[name="downs"]').forEach(e=>e.onchange=updSel);
+ updSel();
 };
 function fld(lab,name,val,type,req,full){
  const c=full?"field full":"field";
@@ -1053,6 +1105,7 @@ window.saveModel=function(id){
  const ad=g("ad");if(!ad){alert("Model adı zorunludur.");return;}
  const kat=[...document.querySelectorAll('input[name="kat"]:checked')].map(x=>x.value);
  const ups=[...document.querySelectorAll('input[name="ups"]:checked')].map(x=>x.value);
+ const downs=[...document.querySelectorAll('input[name="downs"]:checked')].map(x=>x.value);
  const base=id?state.models.find(x=>x.id===id):{crit:{M1:3,M2:3,M3:3,M4:3,M5:3,K1:3,K2:3,K3:3,K4:3,K5:3,K6:3,K7:3,B1:1,O1:0}};
  const obj=Object.assign({},base,{
   id:id||uid("MDL-"),ad,tip:g("tip"),sinif:g("sinif"),amac:g("amac"),kategori:kat,upstream:ups,links:{doc:g("lk_doc"),monitor:g("lk_monitor"),repo:g("lk_repo"),val:g("lk_val")},
@@ -1061,7 +1114,7 @@ window.saveModel=function(id){
   koken:g("koken"),tedarikci:g("tedarikci"),sahipBirim:g("sahipBirim"),sahip:g("sahip"),gelistirici:g("gelistirici"),
   validator:g("validator"),metodoloji:g("metodoloji"),algoritma:g("algoritma"),barindiran:g("barindiran"),
   durum:g("durum"),gelistirmeTarihi:g("gelistirmeTarihi"),prodTarihi:g("prodTarihi"),sonValidasyon:g("sonValidasyon"),
-  valFrekans:g("valFrekans"),varsayim:g("varsayim"),sinirlama:g("sinirlama")
+  valFrekans:g("valFrekans"),varsayim:g("varsayim"),sinirlama:g("sinirlama"),notaSurec:g("notaSurec"),metricProfile:g("metricProfile")||base.metricProfile||""
  });
  obj.crit=Object.assign({},obj.crit,{duzenleyici:obj.duzenleyici,genai:obj.genai});
  const s=scoreCrit(obj.crit);Object.assign(obj,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
@@ -1070,14 +1123,30 @@ window.saveModel=function(id){
   obj.wf="mrm";obj.durumTalep=obj.durum;obj.durum="Onayda";
   state.validations.push({id:uid("VAL-"),baslik:obj.ad+" — İlk Validasyon",modelId:obj.id,tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",durum:"Planlandı"});
  }
+ const prevUps=id?((state.models.find(x=>x.id===id)||{}).upstream||[]).slice():[];
+ const prevDowns=id?state.models.filter(x=>x.id!==id&&(x.upstream||[]).includes(id)).map(x=>x.id):[];
  let chg;
  if(id){const i=state.models.findIndex(x=>x.id===id);const prev=state.models[i];
   obj.muid=prev.muid; // MUID değiştirilemez — form/kod ne gönderirse göndersin korunur
   chg=diffFields(prev,obj,MODEL_FL);
   state.models[i]=obj;
  }else{state.models.push(obj);
-  chg=["ad","sinif","tip","sahipBirim","durum","tier","valFrekans"].map(k=>({alan:MODEL_FL[k]||k,eski:"—",yeni:String(obj[k]??"—")}));
+  chg=["ad","sinif","tip","sahipBirim","durum","tier","valFrekans","notaSurec"].map(k=>({alan:MODEL_FL[k]||k,eski:"—",yeni:String(obj[k]||"—")}));
+  if(obj.metricProfile)genMetricsForModel(obj); // metrik çerçevesi seçildiyse izleme serisi üret
  }
+ // Downstream ters-yazma: seçilen modellerin upstream listesine bu model eklenir/çıkarılır (çift yönlü ilişki)
+ state.models.forEach(x=>{if(x.id===obj.id)return;
+  const has=(x.upstream||[]).includes(obj.id);
+  const want=downs.includes(x.id);
+  if(want&&!has)x.upstream=[...(x.upstream||[]),obj.id];
+  else if(!want&&has)x.upstream=(x.upstream||[]).filter(u=>u!==obj.id);});
+ // İlişki değişiklikleri denetim izine İÇERİKLİ yazılır
+ const nameOf=i2=>{const x=state.models.find(y=>y.id===i2);return x?x.ad:i2;};
+ const jN=a2=>a2.map(nameOf).join(", ")||"—";
+ const relChg=[];
+ if(JSON.stringify(prevUps.slice().sort())!==JSON.stringify(ups.slice().sort()))relChg.push({alan:"Upstream (besleyen) ilişkiler",eski:jN(prevUps),yeni:jN(ups)});
+ if(JSON.stringify(prevDowns.slice().sort())!==JSON.stringify(downs.slice().sort()))relChg.push({alan:"Downstream (beslenen) ilişkiler",eski:jN(prevDowns),yeni:jN(downs)});
+ if(relChg.length)logAudit("Bağımlılık ilişkilendirme","MDL "+obj.id,obj.ad+" — süreç/bağımlılık ilişkileri güncellendi (Bağımlılık & Etki sayfasına yansır)",relChg);
  logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier+(id?"":" · onay akışına gönderildi"),chg);
  save();closeDrawer();render();
 };
@@ -1139,6 +1208,29 @@ const OPT_PLATFORM=["Dataiku","SPSS","SAS","Excel","MATLAB","Python (Jupyter)","
 const OPT_DIL=["Python","SQL","R","SAS","MATLAB","Excel / VBA","Scala","Diğer"];
 const OPT_ALGO=["Lojistik Regresyon","Doğrusal Regresyon","Karar Ağaçları","Random Forest","Gradient Boosting (GBM)","K-Means","Sinir Ağı / Derin Öğrenme","LLM / Transformer","Isolation Forest","Kural Tabanlı","Diğer"];
 const OPT_EH=["Evet","Hayır"];
+/* NOTA — banka süreç kataloğu (Archer NOTA ekranı; akademik tez numaralandırması) */
+const NOTA_SURECLERI=[
+ "1. Krediler",
+ "1.1. Kredi Tahsis Süreci",
+ "1.1.1. Bireysel Kredi Tahsis Süreci",
+ "1.1.2. Kurumsal/Ticari Kredi Tahsis Süreci",
+ "1.2. Kredi İzleme ve Yakın Takip Süreci",
+ "1.3. Tahsilat ve Yasal Takip Süreci",
+ "2. Risk Yönetimi",
+ "2.1. Sermaye Yeterliliği (İSEDES) Süreci",
+ "2.2. Karşılık / TFRS9 (BKZ) Süreci",
+ "2.3. Piyasa Riski Yönetimi Süreci",
+ "2.4. Model Riski Yönetimi (MRM) Süreci",
+ "3. Hazine ve Bilanço Yönetimi",
+ "3.1. Aktif-Pasif Yönetimi (ALM/IRRBB) Süreci",
+ "3.2. Hazine İşlemleri ve Türev Süreci",
+ "4. Uyum ve İç Sistemler",
+ "4.1. AML / Şüpheli İşlem ve Suistimal İzleme Süreci",
+ "4.2. İç Kontrol ve İç Denetim Süreci",
+ "5. Bankacılık Operasyonları ve Dijital",
+ "5.1. NOTA Süreci (Nakit Ödeme/Tahsis Operasyonları)",
+ "5.2. Pazarlama / CRM ve Segmentasyon Süreci",
+ "5.3. Dijital Kanallar ve Operasyonel Otomasyon Süreci"];
 function bsel(name,lab,opts,req,hint){
  return `<div class="field"><label>${lab}${req?' <span style="color:var(--crit)">*</span>':''}${hint?` <span class="tsub" style="font-weight:400">${hint}</span>`:''}</label><select data-b="${name}"><option value="">— seçiniz —</option>${opts.map(o=>{const val=Array.isArray(o)?o[0]:o;const t=Array.isArray(o)?o[1]:o;return `<option value="${esc(val)}">${esc(t)}</option>`;}).join("")}</select></div>`;
 }
@@ -1149,6 +1241,7 @@ window.beyanForm=function(){
   <div class="beyan-sec">1 · Kimlik &amp; Sahiplik</div>
   <div class="form-grid">
    ${fld("Model Adı","ad","","text",true,true)}
+   ${fld("Model İhtiyacı Gerekçesi — bu modele neden ihtiyaç duyuldu?","ihtiyacGerekce","","textarea",true,true)}
    ${bsel("unit","Beyan Eden İş Birimi",BEYAN_UNITS,true)}
    ${bsel("koken","Köken",["İç Geliştirme","Satıcı/Vendor","Grup-Ana Model"],false)}
    ${bsel("durum","Model Durumu",["Geliştirme","Validasyonda","Onaylı/Prod","İzlemede"],true)}
@@ -1260,6 +1353,7 @@ window.saveBeyan=function(){
  const gb=n=>{const e=document.querySelector(`[data-b="${n}"]`);return e?e.value:"";};
  const gf=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};
  const ad=gf("ad");if(!ad){alert("Model adı zorunludur.");return;}
+ const ihtiyac=gf("ihtiyacGerekce");if(!ihtiyac){alert("Model İhtiyacı Gerekçesi zorunludur — modele neden ihtiyaç duyulduğunu açıklayınız.");return;}
  const req=[["unit","Beyan Eden İş Birimi"],["durum","Model Durumu"],["sinif","Model Sınıfı"],["modelTipi","Model Tipi"],["kategori","Model Kategorisi"],["amac","Amaç"],["metricProfile","Performans Metrik Çerçevesi"]];
  for(const r of req){if(!gb(r[0])){alert(r[1]+" seçilmelidir.");return;}}
  const num=n=>{const v=gb(n);return v===""?0:+v;};
@@ -1272,7 +1366,7 @@ window.saveBeyan=function(){
  if(mkSum===0){const lvl=KRIT_PRESET[gk]?gk:"Orta";const p=critFromLevel(lvl,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
  const bddk=gb("bddkKapsam")==="Evet";if(bddk)crit.duzenleyici=true;
  if((gb("etki")||"").startsWith("Doğrudan"))crit.O1=Math.max(crit.O1,3);
- const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama"),karsilikEtkisi:gb("karsilikEtkisi")||"Hayır"};
+ const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama"),karsilikEtkisi:gb("karsilikEtkisi")||"Hayır",ihtiyacGerekce:ihtiyac};
  const s=scoreCrit(crit);
  const sonVal=gb("sonVal"),sv={taze:addDays(todayStr(),-90),"1y":addDays(todayStr(),-365),"2y":addDays(todayStr(),-730),yok:""}[sonVal]||"";
  const aiml=gb("aiml")==="Evet"||gb("genai")==="Evet"||gb("sinif")==="ML/AI";
@@ -1280,7 +1374,7 @@ window.saveBeyan=function(){
  const m={
   id:uid("MDL-"),muid:genMuid(),ad,tip:gb("genai")==="Evet"?"GenAI/Temel Model":(aiml?"AI/ML":"İstatistiksel"),
   sinif:gb("sinif"),modelTipi:gb("modelTipi"),kategori:[gb("kategori")],amac:gb("amac"),metodoloji:gb("metodoloji"),
-  metricProfile:gb("metricProfile"),lifecyclePhase:gb("lifecyclePhase")||"",aiml,genai:gb("genai")==="Evet",
+  metricProfile:gb("metricProfile"),lifecyclePhase:gb("lifecyclePhase")||"",ihtiyacGerekce:ihtiyac,aiml,genai:gb("genai")==="Evet",
   deterministik:gb("metodoloji")==="Kural Tabanlı / Deterministik",duzenleyici:crit.duzenleyici,
   sahipBirim:gb("unit"),sahip:envanter.iletisimKisi||"İş Birimi Beyanı",gelistirici:envanter.gelistiriciAd||(gb("koken")==="Satıcı/Vendor"?"Satıcı/Vendor":"İş Birimi"),
   validator:"Bağımsız Validasyon Birimi",koken:gb("koken")||"İç Geliştirme",barindiran:envanter.platform||"—",algoritma:envanter.algoritma||gb("metodoloji"),
@@ -2478,6 +2572,7 @@ function viewBaglanti(v){
   <p class="vlead">Model bağımlılık ağı ve etki analizi — besleyen (upstream) / beslenen (downstream) ilişkileri ve “bu model bozulursa” dolaylı etki (SS1/23 1.2b: doğrudan ve dolaylı ara bağımlılıklar).</p>
   <div class="toolbar"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="dep-model" style="min-width:320px">${models.map(x=>`<option value="${x.id}" ${depSel===x.id?"selected":""}>${esc(x.ad)}</option>`).join("")}</select></div>
+  ${m.notaSurec?`<div class="callout">📌 İlişkili NOTA Süreci: <b>${esc(m.notaSurec)}</b> — Archer NOTA süreç kaydı ile cross-reference; süreç etki analizi bu bağ üzerinden raporlanır.</div>`:""}
   <div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
    ${kpi("Besleyen (Upstream)",ups.length,"Girdi sağlayan model","info")}
    ${kpi("Doğrudan Beslenen",downs.length,"Bu modeli kullanan","warn")}
