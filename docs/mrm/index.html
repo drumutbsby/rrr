@@ -262,7 +262,18 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
 const KEY="mrm_sim_v1";
 const state={models:[],validations:[],findings:[],metrics:[],pmas:[],changes:[],audit:[]};
 ["metrics","pmas","changes","audit","guardrails"].forEach(k=>{if(!state[k])state[k]=[];});
-function logAudit(action,entity,detail){state.audit=state.audit||[];state.audit.unshift({ts:new Date().toISOString(),role:window.activeRole||"—",action,entity,detail:detail||""});if(state.audit.length>500)state.audit.length=500;}
+function logAudit(action,entity,detail,chg){state.audit=state.audit||[];state.audSeq=(state.audSeq||0)+1;const rec={aid:"LOG-"+String(state.audSeq).padStart(5,"0"),ts:new Date().toISOString(),role:window.activeRole||"—",action,entity,detail:detail||""};if(chg&&chg.length)rec.chg=chg;state.audit.unshift(rec);if(state.audit.length>500)state.audit.length=500;}
+/* Alan-bazlı fark çıkarıcı: denetim izinde işlem İÇERİĞİ (önce → sonra) */
+function diffFields(oldO,newO,labels){const out=[];for(const k in labels){let a=oldO?oldO[k]:undefined,b=newO?newO[k]:undefined;
+ if(Array.isArray(a))a=a.join(", ");if(Array.isArray(b))b=b.join(", ");
+ if(typeof a==="boolean")a=a?"Evet":"Hayır";if(typeof b==="boolean")b=b?"Evet":"Hayır";
+ a=a==null?"":String(a);b=b==null?"":String(b);
+ if(a!==b)out.push({alan:labels[k],eski:a||"—",yeni:b||"—"});}
+ return out;}
+const MODEL_FL={ad:"Model Adı",tip:"Model Tipi",sinif:"Model Sınıfı",amac:"Amaç",kategori:"Kategori",koken:"Köken",tedarikci:"Tedarikçi",sahipBirim:"Sahip Birim",sahip:"Model Sahibi",gelistirici:"Geliştirici",validator:"Validatör",metodoloji:"Metodoloji",algoritma:"Algoritma",barindiran:"Barındıran Sistem",durum:"Durum",gelistirmeTarihi:"Geliştirme Tarihi",prodTarihi:"Prod Tarihi",sonValidasyon:"Son Validasyon",valFrekans:"Validasyon Frekansı",varsayim:"Varsayımlar",sinirlama:"Sınırlamalar",aiml:"AI/ML",genai:"GenAI",deterministik:"Deterministik",duzenleyici:"Düzenleyici",tier:"Tier",icsel:"İçsel Risk",upstream:"Upstream Bağımlılık"};
+const VAL_FL={baslik:"Başlık",tur:"Validasyon Türü",tetik:"Tetik",validator:"Validatör",bagimsizlik:"Bağımsızlık",backtest:"Backtesting",ayrimGucu:"Ayrım Gücü",eskSorgu:"Etkin Sorgulama",oneri:"Öneri",rating:"Rating",onayKarar:"Onay Kararı",onayMakam:"Onay Makamı",raporTarihi:"Rapor Tarihi",durum:"Durum"};
+const FND_FL={baslik:"Başlık",kaynak:"Kaynak",onem:"Önem",durum:"Remediation Durumu",sahip:"Sorumlu",olusturma:"Oluşturma",hedefTarih:"Hedef Tarih",aksiyon:"Aksiyon Planı",kanit:"Kanıt/Re-test"};
+const PMA_FL={tur:"Tür",materyalite:"Materyalite",yon:"Etki Yönü",etkiTutar:"Etki Tutarı",tfrs9Asama:"TFRS9 Aşaması",senaryo:"Senaryo",gerekce:"Gerekçe",hesaplama:"Hesaplama",kaldirma:"Kaldırma Kriteri",onayMakam:"Onay Makamı",bagimsizGozdenDurum:"Bağımsız G.G.",durum:"Durum"};
 const PERMS={
  "Yeni/Düzenle model":["1. Hat – Sahip/Geliştirici","2. Hat – MRM Programı"],
  "Model sil":["2. Hat – MRM Programı"],
@@ -588,6 +599,10 @@ window.phaseSave=function(id,n){
  save();closeDrawer();modelDetail(id);setTimeout(()=>{const bs=[...document.querySelectorAll('#mtabs button')];const t=bs.find(b=>b.textContent.includes('Journey'));if(t)t.click();},60);
 };
 
+/* MUID: her modelin benzersiz, DEĞİŞTİRİLEMEZ kimliği — oluşturmada atanır, düzenlemede asla değişmez */
+function genMuid(){const a=new Uint8Array(6);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(a);else for(let i=0;i<6;i++)a[i]=Math.floor(Math.random()*256);return "HB-MDL-"+[...a].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();}
+function ensureMuids(){(state.models||[]).forEach(m=>{if(!m.muid)m.muid=genMuid();});}
+function findModel(key){return state.models.find(x=>x.id===key||x.muid===key);}
 /* Seed modeller için resmi envanter alanlarını mevcut veriden türet (iş birimi teyidine kadar otomatik) */
 function backfillEnvanter(){
  (state.models||[]).forEach(m=>{
@@ -647,8 +662,9 @@ function wfStageIndex(id){return WF_STAGES.findIndex(s=>s.id===id);}
 function wfPending(m){return m.wf&&m.wf!=="aktif"&&m.wf!=="red";}
 function wfLabel(wf){if(wf==="aktif")return "Onaylı — Aktif";if(wf==="red")return "Reddedildi";const s=WF_STAGES.find(x=>x.id===wf);return s?s.label+" bekliyor":"—";}
 window.wfApprove=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const idx=wfStageIndex(m.wf);const stage=WF_STAGES[idx];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü onaylayabilir (görevler ayrılığı).");return;}const next=WF_STAGES[idx+1];m.wf=next?next.id:"aktif";
+ const oncekiWf=stage.label,oncekiDurum=m.durum;
  if(m.wf==="aktif"){m.durum=m.durumTalep||(m.durum==="Onayda"?"İzlemede":m.durum);} // Y1: onay tamamlanınca talep edilen duruma geç
- logAudit("Onay akışı — "+stage.label+" ONAY","MDL "+id,m.ad+" → "+(m.wf==="aktif"?"Aktif ("+m.durum+")":wfLabel(m.wf)));save();closeDrawer();render();};
+ logAudit("Onay akışı — "+stage.label+" ONAY","MDL "+id,m.ad+" → "+(m.wf==="aktif"?"Aktif ("+m.durum+")":wfLabel(m.wf)),[{alan:"Onay Aşaması",eski:oncekiWf+" bekliyor",yeni:m.wf==="aktif"?"Tamamlandı (Aktif)":wfLabel(m.wf)},{alan:"Durum",eski:oncekiDurum,yeni:m.durum}].filter(x=>x.eski!==x.yeni));save();closeDrawer();render();};
 window.wfReject=function(id){const m=state.models.find(x=>x.id===id);if(!m||!wfPending(m))return;const stage=WF_STAGES[wfStageIndex(m.wf)];if(window.activeRole&&window.activeRole!==stage.role){alert("Bu adımı yalnız '"+stage.role+"' rolü işleyebilir.");return;}m.wf="red";m.durum="Taslak";logAudit("Onay akışı — REDDEDİLDİ","MDL "+id,m.ad+" ("+stage.label+")");save();closeDrawer();render();};
 window.wfReset=function(id){const m=state.models.find(x=>x.id===id);if(!m)return;m.wf="mrm";logAudit("Onay akışı — yeniden başlatıldı","MDL "+id,m.ad);save();closeDrawer();render();};
 function wfBlock(m){
@@ -809,7 +825,7 @@ function viewEnvanter(v){
    ${units.map(u=>{const ms=M.filter(m=>m.sahipBirim===u);const br=ms.filter(m=>modelBreaching(m.id)).length;return `<tr data-unit="${esc(u)}" style="cursor:pointer"><td class="tsub">${esc(u)}</td>${MODEL_SINIFLARI.map(s=>{const n=ms.filter(m=>m.sinif===s).length;return `<td class="num" style="text-align:center">${n||'<span style="opacity:.3">·</span>'}</td>`;}).join("")}<td class="num" style="text-align:center"><b>${ms.length}</b></td><td style="text-align:center">${br?`<span class="chip crit" style="padding:0 7px">${br}</span>`:`<span class="chip good" style="padding:0 7px">0</span>`}</td></tr>`;}).join("")}
   </tbody></table></div></div>
  <div class="toolbar">
-  <input type="search" id="f-q" placeholder="Ara: ad, ID, sahip…" value="${esc(envFilter.q)}">
+  <input type="search" id="f-q" placeholder="Ara: ad, ID, MUID, sahip…" value="${esc(envFilter.q)}">
   <select id="f-sinif"><option value="">Tüm sınıf</option>${MODEL_SINIFLARI.map(s=>`<option ${envFilter.sinif===s?"selected":""}>${s}</option>`).join("")}</select>
   <select id="f-tier"><option value="">Tüm Tier</option>${["Tier 1","Tier 2","Tier 3","İhmal Edilebilir"].map(t=>`<option ${envFilter.tier===t?"selected":""}>${t}</option>`).join("")}</select>
   <select id="f-durum"><option value="">Tüm Durum</option>${durums.map(t=>`<option ${envFilter.durum===t?"selected":""}>${t}</option>`).join("")}</select>
@@ -843,7 +859,7 @@ function renderEnvTable(){
   if(envFilter.durum&&m.durum!==envFilter.durum)return false;
   if(envFilter.unit&&m.sahipBirim!==envFilter.unit)return false;
   if(envFilter.kaynak){const k=m.kaynak||"Seed/Sistem";if(k!==envFilter.kaynak)return false;}
-  if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.sahip||"")+(m.kategori||[]).join()+(m.sinif||"")).toLowerCase().includes(q)))return false;}
+  if(envFilter.q){const q=envFilter.q.toLowerCase();if(!((m.ad+m.id+(m.muid||"")+(m.sahip||"")+(m.kategori||[]).join()+(m.sinif||"")).toLowerCase().includes(q)))return false;}
   return true;
  });
  const el=document.getElementById("envtable");
@@ -868,7 +884,7 @@ function renderEnvTable(){
 
 /* ============ MODEL DETAIL ============ */
 window.modelDetail=function(id){
- const m=state.models.find(x=>x.id===id);if(!m)return;
+ const m=findModel(id);if(!m)return; // MDL kodu ya da değiştirilemez MUID ile çağrılabilir
  const nv=nextVal(m),o=overdue(nv);
  const vals=state.validations.filter(x=>x.modelId===id);
  const finds=state.findings.filter(x=>x.modelId===id);
@@ -880,7 +896,7 @@ window.modelDetail=function(id){
   <div style="flex:1">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${sinifChip(m)} ${tierChip(m.tier)} ${statusChip(m.durum)} <span class="chip ${m.sinif==='ML/AI'?'warn':'info'}">${esc(m.sinif||"—")}</span> ${m.aiml?`<span class="chip ai">${m.genai?"GenAI":"AI/ML"}</span>`:""} ${m.duzenleyici?`<span class="chip info">Düzenleyici</span>`:""} ${m.kaynak==="İş Birimi Beyanı"?'<span class="chip warn">🏛️ İş Birimi Beyanı</span>':""} ${modelBreaching(m.id)?'<span class="chip crit">İzleme aşımı</span>':''}</div>
     <h2 style="margin:8px 0 2px;font-size:19px">${esc(m.ad)}</h2>
-    <div class="id">${m.id} · ${esc(m.sahipBirim||"")}</div>
+    <div class="id">${m.id} · <span title="Benzersiz Model ID — değiştirilemez" style="font-family:ui-monospace,monospace">${esc(m.muid||"—")}</span> · ${esc(m.sahipBirim||"")}</div>
   </div>
   <button class="tbtn" onclick="modelForm('${m.id}')">Düzenle</button>
   <button class="iconbtn x" onclick="closeDrawer()">✕</button>
@@ -890,7 +906,7 @@ window.modelDetail=function(id){
   </div>
   <div class="mtab" data-i="0">
     ${wfBlock(m)}
-    ${dl({"Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
+    ${dl({"Benzersiz Model ID (MUID — değiştirilemez)":m.muid||"—","Amaç":m.amac,"Model Sınıfı":m.sinif,"Model Tipi (PMJ)":modelTipiOf(m),"Risk Sınıfı (PMJ)":sinifOf(m).l+" · "+m.tier,"Yaşam Döngüsü Fazı":m.lifecyclePhase||"—","Metrik Çerçevesi":(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"—","Kategori":(m.kategori||[]).join(", "),"Köken":m.koken,"Tedarikçi":m.tedarikci||"—","Sahip Birim":m.sahipBirim,"Model Sahibi":m.sahip,"Kayıt Kaynağı":m.kaynak||"Sistem/Seed","Geliştirici":m.gelistirici,"Validatör":m.validator,"Düzenleyici/Sermaye":m.duzenleyici?"Evet":"Hayır"})}
     <div class="section-h">İlgili Linkler</div>${linksBlock(m)}
     <div class="section-h">Hızlı Erişim</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1051,11 +1067,19 @@ window.saveModel=function(id){
  obj.crit=Object.assign({},obj.crit,{duzenleyici:obj.duzenleyici,genai:obj.genai});
  const s=scoreCrit(obj.crit);Object.assign(obj,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
  if(!id){ // H4: yeni model de onay akışına girer (Beyan → MRM → Komite); onaylanana dek "Onayda"
+  obj.muid=genMuid(); // benzersiz kimlik — oluşturmada atanır
   obj.wf="mrm";obj.durumTalep=obj.durum;obj.durum="Onayda";
   state.validations.push({id:uid("VAL-"),baslik:obj.ad+" — İlk Validasyon",modelId:obj.id,tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",durum:"Planlandı"});
  }
- if(id){const i=state.models.findIndex(x=>x.id===id);state.models[i]=obj;}else state.models.push(obj);
- logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier+(id?"":" · onay akışına gönderildi"));
+ let chg;
+ if(id){const i=state.models.findIndex(x=>x.id===id);const prev=state.models[i];
+  obj.muid=prev.muid; // MUID değiştirilemez — form/kod ne gönderirse göndersin korunur
+  chg=diffFields(prev,obj,MODEL_FL);
+  state.models[i]=obj;
+ }else{state.models.push(obj);
+  chg=["ad","sinif","tip","sahipBirim","durum","tier","valFrekans"].map(k=>({alan:MODEL_FL[k]||k,eski:"—",yeni:String(obj[k]??"—")}));
+ }
+ logAudit(id?"Model güncelle":"Model oluştur","MDL "+obj.id,obj.ad+" · "+obj.tier+(id?"":" · onay akışına gönderildi"),chg);
  save();closeDrawer();render();
 };
 window.delModel=function(id){if(!roleGuard("Model sil"))return;if(!confirm("Bu model silinsin mi?"))return;state.models=state.models.filter(x=>x.id!==id);logAudit("Model sil","MDL "+id,"");save();closeDrawer();render();};
@@ -1067,9 +1091,9 @@ function levelFromMat(mat){mat=+mat||3;return mat<=2.2?"Düşük":mat<=3.2?"Orta
 function csvEsc(x){x=String(x==null?"":x);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
 function parseCsv(text){const rows=[];let i=0,f="",row=[],q=false;const n=text.length;while(i<n){const c=text[i];if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i+=2;continue;}q=false;i++;continue;}f+=c;i++;continue;}if(c==='"'){q=true;i++;continue;}if(c===','){row.push(f);f="";i++;continue;}if(c==='\r'){i++;continue;}if(c==='\n'){row.push(f);rows.push(row);row=[];f="";i++;continue;}f+=c;i++;}if(f!==""||row.length){row.push(f);rows.push(row);}return rows;}
 window.exportInventoryCsv=function(){
- const cols=["Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Metrik Çerçevesi","Düzenleyici","AI/ML","Genel Kritiklik","Son Validasyon","Tier","İçsel Risk","Kaynak"];
+ const cols=["Model ID","MUID","Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Metrik Çerçevesi","Düzenleyici","AI/ML","Genel Kritiklik","Son Validasyon","Tier","İçsel Risk","Kaynak"];
  const lines=[cols.join(",")];
- state.models.forEach(m=>{lines.push([m.ad,m.sahipBirim,m.sinif,modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.metricProfile||"",m.duzenleyici?"Evet":"Hayır",m.aiml?"Evet":"Hayır",levelFromMat(m.mat),m.sonValidasyon||"",m.tier,m.icsel,m.kaynak||"Seed"].map(csvEsc).join(","));});
+ state.models.forEach(m=>{lines.push([m.id,m.muid||"",m.ad,m.sahipBirim,m.sinif,modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.metricProfile||"",m.duzenleyici?"Evet":"Hayır",m.aiml?"Evet":"Hayır",levelFromMat(m.mat),m.sonValidasyon||"",m.tier,m.icsel,m.kaynak||"Seed"].map(csvEsc).join(","));});
  const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="halkbank_model_envanteri.csv";a.click();logAudit("Envanter CSV dışa aktarıldı","envanter",state.models.length+" model");};
 window.importInventoryCsv=function(file){
  const r=new FileReader();
@@ -1090,7 +1114,7 @@ window.importInventoryCsv=function(file){
    const lvlRaw=((row[iKrit]||"Orta")+"").trim();const lvl=KRIT_PRESET[lvlRaw]?lvlRaw:"Orta";
    const crit=critFromLevel(lvl,duz,aiml);const s=scoreCrit(crit);
    const durumCsv=((row[iDurum]||"İzlemede")+"").trim()||"İzlemede";
-   const m={id:uid("MDL-"),ad,sahipBirim:((row[iBirim]||"—")+"").trim()||"—",sinif,modelTipi:((row[iTip]||"")+"").trim()||modelTipiOf({aiml,sinif}),kategori:[((row[iKat]||"Diğer")+"").split(";")[0].trim()||"Diğer"],durum:"Onayda",durumTalep:durumCsv,wf:"mrm",metricProfile:mp,aiml,genai:false,duzenleyici:duz,tip:aiml?"AI/ML":"İstatistiksel",amac:"CSV içe aktarım",sahip:"CSV İçe Aktarım",gelistirici:"—",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",metodoloji:"—",barindiran:"—",sonValidasyon:((row[iSv]||"")+"").trim(),valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"CSV İçe Aktarım",crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};
+   const m={id:uid("MDL-"),muid:genMuid(),ad,sahipBirim:((row[iBirim]||"—")+"").trim()||"—",sinif,modelTipi:((row[iTip]||"")+"").trim()||modelTipiOf({aiml,sinif}),kategori:[((row[iKat]||"Diğer")+"").split(";")[0].trim()||"Diğer"],durum:"Onayda",durumTalep:durumCsv,wf:"mrm",metricProfile:mp,aiml,genai:false,duzenleyici:duz,tip:aiml?"AI/ML":"İstatistiksel",amac:"CSV içe aktarım",sahip:"CSV İçe Aktarım",gelistirici:"—",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",metodoloji:"—",barindiran:"—",sonValidasyon:((row[iSv]||"")+"").trim(),valFrekans:tierFreq(s.tier),izlemeDurumu:"Normal",upstream:[],links:{},kaynak:"CSV İçe Aktarım",crit,mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece};
    state.models.push(m);genMetricsForModel(m);added++;
   }
   logAudit("CSV içe aktarım","envanter",added+" model");save();render();
@@ -1255,7 +1279,7 @@ window.saveBeyan=function(){
  const aiml=gb("aiml")==="Evet"||gb("genai")==="Evet"||gb("sinif")==="ML/AI";
  const vf=gb("valFrekans");const valFrekans=(!vf||vf==="(Tier'dan otomatik)")?tierFreq(s.tier):vf;
  const m={
-  id:uid("MDL-"),ad,tip:gb("genai")==="Evet"?"GenAI/Temel Model":(aiml?"AI/ML":"İstatistiksel"),
+  id:uid("MDL-"),muid:genMuid(),ad,tip:gb("genai")==="Evet"?"GenAI/Temel Model":(aiml?"AI/ML":"İstatistiksel"),
   sinif:gb("sinif"),modelTipi:gb("modelTipi"),kategori:[gb("kategori")],amac:gb("amac"),metodoloji:gb("metodoloji"),
   metricProfile:gb("metricProfile"),lifecyclePhase:gb("lifecyclePhase")||"",aiml,genai:gb("genai")==="Evet",
   deterministik:gb("metodoloji")==="Kural Tabanlı / Deterministik",duzenleyici:crit.duzenleyici,
@@ -1339,10 +1363,11 @@ function renderResult(){
 }
 window.applyCrit=function(){
  const m=state.models.find(x=>x.id===critState.modelId);if(!m)return;
+ const prevSnap={tier:m.tier,icsel:m.icsel,mat:m.mat,kar:m.kar,duzenleyici:m.duzenleyici,genai:m.genai};
  m.crit=Object.assign({},critState.c);m.duzenleyici=!!critState.c.duzenleyici;m.genai=!!critState.c.genai;if(m.genai)m.aiml=true;
  const s=scoreCrit(m.crit);Object.assign(m,{mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece});
  if(!m.valFrekans)m.valFrekans=tierFreq(s.tier);
- logAudit("Kritiklik/tier belirle","MDL "+m.id,esc(m.ad)+" → "+s.tier);
+ logAudit("Kritiklik/tier belirle","MDL "+m.id,esc(m.ad)+" → "+s.tier,diffFields(prevSnap,{tier:m.tier,icsel:m.icsel,mat:m.mat,kar:m.kar,duzenleyici:m.duzenleyici,genai:m.genai},{tier:"Tier",icsel:"İçsel Risk",mat:"Materyalite",kar:"Karmaşıklık",duzenleyici:"Düzenleyici",genai:"GenAI"}));
  save();
  const el=document.getElementById("crit-result");el.insertAdjacentHTML("afterbegin",`<div class="chip good" style="display:block;text-align:center;margin-bottom:10px">✓ ${esc(m.ad)} güncellendi → ${s.tier}</div>`);
  buildNav();
@@ -1428,13 +1453,14 @@ window.saveVal=function(id){
    id:id||uid("VAL-"),baslik,modelId:g("modelId"),tur:g("tur"),tetik:g("tetik"),validator:g("validator"),
    bagimsizlik:g("bagimsizlik"),backtest:g("backtest"),ayrimGucu:g("ayrimGucu"),eskSorgu:g("eskSorgu"),
    oneri:g("oneri"),rating:g("rating"),raporTarihi:g("raporTarihi"),onayKarar:g("onayKarar"),onayMakam:g("onayMakam"),durum:g("durum")});
- if(id){const i=state.validations.findIndex(x=>x.id===id);state.validations[i]=obj;}else state.validations.push(obj);
+ let vchg;
+ if(id){const i=state.validations.findIndex(x=>x.id===id);vchg=diffFields(state.validations[i],obj,VAL_FL);state.validations[i]=obj;}else state.validations.push(obj);
  // model geri guncelleme
  if(["Onaylandı","Koşullu Onaylandı"].includes(obj.onayKarar)&&obj.raporTarihi){
    const m=state.models.find(x=>x.id===obj.modelId);
    if(m){m.sonValidasyon=obj.raporTarihi;if(m.durum==="Revalidasyonda"||m.durum==="Validasyonda"||m.durum==="Onayda")m.durum=obj.onayKarar==="Koşullu Onaylandı"?"Koşullu Onaylı":"İzlemede";}
  }
- logAudit(id?"Validasyon güncelle":"Validasyon oluştur","VAL "+obj.id,"Öneri: "+(obj.oneri||"—")+" · Onay: "+(obj.onayKarar||"—"));
+ logAudit(id?"Validasyon güncelle":"Validasyon oluştur","VAL "+obj.id,"Öneri: "+(obj.oneri||"—")+" · Onay: "+(obj.onayKarar||"—"),vchg);
  save();closeDrawer();render();
 };
 window.delVal=function(id){if(!roGuard())return;if(!confirm("Validasyon kaydı silinsin mi?"))return;state.validations=state.validations.filter(x=>x.id!==id);save();closeDrawer();render();};
@@ -1523,11 +1549,12 @@ window.saveFind=function(id){
  // kapanış yalnız onayla; formdan "Kapandı" seçilirse onay adımına düşür
  if(durum==="Kapandı"&&(!prev||prev.durum!=="Kapandı")){durum="Kapanış Onayı Bekliyor";}
  const obj=Object.assign({},prev||{},{id:id||uid("FND-"),baslik,modelId:g("modelId"),kaynak:g("kaynak"),onem,durum,sahip:g("sahip"),olusturma,hedefTarih,aksiyon:g("aksiyon"),kanit:g("kanit")});
- if(id){const i=state.findings.findIndex(x=>x.id===id);state.findings[i]=obj;}else state.findings.push(obj);
- logAudit(id?"Bulgu/remediation güncelle":"Bulgu oluştur","FND "+obj.id,obj.onem+" · "+obj.durum);
+ let fchg;
+ if(id){const i=state.findings.findIndex(x=>x.id===id);fchg=diffFields(state.findings[i],obj,FND_FL);state.findings[i]=obj;}else state.findings.push(obj);
+ logAudit(id?"Bulgu/remediation güncelle":"Bulgu oluştur","FND "+obj.id,obj.onem+" · "+obj.durum,fchg);
  save();closeDrawer();render();
 };
-window.findClose=function(id){const f=state.findings.find(x=>x.id===id);if(!f)return;if(window.activeRole&&!REM_CLOSE_ROLES.includes(window.activeRole)){alert("Kapanış onayı yalnız 2. hat (Bağımsız Validasyon / MRM Programı) rolündedir.");return;}f.durum="Kapandı";f.kapanisOnay=window.activeRole||"2. Hat";f.kapanisTarih=todayStr();logAudit("Bulgu kapanış onayı","FND "+id,esc(f.baslik));save();closeDrawer();render();};
+window.findClose=function(id){const f=state.findings.find(x=>x.id===id);if(!f)return;if(window.activeRole&&!REM_CLOSE_ROLES.includes(window.activeRole)){alert("Kapanış onayı yalnız 2. hat (Bağımsız Validasyon / MRM Programı) rolündedir.");return;}const onceki=f.durum;f.durum="Kapandı";f.kapanisOnay=window.activeRole||"2. Hat";f.kapanisTarih=todayStr();logAudit("Bulgu kapanış onayı","FND "+id,esc(f.baslik),[{alan:"Remediation Durumu",eski:onceki,yeni:"Kapandı"},{alan:"Kapanış Onayı",eski:"—",yeni:f.kapanisOnay}]);save();closeDrawer();render();};
 window.delFind=function(id){if(!roleGuard("Bulgu / remediation"))return;if(!confirm("Bulgu silinsin mi?"))return;state.findings=state.findings.filter(x=>x.id!==id);save();closeDrawer();render();};
 
 /* ============ GEREKLILIK MATRISI ============ */
@@ -2120,8 +2147,9 @@ window.savePma=function(id){
  const prev=id?(state.pmas||[]).find(x=>x.id===id):null;
  const obj={id:id||uid("PMA-"),modelId:g("modelId"),tur:g("tur"),materyalite:g("materyalite"),yon:g("yon"),etkiTutar:g("etkiTutar"),tfrs9Asama:g("tfrs9Asama"),senaryo:g("senaryo"),gerekce:g("gerekce"),hesaplama:g("hesaplama"),kaldirma:g("kaldirma"),onayMakam:g("onayMakam"),bagimsizGozdenDurum:g("bagimsizGozdenDurum"),durum:g("durum"),onayDurum:prev?prev.onayDurum:"Onay Bekliyor"};
  if(!obj.onayDurum)obj.onayDurum="Onay Bekliyor";
- if(id){const i=state.pmas.findIndex(x=>x.id===id);state.pmas[i]=obj;}else state.pmas.push(obj);
- logAudit(id?"Overlay/istisna güncelle":"Overlay/istisna oluştur","PMA "+obj.id,obj.tur+" · "+obj.materyalite);
+ let pchg;
+ if(id){const i=state.pmas.findIndex(x=>x.id===id);pchg=diffFields(state.pmas[i],obj,PMA_FL);state.pmas[i]=obj;}else state.pmas.push(obj);
+ logAudit(id?"Overlay/istisna güncelle":"Overlay/istisna oluştur","PMA "+obj.id,obj.tur+" · "+obj.materyalite,pchg);
  save();closeDrawer();render();
 };
 window.pmaApprove=function(id,karar){if(!id){alert("Önce kaydı oluşturun (Kaydet), sonra onaylayın.");return;}const p=(state.pmas||[]).find(x=>x.id===id);if(!p)return;if(window.activeRole&&window.activeRole!=="Model Risk Komitesi"){alert("Overlay onayı yalnız 'Model Risk Komitesi' rolündedir.");return;}p.onayDurum=karar;if(karar==="Reddedildi")p.durum="Beklemede";logAudit("Overlay onay kararı — "+karar,"PMA "+id,(p.tur||"")+" · "+(p.materyalite||""));save();closeDrawer();render();};
@@ -2308,12 +2336,23 @@ function viewYetki(v){
 function fmtTs(ts){try{return new Date(ts).toLocaleString("tr-TR");}catch(e){return ts;}}
 function viewDenetim(v){
  const A=state.audit||[];
- v.innerHTML=`<p class="vlead">Denetim izi — oluşturma/güncelleme/geçiş/onay işlemleri zaman, rol ve nesne ile kaydedilir (Archer <b>History Log / Access History</b> karşılığı).</p>
+ v.innerHTML=`<p class="vlead">Denetim izi — oluşturma/güncelleme/geçiş/onay işlemleri zaman, rol ve nesne ile kaydedilir (Archer <b>History Log / Access History</b> karşılığı). <b>Satıra tıklayın:</b> yapılan işlemin alan-bazlı içeriği (önceki → yeni değer) görüntülenir.</p>
   <div class="toolbar"><span class="tsub">${A.length} kayıt (son 200 gösterilir)</span><div class="sp"></div><button class="tbtn" onclick="clearAudit()">Denetim izini temizle</button></div>
-  <div class="tablewrap"><table><thead><tr><th>Zaman</th><th>Rol</th><th>İşlem</th><th>Nesne</th><th>Detay</th></tr></thead><tbody>
-   ${A.slice(0,200).map(a=>`<tr style="cursor:default"><td class="tsub" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtTs(a.ts)}</td><td class="tsub">${esc(a.role)}</td><td>${esc(a.action)}</td><td class="id">${esc(a.entity)}</td><td class="tsub" style="white-space:normal">${esc(a.detail)}</td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">Henüz işlem kaydı yok. Bir model oluşturun, validasyon onaylayın ya da yaşam döngüsü geçişi yapın.</div></td></tr>`}
+  <div class="tablewrap"><table><thead><tr><th>Zaman</th><th>Rol</th><th>İşlem</th><th>Nesne</th><th>Detay</th><th style="width:76px">İçerik</th></tr></thead><tbody>
+   ${A.slice(0,200).map((a,i)=>`<tr onclick="auditDetail(${i})"><td class="tsub" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtTs(a.ts)}</td><td class="tsub">${esc(a.role)}</td><td>${esc(a.action)}</td><td class="id">${esc(a.entity)}</td><td class="tsub" style="white-space:normal">${esc(a.detail)}</td><td>${a.chg&&a.chg.length?`<span class="chip info" style="padding:0 8px">${a.chg.length} alan</span>`:'<span class="tsub" style="opacity:.4">—</span>'}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty">Henüz işlem kaydı yok. Bir model oluşturun, validasyon onaylayın ya da yaşam döngüsü geçişi yapın.</div></td></tr>`}
   </tbody></table></div>`;
 }
+window.auditDetail=function(i){
+ const a=(state.audit||[])[i];if(!a)return;
+ const chg=a.chg||[];
+ openDrawer(`<div style="flex:1"><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip info">${esc(a.aid||"LOG")}</span>${chg.length?`<span class="chip warn">${chg.length} alan değişti</span>`:'<span class="chip muted">içerik kaydı yok</span>'}</div><h2 style="margin:8px 0 2px;font-size:18px">${esc(a.action)}</h2><div class="id">${esc(a.entity)} · ${fmtTs(a.ts)}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
+  ${dl({"İşlem":a.action,"Nesne":a.entity,"Yapan Rol":a.role,"Zaman":fmtTs(a.ts),"Detay":a.detail||"—","Kayıt No":a.aid||"—"})}
+  <div class="section-h">İşlem İçeriği — Alan Değişiklikleri</div>
+  ${chg.length?`<div class="tablewrap" style="box-shadow:none"><table><thead><tr><th>Alan</th><th>Önceki Değer</th><th></th><th>Yeni Değer</th></tr></thead><tbody>
+   ${chg.map(c=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(c.alan)}</td><td class="tsub" style="white-space:normal;max-width:180px">${esc(c.eski)}</td><td style="color:var(--accent-ink);font-weight:700">→</td><td style="white-space:normal;max-width:180px"><b>${esc(c.yeni)}</b></td></tr>`).join("")}
+  </tbody></table></div>`:`<div class="empty">Bu kayıt için alan-bazlı içerik tutulmamış (eski kayıt ya da içeriksiz işlem — örn. dışa aktarma, görüntüleme).</div>`}
+  <div class="footnote" style="margin-top:12px">Archer karşılığı: <b>History Log</b> alan-seviyesi değişiklik geçmişi (field history) — her düzenlemede önceki/yeni değer, işlemi yapan rol ve zaman damgası değişmez kayıt olarak tutulur.</div>`);
+};
 window.clearAudit=function(){if(window.activeRole&&window.activeRole!=="2. Hat – MRM Programı"){alert("Denetim izi yalnız 2. Hat – MRM Programı rolünce (test amaçlı) temizlenebilir; üretimde değişmezdir.");return;}if(!confirm("Denetim izi temizlensin mi?"))return;state.audit=[];save();render();};
 
 /* ============ VERI FEED / API (SIMULASYON) ============ */
@@ -2639,8 +2678,8 @@ function buildXlsx(sheets){ // sheets: [[ad, aoa], ...]
 }
 window.exportXlsx=function(){
  const M=state.models;const num=x=>{const n=+x;return isFinite(n)&&x!==""&&x!=null?n:String(x==null?"":x);};
- const inv=[["Model ID","Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Tier","Risk Sınıfı","İçsel Risk","Materyalite","Karmaşıklık","AI/ML","GenAI","Düzenleyici","Metrik Çerçevesi","Son Validasyon","Sonraki Validasyon","Validasyon Frekansı","İzleme","Onay Akışı","Kaynak","Sahip","Geliştirici","Metodoloji"]];
- M.forEach(m=>{const nv=nextVal(m);inv.push([m.id,m.ad,m.sahipBirim||"",m.sinif||"",modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.tier,sinifOf(m).l,num(m.icsel),num(m.mat),num(m.kar),m.aiml?"Evet":"Hayır",m.genai?"Evet":"Hayır",m.duzenleyici?"Evet":"Hayır",(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"",m.sonValidasyon||"",nv||"",m.valFrekans||"",m.izlemeDurumu||"",m.wf?wfLabel(m.wf):"—",m.kaynak||"Seed/Sistem",m.sahip||"",m.gelistirici||"",m.metodoloji||""]);});
+ const inv=[["Model ID","MUID (değiştirilemez)","Model Adı","İş Birimi","Sınıf","Model Tipi","Kategori","Durum","Tier","Risk Sınıfı","İçsel Risk","Materyalite","Karmaşıklık","AI/ML","GenAI","Düzenleyici","Metrik Çerçevesi","Son Validasyon","Sonraki Validasyon","Validasyon Frekansı","İzleme","Onay Akışı","Kaynak","Sahip","Geliştirici","Metodoloji"]];
+ M.forEach(m=>{const nv=nextVal(m);inv.push([m.id,m.muid||"",m.ad,m.sahipBirim||"",m.sinif||"",modelTipiOf(m),(m.kategori||[]).join("; "),m.durum,m.tier,sinifOf(m).l,num(m.icsel),num(m.mat),num(m.kar),m.aiml?"Evet":"Hayır",m.genai?"Evet":"Hayır",m.duzenleyici?"Evet":"Hayır",(METRIC_FRAMEWORKS[m.metricProfile]||{}).lab||"",m.sonValidasyon||"",nv||"",m.valFrekans||"",m.izlemeDurumu||"",m.wf?wfLabel(m.wf):"—",m.kaynak||"Seed/Sistem",m.sahip||"",m.gelistirici||"",m.metodoloji||""]);});
  const vals=[["ID","Başlık","Model","Tür","Tetik","Validatör","Bağımsızlık","Öneri","Rating","Onay Kararı","Onay Makamı","Rapor Tarihi","Durum"]];
  state.validations.forEach(x=>{const m=M.find(y=>y.id===x.modelId);vals.push([x.id,x.baslik,m?m.ad:"",x.tur||"",x.tetik||"",x.validator||"",x.bagimsizlik||"",x.oneri||"",x.rating||"",x.onayKarar||"",x.onayMakam||"",x.raporTarihi||"",x.durum||""]);});
  const plan=[["Model","Tier","Frekans","Son Validasyon","Sonraki Validasyon","Durum"]];
@@ -2706,7 +2745,7 @@ const ROLES=["1. Hat – Sahip/Geliştirici","2. Hat – Bağımsız Validasyon"
  if(!load())seed();
  refreshMonitorStatus();
  buildNav();
- backfillEnvanter();save();
+ backfillEnvanter();ensureMuids();save();
  window.activeRole=localStorage.getItem("mrm_role")||"1. Hat – Sahip/Geliştirici";
  const rs=document.getElementById("roleSel");
  rs.innerHTML=ROLES.map(r=>`<option ${window.activeRole===r?"selected":""}>${r}</option>`).join("");
