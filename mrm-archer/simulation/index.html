@@ -247,7 +247,7 @@ code.k{font-family:var(--mono);font-size:12px;background:var(--surface-2);paddin
       <button class="tbtn ghost" id="themeBtn" title="Tema">◐ Tema</button>
       <button class="tbtn" id="seedBtn" title="Örnek veriyi yükle">↺ Örnek Veri</button>
       <button class="tbtn" id="xlsxBtn" title="Tüm çıktıları Excel çalışma kitabı (10 sheet) olarak indir">📊 XLSX Rapor</button>
-      <div class="user-chip"><span class="u-av">UÖB</span><div class="u-tx"><b>Umut Okan Başbay</b><span>Model Risk · Turkish Branch</span></div></div>
+      <div class="user-chip"><span class="u-av">UOB</span><div class="u-tx"><b>Umut Okan Başbay</b><span>Model Risk · Turkish Branch</span></div></div>
     </header>
     <div class="ro-note" style="align-items:center;gap:8px;background:var(--warn-bg);color:var(--warn);padding:8px 22px;font-size:12.5px;font-weight:600;border-bottom:1px solid var(--line)">🔒 3. Hat – İç Denetim: salt-okur görünüm — oluşturma/düzenleme kapalı, gözetim amaçlı erişim.</div>
     <div class="view" id="view"></div>
@@ -323,7 +323,7 @@ function seed(){
   mk({id:"MDL-0003",ad:"Kredi Kartı Suistimal (Fraud) – ML",tip:"AI/ML",kategori:["Operasyonel/AMA","AML/Suistimal"],aiml:true,duzenleyici:false,amac:"Kredi kartı işlemlerinde gerçek zamanlı suistimal tespiti.",sahipBirim:"Operasyonel İşlemler ve Destek Hizmetleri GMY",sahip:"S. Kaya",gelistirici:"Veri Bilimi Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"Fraud Platformu (MLOps)",metodoloji:"Gradient Boosting",algoritma:"GBM",crit:{M1:3,M2:5,M3:4,M4:2,M5:4,K1:4,K2:4,K3:4,K4:5,K5:4,K6:3,K7:3,B1:1,O1:2,duzenleyici:false},durum:"İzlemede",gelistirmeTarihi:"2023-01-15",prodTarihi:"2023-05-01",sonValidasyon:"2025-05-05"}),
   mk({id:"MDL-0004",ad:"Piyasa Riski VaR (Tarihsel Simülasyon)",tip:"İstatistiksel",kategori:["Piyasa/VaR"],duzenleyici:true,amac:"Alım-satım portföyü riske maruz değer (VaR) hesabı; yasal sermaye.",sahipBirim:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",gelistirici:"Piyasa Riski Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"Hazine Risk Sistemi",metodoloji:"Tarihsel simülasyon 250 gün",crit:{M1:5,M2:2,M3:4,M4:5,M5:2,K1:3,K2:3,K3:3,K4:5,K5:2,K6:1,K7:1,B1:2,O1:0,duzenleyici:true},durum:"İzlemede",gelistirmeTarihi:"2020-01-01",prodTarihi:"2020-06-01",sonValidasyon:"2025-06-15"}),
   mk({id:"MDL-0005",ad:"Başvuru Skorkartı – Bireysel Krediler",tip:"İstatistiksel",kategori:["Kredi/IRB"],duzenleyici:false,amac:"Bireysel kredi başvurularında onay/limit kararı desteği.",sahipBirim:"Perakende Bankacılık GMY",sahip:"C. Temel",gelistirici:"Model Geliştirme Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"Karar Motoru",metodoloji:"Skorkart",crit:{M1:3,M2:4,M3:4,M4:2,M5:3,K1:2,K2:2,K3:3,K4:5,K5:2,K6:2,K7:1,B1:2,O1:1,duzenleyici:false},durum:"Onaylı/Prod",gelistirmeTarihi:"2023-08-01",prodTarihi:"2024-01-10",sonValidasyon:"2025-01-15"}),
-  mk({id:"MDL-0006",ad:"GenAI Müşteri Asistanı (Çağrı Özeti)",tip:"GenAI/Temel Model",kategori:["Diğer"],aiml:true,genai:true,duzenleyici:false,amac:"Çağrı merkezi görüşmelerinin özetlenmesi ve yönlendirme önerisi.",sahipBirim:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",gelistirici:"Yapay Zekâ Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"Satıcı/Vendor",tedarikci:"Bulut LLM Sağlayıcısı",barindiran:"Bulut (LLM API)",metodoloji:"Fine-tuned LLM + RAG",algoritma:"Transformer/LLM",crit:{M1:2,M2:4,M3:2,M4:1,M5:4,K1:4,K2:5,K3:4,K4:4,K5:5,K6:4,K7:4,B1:1,O1:2,duzenleyici:false,genai:true},durum:"Koşullu Onaylı",gelistirmeTarihi:"2025-02-01",prodTarihi:"2025-06-01",sonValidasyon:"2025-06-01"}),
+  mk({id:"MDL-0006",ad:"GenAI Müşteri Asistanı (Çağrı Özeti)",tip:"GenAI/Temel Model",kategori:["Generative AI"],aiml:true,genai:true,duzenleyici:false,amac:"Çağrı merkezi görüşmelerinin özetlenmesi ve yönlendirme önerisi.",sahipBirim:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",gelistirici:"Yapay Zekâ Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"Satıcı/Vendor",tedarikci:"Bulut LLM Sağlayıcısı",barindiran:"Bulut (LLM API)",metodoloji:"Fine-tuned LLM + RAG",algoritma:"Transformer/LLM",crit:{M1:2,M2:4,M3:2,M4:1,M5:4,K1:4,K2:5,K3:4,K4:4,K5:5,K6:4,K7:4,B1:1,O1:2,duzenleyici:false,genai:true},durum:"Koşullu Onaylı",gelistirmeTarihi:"2025-02-01",prodTarihi:"2025-06-01",sonValidasyon:"2025-06-01"}),
   mk({id:"MDL-0007",ad:"AML İşlem İzleme Skoru",tip:"Hibrit",kategori:["AML/Suistimal"],aiml:true,duzenleyici:true,amac:"Şüpheli işlem tespiti için kural + skor tabanlı izleme.",sahipBirim:"İç Sistemler Grup Başkanlığı",sahip:"N. Arslan",gelistirici:"Uyum & Veri Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"AML Platformu",metodoloji:"Kural + lojistik skor",crit:{M1:3,M2:5,M3:3,M4:2,M5:5,K1:3,K2:3,K3:4,K4:5,K5:3,K6:2,K7:2,B1:2,O1:1,duzenleyici:true},durum:"İzlemede",gelistirmeTarihi:"2022-11-01",prodTarihi:"2023-03-01",sonValidasyon:"2024-11-20"}),
   mk({id:"MDL-0008",ad:"ALM / IRRBB Davranışsal Model",tip:"İstatistiksel",kategori:["ALM/IRRBB"],duzenleyici:true,amac:"Vadesiz mevduat davranışı ve faiz riski (IRRBB) modellemesi.",sahipBirim:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",gelistirici:"Bilanço Yönetimi Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"ALM Sistemi",metodoloji:"Zaman serisi + davranışsal varsayım",crit:{M1:4,M2:3,M3:4,M4:4,M5:2,K1:3,K2:4,K3:3,K4:3,K5:2,K6:2,K7:2,B1:2,O1:0,duzenleyici:true},durum:"İzlemede",gelistirmeTarihi:"2021-09-01",prodTarihi:"2022-02-01",sonValidasyon:"2025-02-25"}),
   mk({id:"MDL-0009",ad:"Erken Uyarı Sistemi (EWS)",tip:"AI/ML",kategori:["Kredi/IRB"],aiml:true,duzenleyici:false,amac:"Kredilerde bozulma sinyalleri için erken uyarı skoru.",sahipBirim:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",gelistirici:"Veri Bilimi Ekibi",validator:"Bağımsız Validasyon Birimi",koken:"İç Geliştirme",barindiran:"Risk Analitik Platformu",metodoloji:"Random Forest",algoritma:"Random Forest",crit:{M1:2,M2:3,M3:3,M4:1,M5:2,K1:3,K2:3,K3:2,K4:3,K5:3,K6:2,K7:2,B1:1,O1:1,duzenleyici:false},durum:"Onaylı/Prod",gelistirmeTarihi:"2024-04-01",prodTarihi:"2024-09-01",sonValidasyon:"2025-09-10"}),
@@ -333,6 +333,11 @@ function seed(){
   {id:"VAL-0002",baslik:"TFRS9 BKZ Bireysel – Revalidasyon (gecikmiş)",modelId:"MDL-0002",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",backtest:"Makro senaryo duyarlılığı yüksek",ayrimGucu:"—",eskSorgu:"SICR eşiği ve makro overlay sorgulandı.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Onayda"},
   {id:"VAL-0003",baslik:"GenAI Çağrı Özeti – İlk Validasyon",modelId:"MDL-0006",tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Aynı Birim-Ayrı Personel",backtest:"Halüsinasyon oranı eşik üstünde örneklemde",ayrimGucu:"—",eskSorgu:"Guardrail kapsamı ve insan gözetimi sorgulandı; kısıtla onay.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Koşullu Onaylandı",onayMakam:"Model Risk Komitesi",raporTarihi:"2025-06-01",durum:"Tamamlandı",tests:{kavramsal:"Geçti",surec:"Geçti",backtest:"Kaldı",ayrim:"Uygun Değil",paralel:"Geçti",replikasyon:"Geçti",kodqa:"Geçti"}},
  ];
+ state.validations.push(
+  {id:"VAL-0004",baslik:"Piyasa Riski VaR — Periyodik Revalidasyon 2026",modelId:"MDL-0004",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",eskSorgu:"Tarihsel pencere ve stresli VaR kapsamı sorgulanıyor.",oneri:"",rating:"",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Devam Ediyor"},
+  {id:"VAL-0005",baslik:"Stres Testi Makro Projeksiyon — Periyodik Revalidasyon",modelId:"MDL-0014",tur:"Periyodik Revalidasyon",tetik:"Periyodik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",eskSorgu:"Senaryo şiddeti ve makro bağlantılar gözden geçiriliyor.",oneri:"Koşullu Onay Önerilir",rating:"Kısmen Tatmin",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Bulgu Gözden Geçirme"},
+  {id:"VAL-0006",baslik:"Kredi Kartı Fraud ML — Hedefli Validasyon (v2.1 retraining)",modelId:"MDL-0003",tur:"Hedefli (Materyal Değişiklik)",tetik:"Materyal Değişiklik",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Aynı Birim-Ayrı Personel",eskSorgu:"Yeni özellik setinin ayrım gücüne etkisi test ediliyor.",oneri:"",rating:"",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Devam Ediyor"},
+  {id:"VAL-0007",baslik:"Agentic AI Operasyon Asistanı — İlk Validasyon",modelId:"MDL-0024",tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",eskSorgu:"Araç çağırma yetki sınırları ve insan gözetimi değerlendiriliyor.",oneri:"",rating:"",onayKarar:"Beklemede",onayMakam:"Model Risk Komitesi",raporTarihi:"",durum:"Devam Ediyor"});
  state.findings=[
   {id:"FND-0001",modelId:"MDL-0002",baslik:"Makro overlay dokümantasyonu yetersiz",kaynak:"Model Validasyonu",onem:"Yüksek",durum:"Uygulanıyor",sahip:"M. Demir",aksiyon:"Overlay gerekçe ve senaryo dokümantasyonu güncellenecek; komite kararı eklenecek.",kanit:""},
   {id:"FND-0002",modelId:"MDL-0006",baslik:"Halüsinasyon izleme eşiği tanımlı değil",kaynak:"Model Validasyonu",onem:"Yüksek",durum:"Kapanış Onayı Bekliyor",sahip:"B. Aksoy",aksiyon:"SelfCheckGPT eşiği 0.15 olarak tanımlandı; guardrail izleme paneline eklendi.",kanit:"Re-test: 200 örnekte halüsinasyon oranı 0.11 (eşik altı). Ekran görüntüsü ekli."},
@@ -379,7 +384,8 @@ function seed(){
   {id:"MDL-0020",ad:"AML Anomali Tespiti (Unsupervised)",tip:"AI/ML",sinif:"ML/AI",mp:"aml_fraud",aiml:true,kat:["AML/Suistimal"],duz:true,unit:"İç Sistemler Grup Başkanlığı",sahip:"N. Arslan",met:"Isolation Forest",alg:"Isolation Forest",mm:3,kk:4,deg:true},
   {id:"MDL-0021",ad:"Belge OCR & Sınıflandırma",tip:"AI/ML",sinif:"ML/AI",mp:"ml_class",aiml:true,kat:["Diğer"],unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",met:"CNN / Transformer",alg:"Sinir Ağı",mm:2,kk:4,o:2,koken:"Satıcı/Vendor",tedarik:"OCR Sağlayıcısı"},
   {id:"MDL-0022",ad:"Müşteri Segmentasyon",tip:"AI/ML",sinif:"ML/AI",mp:"ml_reg",aiml:true,kat:["Diğer"],unit:"Perakende Bankacılık GMY",sahip:"C. Temel",met:"K-Means + skorlama",alg:"Kümeleme",mm:2,kk:3},
-  {id:"MDL-0023",ad:"GenAI Doküman Özetleme",tip:"GenAI/Temel Model",sinif:"ML/AI",mp:"genai",aiml:true,genai:true,kat:["Diğer"],unit:"Bilgi Teknolojileri Grup Başkanlığı",sahip:"K. Öz",met:"Fine-tuned LLM + RAG",alg:"Transformer/LLM",mm:2,kk:5,o:2,koken:"Satıcı/Vendor",tedarik:"Bulut LLM Sağlayıcısı",durum:"Koşullu Onaylı"}
+  {id:"MDL-0023",ad:"GenAI Doküman Özetleme",tip:"GenAI/Temel Model",sinif:"ML/AI",mp:"genai",aiml:true,genai:true,kat:["Generative AI"],unit:"Bilgi Teknolojileri Grup Başkanlığı",sahip:"K. Öz",met:"Fine-tuned LLM + RAG",alg:"Transformer/LLM",mm:2,kk:5,o:2,koken:"Satıcı/Vendor",tedarik:"Bulut LLM Sağlayıcısı",durum:"Koşullu Onaylı"},
+  {id:"MDL-0024",ad:"Agentic AI Operasyon Asistanı (Tool-Use)",tip:"GenAI/Temel Model",sinif:"ML/AI",mp:"genai",aiml:true,genai:true,kat:["Agentic AI"],unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",met:"LLM + araç çağırma (agent)",alg:"Transformer/LLM + Tools",mm:3,kk:5,o:3,koken:"Satıcı/Vendor",tedarik:"Bulut LLM Sağlayıcısı",durum:"Validasyonda",deg:true}
  ].forEach(o=>state.models.push(mk2(o)));
  const aug2={
   "MDL-0017":{algoAile:"GBM",aciklanabilirlikYontem:"SHAP",disparateImpact:0.79,temsil:"Temsil Ediyor",pii:false,robustlukTest:false,reproducibility:true,driftMetrik:["PSI"],psiEsik:0.25,psiSon:0.20,retrainFrekans:"Çeyreklik",insanGozetim:false,euAiKategori:"Minimal"},
@@ -736,6 +742,8 @@ function viewDashboard(v){
  const openF=state.findings.filter(f=>f.durum!=="Kapandı").length;
  const prod=M.filter(m=>["Onaylı/Prod","İzlemede"].includes(m.durum)).length;
  const aiN=M.filter(m=>m.aiml).length;
+ const inflight=state.validations.filter(v=>["Devam Ediyor","Bulgu Gözden Geçirme","Onayda"].includes(v.durum));
+ const periyodik=state.validations.filter(v=>/Periyodik/.test(v.tur||"")&&!["Tamamlandı","İptal"].includes(v.durum));
  const tiers=[["Tier 1",byTier("Tier 1"),"var(--t1)"],["Tier 2",byTier("Tier 2"),"var(--t2)"],["Tier 3",byTier("Tier 3"),"var(--t3)"],["İhmal Edilebilir",byTier("İhmal Edilebilir"),"var(--t0)"]];
  const total=M.length||1;
  let acc=0;const segs=tiers.map(([n,c,col])=>{const a=acc/total*360;acc+=c;const b=acc/total*360;return `${col} ${a}deg ${b}deg`;}).join(",");
@@ -753,7 +761,11 @@ function viewDashboard(v){
   ${kpi("Gecikmiş Validasyon",overdueN,soonN+" yaklaşan","crit")}
   ${kpi("Açık Bulgu",openF,"Remediation izleniyor","warn")}
   ${kpi("Prod / İzlemede",prod,"Aktif kullanımda","good")}
+  ${kpi("Süreçteki Validasyonlar",inflight.length,"Devam eden çalışmalar","info")}
+  ${kpi("Periyodik Validasyonda",periyodik.length,"Revalidasyon döngüsünde","warn")}
  </div>
+ ${inflight.length?`<div class="card panel" style="margin-bottom:16px"><h3>Süreçteki Validasyonlar <span class="cnt">${inflight.length} çalışma · satıra tıkla → detay</span></h3>
+  <div class="list">${inflight.slice(0,6).map(vv=>{const m=M.find(x=>x.id===vv.modelId);return `<div class="li-row" style="cursor:pointer" onclick="go('validasyon');setTimeout(()=>valDetail('${vv.id}'),80)"><span class="chip ${vv.durum==='Bulgu Gözden Geçirme'?'warn':'info'}">${esc(vv.durum)}</span><div class="grow"><div class="t">${esc(vv.baslik)}</div><div class="s">${esc(m?m.ad:"—")} · ${esc(vv.tur)}${/Periyodik/.test(vv.tur||"")?' · <b>periyodik</b>':''}</div></div><button class="tbtn ghost">Aç</button></div>`;}).join("")}</div></div>`:""}
  <div class="grid panels">
   <div class="card panel">
    <h3>Tier Dağılımı <span class="cnt">${M.length} model</span></h3>
@@ -939,7 +951,7 @@ function envanterTab(m){
   <div class="section-h">Sahiplik & İletişim</div>
   ${dl({"Model Geliştiricisi":e.gelistiriciAd||m.gelistirici,"Danışman":e.danisman,"Kullanıcı Birim ve Bölümler":e.kullaniciBirim,"İletişim Personeli":e.iletisimKisi})}
   <div class="section-h">Kontrol & Denetim Kapsamı</div>
-  <dl class="dl"><dt>Kontrol/Doğrulama süreci</dt><dd>${eh(e.kontrolSurec)}</dd><dt>Performans ölçümü</dt><dd>${eh(e.performansOlcum)}</dd><dt>BDDK denetimi kapsamı</dt><dd>${eh(e.bddkKapsam)}</dd><dt>İç denetim kapsamı</dt><dd>${eh(e.icDenetimKapsam)}</dd><dt>Model dokümanı</dt><dd>${eh(e.dokuman)}</dd></dl>
+  <dl class="dl"><dt>Kontrol/Doğrulama süreci</dt><dd>${eh(e.kontrolSurec)}</dd><dt>Performans ölçümü</dt><dd>${eh(e.performansOlcum)}</dd><dt>BDDK denetimi kapsamı</dt><dd>${eh(e.bddkKapsam)}</dd><dt>İç denetim kapsamı</dt><dd>${eh(e.icDenetimKapsam)}</dd><dt>Model dokümanı</dt><dd>${eh(e.dokuman)}</dd><dt>Karşılık (TFRS9) etkisi</dt><dd>${e.karsilikEtkisi==="Evet"?'<span class="chip warn">Evet — paydaşlar bilgilendirildi</span>':eh(e.karsilikEtkisi)}</dd></dl>
   ${e.aciklama?`<div class="section-h">Açıklama</div><div class="tsub" style="white-space:normal;line-height:1.6">${esc(e.aciklama)}</div>`:""}`;
 }
 window.mtab=function(btn,i){document.querySelectorAll("#mtabs button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");document.querySelectorAll(".mtab").forEach(t=>t.hidden=+t.dataset.i!==i);};
@@ -968,7 +980,7 @@ function perfTab(m){
 /* ============ MODEL FORM ============ */
 window.modelForm=function(id){
  const m=id?JSON.parse(JSON.stringify(state.models.find(x=>x.id===id))):{kategori:[],crit:{},durum:"Taslak",koken:"İç Geliştirme"};
- const cats=["Kredi/IRB","Piyasa/VaR","Operasyonel/AMA","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Fiyatlama/Değerleme","Diğer"];
+ const cats=["Kredi/IRB","Piyasa/VaR","Operasyonel/AMA","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Fiyatlama/Değerleme","Generative AI","Agentic AI","Diğer"];
  openDrawer(`<div style="flex:1"><h2 style="margin:0;font-size:18px">${id?"Model Düzenle":"Yeni Model"}</h2><div class="id">${id||"Yeni kayıt"}</div></div><button class="iconbtn x" onclick="closeDrawer()">✕</button>`,`
   <div class="form-grid">
    ${fld("Model Adı","ad",m.ad,"text",true,true)}
@@ -1089,7 +1101,7 @@ window.importInventoryCsv=function(file){
 /* ============ İŞ BİRİMİ MODEL BEYANI (dropdown anketi) ============ */
 const SCALE5=[["Çok Düşük",1],["Düşük",2],["Orta",3],["Yüksek",4],["Çok Yüksek",5]];
 const BEYAN_UNITS=["Kredi Risk İzleme ve Yasal Takip GMY","Kredi Tahsis ve Yönetimi GMY","Finansal Yönetim ve Planlama GMY","Hazine Yönetimi ve Uluslararası Bankacılık GMY","Perakende Bankacılık GMY","Kurumsal ve Ticari Pazarlama GMY","Operasyonel İşlemler ve Destek Hizmetleri GMY","İç Sistemler Grup Başkanlığı","Bilgi Teknolojileri Grup Başkanlığı","Dijital Dönüşüm Ofisi Daire Başkanlığı"];
-const BEYAN_KAT=["Kredi/IRB","Piyasa/VaR","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Operasyonel/AMA","Fiyatlama/Değerleme","Diğer"];
+const BEYAN_KAT=["Kredi/IRB","Piyasa/VaR","Karşı Taraf/CVA","TFRS9 BKZ","İSEDES Sermaye","ALM/IRRBB","AML/Suistimal","Operasyonel/AMA","Fiyatlama/Değerleme","Generative AI","Agentic AI","Diğer"];
 const BEYAN_MET=["Skorkart / Lojistik Regresyon","PD / LGD / EAD","VaR / Tarihsel Simülasyon","Zaman Serisi / Repricing","Makro / Ekonometrik Regresyon","Gradient Boosting (GBM)","Random Forest","Sinir Ağı / Derin Öğrenme","LLM / GenAI (RAG)","Kümeleme / Isolation Forest","Kural Tabanlı / Deterministik"];
 const BEYAN_MP=[["pd_rating","PD / Derecelendirme (Gini, KS, PSI, HHI)"],["lgd_ead","LGD / EAD (RMSE, MAE, R²)"],["ifrs9","IFRS9 BKZ — ekonometrik (RMSE, MAPE, R², PSI)"],["alm_irrbb","ALM / IRRBB — zaman serisi (RMSE, MAPE, DW)"],["var_market","Piyasa / Karşı Taraf — VaR (VaR aşımı)"],["stress","Stres testi — ekonometrik (RMSE, MAPE, R²)"],["ml_class","ML Sınıflandırma (AUC, Gini, KS, F1, PSI)"],["ml_reg","ML Regresyon (RMSE, MAE, R², PSI)"],["aml_fraud","AML / Suistimal (Precision, Recall, PSI)"],["genai","GenAI (Halüsinasyon, Toksisite, Faithfulness)"]];
 const BEYAN_AMAC=["Kredi kararı / limit","Temerrüt olasılığı (PD) / derecelendirme","Beklenen kredi zararı (BKZ/IFRS9)","Yasal/ekonomik sermaye","Piyasa riski / VaR","Likidite / faiz riski (IRRBB)","Suistimal / AML tespiti","Fiyatlama / değerleme","Pazarlama / churn / segmentasyon","Operasyonel otomasyon / OCR","Metin/özet (GenAI)","Diğer"];
@@ -1134,6 +1146,12 @@ window.beyanForm=function(){
    ${bsel("duzenleyici","Düzenleyici / sermaye kullanımı?",["Hayır","Evet"],false,"IRB/İSEDES/TFRS9/piyasa")}
    ${bsel("genelKrit","Genel Kritiklik Düzeyi",["Düşük","Orta","Yüksek","Kritik"],false,"basit: tek seçim → Tier")}
   </div>
+  <div class="field full" style="margin-top:4px"><label>Karşılık (TFRS9) Etkisi</label>
+   <input type="hidden" data-b="karsilikEtkisi" value="">
+   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+     <button type="button" class="tbtn" id="karsilikBtn" onclick="karsilikPopup()">⚠ Model karşılık etkisi yaratıyor</button>
+     <span class="tsub" id="karsilikNote">Model, TFRS9 karşılık (BKZ) hesabını etkiliyorsa işaretleyin — paydaş bilgilendirmesi tetiklenir.</span>
+   </div></div>
   <div style="margin:6px 0 2px"><button type="button" class="tbtn ghost" id="beyanAdvBtn" onclick="beyanToggleAdv()">⚙ Gelişmiş alanlar (ayrıntılı kritiklik + resmi envanter) ▾</button> <span class="tsub">Basit giriş için gerekli değil — yukarıdaki “Genel Kritiklik” yeterli.</span></div>
   <div id="beyanAdv" style="display:none">
   <div class="beyan-sec">4 · Kritiklik — Materyalite (S.03.A)</div>
@@ -1188,6 +1206,24 @@ window.beyanForm=function(){
   </div>
   <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveBeyan()">Beyanı Kaydet &amp; İşle</button></div>`);
 };
+window.karsilikPopup=function(){
+ if(document.getElementById("karsilikOv"))return;
+ const ov=document.createElement("div");ov.id="karsilikOv";
+ ov.style.cssText="position:fixed;inset:0;background:#0009;z-index:300;display:grid;place-items:center;padding:20px";
+ ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;max-width:440px;width:100%;padding:22px;box-shadow:0 24px 70px #0007">
+   <h3 style="margin:0 0 10px;font-size:16px;color:var(--ink)">⚠ Karşılık Etkisi Bildirimi</h3>
+   <p style="font-size:13.5px;line-height:1.65;margin:0 0 18px;color:var(--ink)">Tüm olası paydaşlar bilgilendirilecektir, kabul ediyor musunuz?<br><span class="tsub">Finansal Raporlama, Karşılık/IFRS9 Ekibi, MRM Programı ve Bağımsız Validasyon'a bildirim üretilir (Archer Notifications).</span></p>
+   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="tbtn" onclick="karsilikCancel()">Geri Dön</button><button class="tbtn primary" onclick="karsilikOk()">Onayla</button></div></div>`;
+ document.body.appendChild(ov);
+};
+window.karsilikCancel=function(){const o=document.getElementById("karsilikOv");if(o)o.remove();};
+window.karsilikOk=function(){
+ const e=document.querySelector('[data-b="karsilikEtkisi"]');if(e)e.value="Evet";
+ const b=document.getElementById("karsilikBtn");if(b){b.classList.add("primary");b.textContent="✓ Karşılık etkisi beyan edildi";}
+ const n=document.getElementById("karsilikNote");if(n)n.textContent="Paydaş bilgilendirmesi onaylandı — kayıtla birlikte ilgili taraflara bildirim üretilecek.";
+ logAudit("Karşılık etkisi beyanı","beyan","Paydaş bilgilendirme onaylandı (TFRS9/Finansal Raporlama)");
+ karsilikCancel();
+};
 window.beyanToggleAdv=function(){const el=document.getElementById("beyanAdv");const btn=document.getElementById("beyanAdvBtn");if(!el)return;const show=el.style.display==="none";el.style.display=show?"block":"none";if(btn)btn.innerHTML=show?"⚙ Gelişmiş alanları gizle ▴":"⚙ Gelişmiş alanlar (ayrıntılı kritiklik + resmi envanter) ▾";};
 /* FLS / rol kısıtı: yazma yetkisi (Archer Access Roles) */
 function canWrite(){return !window.activeRole||PERMS["Yeni/Düzenle model"].includes(window.activeRole);}
@@ -1212,7 +1248,7 @@ window.saveBeyan=function(){
  if(mkSum===0){const lvl=KRIT_PRESET[gk]?gk:"Orta";const p=critFromLevel(lvl,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
  const bddk=gb("bddkKapsam")==="Evet";if(bddk)crit.duzenleyici=true;
  if((gb("etki")||"").startsWith("Doğrudan"))crit.O1=Math.max(crit.O1,3);
- const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama")};
+ const envanter={amacDetay:gf("amacDetay"),isSurec:gb("isSurec"),etki:gb("etki"),modelTuru:gb("modelTuru"),yaklasim:gb("yaklasim"),platform:gb("platform"),dil:gb("dil"),algoritma:gb("algoritmaSec"),dataAralik:gf("dataAralik"),revizyonTarihi:gf("revizyonTarihi"),gelistiriciAd:gf("gelistiriciAd"),danisman:gf("danisman"),kullaniciBirim:gf("kullaniciBirim"),iletisimKisi:gf("iletisimKisi"),kontrolSurec:gb("kontrolSurec"),performansOlcum:gb("performansOlcum"),bddkKapsam:gb("bddkKapsam"),icDenetimKapsam:gb("icDenetimKapsam"),dokuman:gb("dokuman"),aciklama:gf("aciklama"),karsilikEtkisi:gb("karsilikEtkisi")||"Hayır"};
  const s=scoreCrit(crit);
  const sonVal=gb("sonVal"),sv={taze:addDays(todayStr(),-90),"1y":addDays(todayStr(),-365),"2y":addDays(todayStr(),-730),yok:""}[sonVal]||"";
  const aiml=gb("aiml")==="Evet"||gb("genai")==="Evet"||gb("sinif")==="ML/AI";
@@ -1228,6 +1264,8 @@ window.saveBeyan=function(){
   izlemeDurumu:"Normal",upstream:[],links:(envanter.dokuman==="Evet"?{doc:"#/model-dok/beyan"}:{}),kaynak:"İş Birimi Beyanı",wf:"mrm",crit,envanter,amacDetay:envanter.amacDetay,
   mat:s.mat,kar:s.kar,icsel:s.icsel,tier:s.tier,derece:s.derece
  };
+ m.karsilikEtkisi=(envanter.karsilikEtkisi==="Evet");
+ if(m.karsilikEtkisi){logAudit("Paydaş bilgilendirme","MDL "+m.id,"Karşılık etkisi — Finansal Raporlama / IFRS9 / MRM / Validasyon bilgilendirildi");}
  state.models.push(m);
  genMetricsForModel(m);
  // E4: yeni model → otomatik "İlk Validasyon" kaydı (SR 11-7: her yeni model ilk validasyona tabidir)
@@ -2509,12 +2547,14 @@ const MAIL_RULES=[
  ["Bulgu SLA (14 gün kala / aşım)","Bulgu Sahibi + MRM Programı","FND-SLA","Günlük"],
  ["Onay bekleyen model / overlay","Onay makamı (MRM / Komite)","APPROVAL-PENDING","Günlük"],
  ["Guardrail / red-team başarısız","AI Model Sahibi + MRM Programı","GRD-FAIL","Anında"],
+ ["Karşılık etkisi beyanı","Finansal Raporlama + IFRS9 Ekibi + MRM + Validasyon","PROVISION-IMPACT","Anında"],
  ["Haftalık MRM yönetim özeti","MRM Programı + Üst Yönetim","WEEKLY-DIGEST","Haftalık (Pzt 08:00)"]];
 function roleMail(t){return (t||"ilgili").toLowerCase().replace(/[^a-z0-9]+/g,".").replace(/^\.|\.$/g,"")+"@halkbank.com.tr";}
 function mailOutbox(N){
  const out=N.map(x=>({to:roleMail(x.target),tpl:x.sev==="crit"?(x.rule.includes("eşik")?"METRIC-BREACH":x.rule.includes("SLA")?"FND-SLA":"VAL-OVERDUE"):x.sev==="warn"?"VAL-REMINDER":"APPROVAL-PENDING",subject:"["+(x.sev==="crit"?"KRİTİK":x.sev==="warn"?"UYARI":"BİLGİ")+"] "+x.rule+" — "+x.name,body:x.detail}));
  (state.models||[]).filter(m=>wfPending(m)).forEach(m=>out.push({to:roleMail(m.wf==="mrm"?"2. Hat – MRM Programı":"Model Risk Komitesi"),tpl:"APPROVAL-PENDING",subject:"[ONAY] Bekleyen model onayı — "+m.ad,body:wfLabel(m.wf)}));
  (state.pmas||[]).filter(p=>pmaOnay(p)==="Onay Bekliyor").forEach(p=>out.push({to:roleMail("Model Risk Komitesi"),tpl:"APPROVAL-PENDING",subject:"[ONAY] Overlay/istisna onayı — "+p.id,body:p.tur+" · "+p.materyalite}));
+ (state.models||[]).filter(m=>m.karsilikEtkisi).forEach(m=>out.push({to:"finansal.raporlama@halkbank.com.tr",tpl:"PROVISION-IMPACT",subject:"[BİLGİ] Karşılık etkisi beyanı — "+m.ad,body:"TFRS9/karşılık paydaş bilgilendirmesi"}));
  (state.guardrails||[]).filter(g=>g.sonuc==="Kaldı").forEach(g=>{const m=state.models.find(x=>x.id===g.modelId);out.push({to:roleMail("2. Hat – MRM Programı"),tpl:"GRD-FAIL",subject:"[KRİTİK] Guardrail başarısız — "+(m?m.ad:g.modelId),body:g.tur+" · "+(g.siddet||"")});});
  return out;
 }
