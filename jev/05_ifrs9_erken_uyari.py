@@ -12,11 +12,50 @@ Kodda kalan:    gecikme günü, aşama geçiş kuralı, karşılık etkisi, komi
 Ek olarak:  typed response — cevaplar `yanit.temerrut_yakin` gibi alan olarak geliyor
             (system_one(..., response_model=...)).
 
-Çalıştırma: python jev/05_ifrs9_erken_uyari.py
+Kurulum:  pip install typesafe-sdk
+          (Colab: ilk hücrede  !pip install -q typesafe-sdk  — pydantic sürüm uyarısı
+           çıkarsa "Çalışma zamanını yeniden başlat" deyip hücreyi tekrar çalıştır.)
+Anahtar:  Aşağıdaki API_KEY satırına tırnakların arasına yapıştır.
+          (Boş bırakırsan önce Colab Secrets, sonra TYPESAFE_API_KEY ortam
+           değişkeni denenir.)
+Proxy:    Gerekiyorsa PROXY satırına yaz, örn. "http://kullanici:sifre@proxy:8080"
+
+Çalıştırma: tek parça — dosyanın tamamını bir Colab hücresine yapıştırıp çalıştır,
+            ya da yerelde:  python 05_ifrs9_erken_uyari.py
 """
 
-from ortak import calistir, istemci, karar
-from typesafe_sdk import Choice, ChoiceAnswer, Noul, NoulAnswer, Score, ScoreAnswer, SystemOneResponse
+import os
+
+from typesafe_sdk import (
+    Choice,
+    ChoiceAnswer,
+    Noul,
+    NoulAnswer,
+    Score,
+    ScoreAnswer,
+    SystemOneResponse,
+    TypeSafeAPIConnectionError,
+    TypeSafeAuthenticationError,
+    TypeSafeClient,
+    TypeSafeError,
+)
+
+
+API_KEY = ""   # <-- anahtarı buraya yapıştır: API_KEY = "ts-..."
+PROXY = ""     # <-- kurumsal proxy varsa buraya, yoksa boş bırak
+
+
+def anahtar() -> str | None:
+    """API_KEY boşsa Colab Secrets'tan oku; o da yoksa SDK ortam değişkenine baksın."""
+    if API_KEY:
+        return API_KEY
+    try:  # Colab: sol menü > anahtar simgesi > TYPESAFE_API_KEY
+        from google.colab import userdata  # type: ignore[import-not-found]
+
+        return userdata.get("TYPESAFE_API_KEY")
+    except Exception:
+        return None  # None => SDK, TYPESAFE_API_KEY ortam değişkenini kullanır
+
 
 GECIKME_GUN = 24
 LIMIT_KULLANIM = 0.97
@@ -101,7 +140,12 @@ class ErkenUyariYaniti(SystemOneResponse):
 
 
 def main() -> None:
-    with istemci() as client:
+    print("### Ticari kredi erken uyari / IFRS 9 asama onerisi\n")
+
+    if PROXY:
+        os.environ["HTTPS_PROXY"] = PROXY
+
+    with TypeSafeClient(api_key=anahtar(), timeout=30) as client:
         yanit = client.system_one(state=STATE, questions=SORULAR, response_model=ErkenUyariYaniti)
 
     # Tip güvenli erişim: sözlük anahtarı yerine alan adı.
@@ -148,8 +192,22 @@ def main() -> None:
     if yanit.ana_risk.confidence < 0.6:
         satirlar.append("Not: ana risk surucusu belirsiz — dosya kredi izleme uzmanina yazili gorus icin gonderilsin.")
 
-    karar(satirlar)
+    print()
+    print("=" * 72)
+    for satir in satirlar:
+        print(satir)
+    print("=" * 72)
+
+    u = yanit.usage
+    print(f"\nKullanim: {u.input_tokens} giris / {u.output_tokens} cikis token")
 
 
 if __name__ == "__main__":
-    calistir("Ticari kredi erken uyari / IFRS 9 asama onerisi", main)
+    try:
+        main()
+    except TypeSafeAuthenticationError:
+        print("API anahtarı reddedildi. API_KEY satırındaki değer doğru mu?")
+    except TypeSafeAPIConnectionError as hata:
+        print(f"api.typesafe.ai'a bağlanılamadı (proxy/TLS?): {hata}")
+    except TypeSafeError as hata:
+        print(f"TypeSafe hatası: {hata}")

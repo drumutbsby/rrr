@@ -11,11 +11,46 @@ Kodda kalan:    ŞİB eşiği, analist kuyruğu sıralaması, 10 gün içinde bi
 Not:  Tek istemci açılıp birden çok kayıt için system_one çağrılıyor — bağlantı
       yeniden kullanılıyor, senaryo başına client kurulmuyor.
 
-Çalıştırma: python jev/03_masak_supheli_islem.py
+Kurulum:  pip install typesafe-sdk
+          (Colab: ilk hücrede  !pip install -q typesafe-sdk  — pydantic sürüm uyarısı
+           çıkarsa "Çalışma zamanını yeniden başlat" deyip hücreyi tekrar çalıştır.)
+Anahtar:  Aşağıdaki API_KEY satırına tırnakların arasına yapıştır.
+          (Boş bırakırsan önce Colab Secrets, sonra TYPESAFE_API_KEY ortam
+           değişkeni denenir.)
+Proxy:    Gerekiyorsa PROXY satırına yaz, örn. "http://kullanici:sifre@proxy:8080"
+
+Çalıştırma: tek parça — dosyanın tamamını bir Colab hücresine yapıştırıp çalıştır,
+            ya da yerelde:  python 03_masak_supheli_islem.py
 """
 
-from ortak import calistir, istemci, karar
-from typesafe_sdk import Choice, Noul, Score
+import os
+
+from typesafe_sdk import (
+    Choice,
+    Noul,
+    Score,
+    TypeSafeAPIConnectionError,
+    TypeSafeAuthenticationError,
+    TypeSafeClient,
+    TypeSafeError,
+)
+
+
+API_KEY = ""   # <-- anahtarı buraya yapıştır: API_KEY = "ts-..."
+PROXY = ""     # <-- kurumsal proxy varsa buraya, yoksa boş bırak
+
+
+def anahtar() -> str | None:
+    """API_KEY boşsa Colab Secrets'tan oku; o da yoksa SDK ortam değişkenine baksın."""
+    if API_KEY:
+        return API_KEY
+    try:  # Colab: sol menü > anahtar simgesi > TYPESAFE_API_KEY
+        from google.colab import userdata  # type: ignore[import-not-found]
+
+        return userdata.get("TYPESAFE_API_KEY")
+    except Exception:
+        return None  # None => SDK, TYPESAFE_API_KEY ortam değişkenini kullanır
+
 
 KAYITLAR = [
     {
@@ -102,12 +137,20 @@ SORULAR = {
 
 
 def main() -> None:
-    kuyruk = []
+    print("### MASAK supheli islem taramasi (toplu)\n")
 
-    with istemci() as client:
+    kuyruk = []
+    giris_token = cikis_token = 0
+
+    if PROXY:
+        os.environ["HTTPS_PROXY"] = PROXY
+
+    with TypeSafeClient(api_key=anahtar(), timeout=30) as client:
         for kayit in KAYITLAR:
             yanit = client.system_one(state=kayit, questions=SORULAR)
             n, c, s = yanit.nouls, yanit.choices, yanit.scores
+            giris_token += yanit.usage.input_tokens or 0
+            cikis_token += yanit.usage.output_tokens or 0
 
             bayraklar = [ad for ad, cevap in n.items() if ad != "ekonomik_gerekce_var" and cevap.noul > 0.7]
             if n["ekonomik_gerekce_var"].noul < 0.3:
@@ -142,8 +185,21 @@ def main() -> None:
             aksiyon = "Izlemede birak — 30 gun sonra tekrar tara"
         satirlar.append(f"  {kayit['musteri_no']}  skor {kayit['sib']:.2f}  -> {aksiyon}")
 
-    karar(satirlar)
+    print()
+    print("=" * 72)
+    for satir in satirlar:
+        print(satir)
+    print("=" * 72)
+
+    print(f"\nKullanim ({len(KAYITLAR)} kayit): {giris_token} giris / {cikis_token} cikis token")
 
 
 if __name__ == "__main__":
-    calistir("MASAK supheli islem taramasi (toplu)", main)
+    try:
+        main()
+    except TypeSafeAuthenticationError:
+        print("API anahtarı reddedildi. API_KEY satırındaki değer doğru mu?")
+    except TypeSafeAPIConnectionError as hata:
+        print(f"api.typesafe.ai'a bağlanılamadı (proxy/TLS?): {hata}")
+    except TypeSafeError as hata:
+        print(f"TypeSafe hatası: {hata}")

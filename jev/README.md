@@ -1,23 +1,38 @@
 # Jev (TypeSafe AI) deneme senaryoları — bankacılık
 
-Her dosya tek başına çalışan bir senaryo: gerçek bir bankacılık kararı, o karara
-yetecek dar sorular ve **eşikleri/birleştirmeyi kodda tutan** bir karar bloğu.
+Her dosya **tek parça**: kendi `API_KEY`/`PROXY` satırı, kendi soruları, kendi karar
+mantığı ve kendi hata yakalaması var. Hiçbir dosya diğerini import etmez — dosyanın
+tamamını bir Colab hücresine yapıştırıp çalıştırabilirsin.
 
-Ortak kalıp: model *tek bir hüküm* verir (bu metin şu kalıba uyuyor mu?), ürün/limit/
+Ortak kalıp: model *tek bir dar hüküm* verir (bu metin şu kalıba uyuyor mu?), ürün/limit/
 mevzuat kuralı Python tarafında kalır. Böylece eşik değiştiğinde prompt değil kod değişir.
 
-## Kurulum
+## Colab'da çalıştırma
+
+İlk hücre:
+
+```python
+!pip install -q typesafe-sdk
+```
+
+`pydantic` sürüm uyarısı çıkarsa **Çalışma zamanını yeniden başlat** deyip devam et.
+
+Anahtar için iki yol var:
+
+- Dosyadaki `API_KEY = ""` satırına yapıştır, veya
+- Colab'ın sol menüsündeki 🔑 **Secrets** bölümüne `TYPESAFE_API_KEY` adıyla ekle,
+  "Notebook access" anahtarını aç. Dosyadaki `anahtar()` fonksiyonu `API_KEY` boşsa
+  önce Colab Secrets'a, o da yoksa `TYPESAFE_API_KEY` ortam değişkenine bakar.
+
+Sonra senaryo dosyasının tamamını ikinci hücreye yapıştır ve çalıştır.
+
+## Yerelde çalıştırma
 
 ```bash
 pip install typesafe-sdk
-export TYPESAFE_API_KEY="ts-..."        # veya jev/ortak.py içindeki API_KEY satırına yaz
+export TYPESAFE_API_KEY="ts-..."
 python jev/01_kart_itirazi_chargeback.py
 ```
-
-Anahtar, proxy ve model ayarı tek yerde: [`ortak.py`](ortak.py). Senaryolar bu dosyadan
-`sor()` (tek çağrı), `istemci()` (bağlantıyı yeniden kullanan çağrılar), `yazdir()` ve
-`karar()` yardımcılarını alır. Hata mesajları (yanlış anahtar, proxy, zaman aşımı, hız
-limiti) `calistir()` içinde Türkçeleştirilmiştir.
 
 ## Senaryolar
 
@@ -54,6 +69,7 @@ limiti) `calistir()` içinde Türkçeleştirilmiştir.
 
 - Aynı `STATE` üzerinde eşikleri oynatıp kaç dosyanın insana düştüğünü ölç.
 - `state`'i düz metin yerine yapılandırılmış JSON verip (04, 05) fark var mı bak.
-- `ortak.MODEL` ile farklı modelleri aynı senaryoda karşılaştır.
+- `client.system_one(..., model="...")` ile farklı modelleri aynı senaryoda karşılaştır;
+  hesabın modellerini `client.models.list()` ile görebilirsin.
 - Aynı senaryoyu 5 kez çağırıp olasılıkların oynaklığını (kararlılık) ölç.
 - Kritik senaryolarda (02, 07, 10) sahte "temiz" bir state yazıp yanlış pozitif ver mi diye dene.

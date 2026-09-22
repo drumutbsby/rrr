@@ -9,11 +9,46 @@ Jev'e sorulan:  konuşmanın içeriği — vaat var mı, zorluk beyanı gerçek 
                 temsilcinin tutumu uygun mu.
 Kodda kalan:    gecikme gün sayısı, yapılandırma uygunluğu, bir sonraki temas takvimi.
 
-Çalıştırma: python jev/06_tahsilat_gorusmesi.py
+Kurulum:  pip install typesafe-sdk
+          (Colab: ilk hücrede  !pip install -q typesafe-sdk  — pydantic sürüm uyarısı
+           çıkarsa "Çalışma zamanını yeniden başlat" deyip hücreyi tekrar çalıştır.)
+Anahtar:  Aşağıdaki API_KEY satırına tırnakların arasına yapıştır.
+          (Boş bırakırsan önce Colab Secrets, sonra TYPESAFE_API_KEY ortam
+           değişkeni denenir.)
+Proxy:    Gerekiyorsa PROXY satırına yaz, örn. "http://kullanici:sifre@proxy:8080"
+
+Çalıştırma: tek parça — dosyanın tamamını bir Colab hücresine yapıştırıp çalıştır,
+            ya da yerelde:  python 06_tahsilat_gorusmesi.py
 """
 
-from ortak import calistir, karar, sor, yazdir
-from typesafe_sdk import Choice, Noul, Score
+import os
+
+from typesafe_sdk import (
+    Choice,
+    Noul,
+    Score,
+    TypeSafeAPIConnectionError,
+    TypeSafeAuthenticationError,
+    TypeSafeClient,
+    TypeSafeError,
+)
+
+
+API_KEY = ""   # <-- anahtarı buraya yapıştır: API_KEY = "ts-..."
+PROXY = ""     # <-- kurumsal proxy varsa buraya, yoksa boş bırak
+
+
+def anahtar() -> str | None:
+    """API_KEY boşsa Colab Secrets'tan oku; o da yoksa SDK ortam değişkenine baksın."""
+    if API_KEY:
+        return API_KEY
+    try:  # Colab: sol menü > anahtar simgesi > TYPESAFE_API_KEY
+        from google.colab import userdata  # type: ignore[import-not-found]
+
+        return userdata.get("TYPESAFE_API_KEY")
+    except Exception:
+        return None  # None => SDK, TYPESAFE_API_KEY ortam değişkenini kullanır
+
 
 GECIKME_GUN = 92
 BORC_TL = 74_300.0
@@ -86,8 +121,25 @@ SORULAR = {
 
 
 def main() -> None:
-    yanit = sor(STATE, SORULAR)
-    yazdir(yanit)
+    print("### Tahsilat gorusmesi degerlendirmesi\n")
+
+    if PROXY:
+        os.environ["HTTPS_PROXY"] = PROXY
+
+    with TypeSafeClient(api_key=anahtar(), timeout=30) as client:
+        yanit = client.system_one(state=STATE, questions=SORULAR)
+    print(f"Model: {yanit.model}\n")
+
+    for ad, cevap in yanit.nouls.items():
+        print(f"[Noul]   {ad:<26} p(evet) = {cevap.noul:.3f}")
+
+    for ad, cevap in yanit.choices.items():
+        dagilim = ", ".join(f"{k}={v:.2f}" for k, v in sorted(cevap.probabilities.items(), key=lambda kv: -kv[1]))
+        print(f"[Choice] {ad:<26} secim = {cevap.choice}  (guven {cevap.confidence:.2f})  [{dagilim}]")
+
+    for ad, cevap in yanit.scores.items():
+        seviyeler = ", ".join(f"{k}: {v:.2f}" for k, v in sorted(cevap.probabilities.items()))
+        print(f"[Score]  {ad:<26} beklenen = {cevap.score:.2f}  (guven {cevap.confidence:.2f})  [{seviyeler}]")
 
     n, c, s = yanit.nouls, yanit.choices, yanit.scores
 
@@ -128,8 +180,22 @@ def main() -> None:
     if STATE["dosya"]["onceki_vaat_sayisi"] >= 2 and n["odeme_vaadi"].noul > 0.7:
         satirlar.append("Not: ucuncu vaat — tek basina vaat takibi yeterli degil, yazili plan sart.")
 
-    karar(satirlar)
+    print()
+    print("=" * 72)
+    for satir in satirlar:
+        print(satir)
+    print("=" * 72)
+
+    u = yanit.usage
+    print(f"\nKullanim: {u.input_tokens} giris / {u.output_tokens} cikis token")
 
 
 if __name__ == "__main__":
-    calistir("Tahsilat gorusmesi degerlendirmesi", main)
+    try:
+        main()
+    except TypeSafeAuthenticationError:
+        print("API anahtarı reddedildi. API_KEY satırındaki değer doğru mu?")
+    except TypeSafeAPIConnectionError as hata:
+        print(f"api.typesafe.ai'a bağlanılamadı (proxy/TLS?): {hata}")
+    except TypeSafeError as hata:
+        print(f"TypeSafe hatası: {hata}")

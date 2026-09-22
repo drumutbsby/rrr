@@ -8,11 +8,46 @@ Jev'e sorulan:  müşterinin anlattığı belirtilerin ele geçirme kalıbına u
                 ve arayanın gerçekten müşteri olup olmadığına dair şüphe.
 Kodda kalan:    bloke kararı, kanal kapatma, yeniden kimliklendirme akışı.
 
-Çalıştırma: python jev/07_sim_swap_hesap_ele_gecirme.py
+Kurulum:  pip install typesafe-sdk
+          (Colab: ilk hücrede  !pip install -q typesafe-sdk  — pydantic sürüm uyarısı
+           çıkarsa "Çalışma zamanını yeniden başlat" deyip hücreyi tekrar çalıştır.)
+Anahtar:  Aşağıdaki API_KEY satırına tırnakların arasına yapıştır.
+          (Boş bırakırsan önce Colab Secrets, sonra TYPESAFE_API_KEY ortam
+           değişkeni denenir.)
+Proxy:    Gerekiyorsa PROXY satırına yaz, örn. "http://kullanici:sifre@proxy:8080"
+
+Çalıştırma: tek parça — dosyanın tamamını bir Colab hücresine yapıştırıp çalıştır,
+            ya da yerelde:  python 07_sim_swap_hesap_ele_gecirme.py
 """
 
-from ortak import calistir, karar, sor, yazdir
-from typesafe_sdk import Choice, Noul, Score
+import os
+
+from typesafe_sdk import (
+    Choice,
+    Noul,
+    Score,
+    TypeSafeAPIConnectionError,
+    TypeSafeAuthenticationError,
+    TypeSafeClient,
+    TypeSafeError,
+)
+
+
+API_KEY = ""   # <-- anahtarı buraya yapıştır: API_KEY = "ts-..."
+PROXY = ""     # <-- kurumsal proxy varsa buraya, yoksa boş bırak
+
+
+def anahtar() -> str | None:
+    """API_KEY boşsa Colab Secrets'tan oku; o da yoksa SDK ortam değişkenine baksın."""
+    if API_KEY:
+        return API_KEY
+    try:  # Colab: sol menü > anahtar simgesi > TYPESAFE_API_KEY
+        from google.colab import userdata  # type: ignore[import-not-found]
+
+        return userdata.get("TYPESAFE_API_KEY")
+    except Exception:
+        return None  # None => SDK, TYPESAFE_API_KEY ortam değişkenini kullanır
+
 
 STATE = {
     "telemetri": {
@@ -84,8 +119,25 @@ SORULAR = {
 
 
 def main() -> None:
-    yanit = sor(STATE, SORULAR)
-    yazdir(yanit)
+    print("### SIM swap / hesap ele gecirme triyaji\n")
+
+    if PROXY:
+        os.environ["HTTPS_PROXY"] = PROXY
+
+    with TypeSafeClient(api_key=anahtar(), timeout=30) as client:
+        yanit = client.system_one(state=STATE, questions=SORULAR)
+    print(f"Model: {yanit.model}\n")
+
+    for ad, cevap in yanit.nouls.items():
+        print(f"[Noul]   {ad:<26} p(evet) = {cevap.noul:.3f}")
+
+    for ad, cevap in yanit.choices.items():
+        dagilim = ", ".join(f"{k}={v:.2f}" for k, v in sorted(cevap.probabilities.items(), key=lambda kv: -kv[1]))
+        print(f"[Choice] {ad:<26} secim = {cevap.choice}  (guven {cevap.confidence:.2f})  [{dagilim}]")
+
+    for ad, cevap in yanit.scores.items():
+        seviyeler = ", ".join(f"{k}: {v:.2f}" for k, v in sorted(cevap.probabilities.items()))
+        print(f"[Score]  {ad:<26} beklenen = {cevap.score:.2f}  (guven {cevap.confidence:.2f})  [{seviyeler}]")
 
     n, c, s = yanit.nouls, yanit.choices, yanit.scores
     saldiri = c["olay_tipi"].choice in {"sim_swap_ato", "kimlik_avi_ato", "zararli_yazilim"}
@@ -118,8 +170,22 @@ def main() -> None:
     if n["sim_swap_belirtisi"].noul > 0.7:
         satirlar.append("Aksiyon: operatorden hat degisiklik tarihi yazili istensin — sonraki itiraz/dava dosyasinda gerekiyor.")
 
-    karar(satirlar)
+    print()
+    print("=" * 72)
+    for satir in satirlar:
+        print(satir)
+    print("=" * 72)
+
+    u = yanit.usage
+    print(f"\nKullanim: {u.input_tokens} giris / {u.output_tokens} cikis token")
 
 
 if __name__ == "__main__":
-    calistir("SIM swap / hesap ele gecirme triyaji", main)
+    try:
+        main()
+    except TypeSafeAuthenticationError:
+        print("API anahtarı reddedildi. API_KEY satırındaki değer doğru mu?")
+    except TypeSafeAPIConnectionError as hata:
+        print(f"api.typesafe.ai'a bağlanılamadı (proxy/TLS?): {hata}")
+    except TypeSafeError as hata:
+        print(f"TypeSafe hatası: {hata}")
