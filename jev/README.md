@@ -49,6 +49,36 @@ python jev/01_kart_itirazi_chargeback.py
 | 09 | `09_uzaktan_kimlik_tespiti_kyc.py` | Hesap açılışı tamamlansın mı? | Video tutanağından yönlendirme/vekâleten hesap tespiti, PEP |
 | 10 | `10_gise_nakit_cekim_baski.py` | Nakit teslim edilsin mi? | Baskı altındaki müşteri; "güvenli hesap" anlatısı tek başına durdurucu |
 
+## PyQt uygulaması — `jev_pyqt.py`
+
+Aynı 10 senaryo gömülü gelen bir masaüstü arayüz; ayrıca dışarıdan JSON talimat yükler.
+
+```bash
+pip install typesafe-sdk PyQt6      # PyQt5 de çalışır
+python jev/jev_pyqt.py
+python jev/jev_pyqt.py talimat.json # doğrudan bir talimatla açmak için
+```
+
+- Soldaki listeden senaryo seç; **State** ve **Questions** panolarını düzenleyebilirsin —
+  gönderilen şey ekranda gördüğündür.
+- **Çalıştır** (Ctrl+Enter) isteği ayrı bir iş parçacığında atar, arayüz donmaz.
+- Cevaplar olasılık çubuklarıyla gösterilir; gömülü senaryolarda eşik/karar bloğu da çalışır.
+- **JSON yükle…** (ya da dosyayı pencereye sürükle-bırak) — biçim otomatik algılanır:
+
+| Yüklenen JSON | Nasıl yorumlanır |
+|---|---|
+| `{"state": {...}, "questions": {...}}` | tek senaryo (`baslik`, `aciklama` varsa kullanılır) |
+| `{"ad": {"baslik", "state", "questions"}, ...}` | çoklu senaryo — `tum_senaryolar.json` biçimi |
+| `{"soru_adi": {"type": "noul", ...}, ...}` | yalnızca soru seti; state'i sen doldurursun |
+| başka her nesne/dizi | yalnızca state |
+
+Çoklu senaryo dosyasında `state` bir dizi ise (03'teki üç MASAK kaydı gibi) her eleman
+ayrı senaryo olarak listeye girer. **JSON kaydet…** ile düzenlediğin panoları
+`{"baslik", "state", "questions"}` olarak dışarı alırsın — o dosya tekrar yüklenebilir.
+
+Anahtar: üstteki alana yaz, ya da `TYPESAFE_API_KEY` ortam değişkeni; dosya başındaki
+`API_KEY` satırı da çalışır.
+
 ## Senaryo yazarken izlenen kurallar
 
 1. **Bir soru = bir hüküm.** "Riskli mi?" değil; "müşteri işlemi kendisi yapmadığını
