@@ -1,0 +1,22 @@
+{
+  "firma": {
+    "unvan": "ANADOLU TEKSTIL A.S.",
+    "sektor": "hazir_giyim_ihracat",
+    "risk_bakiyesi_tl": 47500000.0
+  },
+  "sayisal_sinyaller": {
+    "nakdi_limit_kullanim_orani": 0.97,
+    "en_uzun_gecikme_gun": 24,
+    "son_6_ay_karsiliksiz_cek_adet": 3,
+    "vergi_sgk_borcu_tl": 4900000,
+    "kredi_notu_degisimi": "1.380 -> 1.055 (6 ay)",
+    "teminat_kapsama_orani": 0.62
+  },
+  "niteliksel_sinyaller": [
+    "Sektör haberi: firmanın en büyük Avrupa alıcısı konkordato ilan etti (basında, 12 gün önce).",
+    "Firma, iki üretim vardiyasından birini süresiz durdurduğunu duyurdu.",
+    "CFO istifa etti, yerine atama yapılmadı.",
+    "Müşteri ziyaret notu: 'İhracat alacaklarımız donduğu için kısa vadeli sıkışıklık var, yeni alıcıyla sözleşme imzalanmak üzere, üç ayda toparlarız' dendi. Sözleşme taslağı gösterilmedi.",
+    "Firma, başka bir bankadaki kredisini 24 ay vade uzatımıyla yapılandırdığını söyledi."
+  ]
+}

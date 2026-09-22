@@ -1,0 +1,15 @@
+{
+  "musteri_no": "4471902",
+  "profil": {
+    "meslek": "ogrenci",
+    "yas": 21,
+    "beyan_gelir_tl": 0,
+    "hesap_yasi_gun": 38
+  },
+  "hareketler": [
+    "11 farkli gercek kisiden 3 gun icinde toplam 412.000 TL gelen havale",
+    "Her gelen tutar 9.000-9.800 TL araliginda",
+    "Gelen tutarlarin %94'u ayni gun icinde 3 farkli IBAN'a cikti",
+    "Kalan bakiye: 2.140 TL"
+  ]
+}

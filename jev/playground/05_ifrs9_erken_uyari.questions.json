@@ -1,0 +1,50 @@
+{
+  "temerrut_yakin": {
+    "type": "noul",
+    "instructions": "Taken together, the signals indicate that the borrower is unlikely to pay its credit obligations in full without the bank realising collateral or granting relief."
+  },
+  "yapisal_bozulma": {
+    "type": "noul",
+    "instructions": "The deterioration looks structural rather than a temporary liquidity squeeze.",
+    "criteria": {
+      "true": "The borrower's business model, main market or capacity is impaired in a lasting way.",
+      "false": "The problem is timing of cash flows and the underlying business is intact."
+    }
+  },
+  "baska_bankada_yapilandirma": {
+    "type": "noul",
+    "instructions": "The borrower has restructured or extended debt with another creditor because of financial difficulty."
+  },
+  "yonetim_zayifligi": {
+    "type": "noul",
+    "instructions": "There are governance or management stability problems at the borrower."
+  },
+  "beyan_dogrulanabilir": {
+    "type": "noul",
+    "instructions": "The borrower's recovery claims are backed by verifiable evidence.",
+    "criteria": {
+      "true": "Contracts, orders or documents supporting the recovery plan were actually shown.",
+      "false": "The recovery plan rests on statements only, with no document produced."
+    }
+  },
+  "ana_risk": {
+    "type": "choice",
+    "instructions": "What is the dominant driver of risk in this file?",
+    "criteria": {
+      "alici_yogunlasmasi": "Loss or distress of a dominant buyer.",
+      "sektorel_daralma": "Sector-wide contraction in demand or margins.",
+      "likidite": "Cash-flow timing problems with an otherwise sound business.",
+      "yonetim": "Management or governance failure.",
+      "asiri_borcluluk": "Debt load too large for the business to service."
+    }
+  },
+  "izleme_siddeti": {
+    "type": "score",
+    "instructions": "How closely should this exposure be monitored from now on?",
+    "criteria": [
+      "Standard: no change in monitoring.",
+      "Close watch: quarterly review, tighter limits, collateral review.",
+      "Intensive: monthly review, no new limits, exit or restructuring plan required."
+    ]
+  }
+}

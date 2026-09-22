@@ -1,0 +1,47 @@
+{
+  "parcalama": {
+    "type": "noul",
+    "instructions": "The account activity looks like structuring: amounts deliberately kept below a reporting threshold, or one large sum split across many smaller movements."
+  },
+  "gecis_hesabi": {
+    "type": "noul",
+    "instructions": "The account behaves as a pass-through: money arrives and leaves almost immediately, leaving little balance behind.",
+    "criteria": {
+      "true": "Incoming funds are forwarded out within a very short time, with almost nothing retained.",
+      "false": "Funds stay in the account and are used in a way consistent with normal personal or business use."
+    }
+  },
+  "profil_uyumsuz": {
+    "type": "noul",
+    "instructions": "The volume or nature of the activity is inconsistent with the customer's stated occupation, age and declared income."
+  },
+  "ekonomik_gerekce_var": {
+    "type": "noul",
+    "instructions": "The activity has a visible, documented business or economic rationale.",
+    "criteria": {
+      "true": "Invoices, contracts, payroll, progress payments or similar explain the flow.",
+      "false": "No economic explanation is visible in the records."
+    }
+  },
+  "tipoloji": {
+    "type": "choice",
+    "instructions": "Which money-laundering typology does this activity fit best?",
+    "criteria": {
+      "para_katiri": "A mule account collecting funds from many senders and forwarding them on.",
+      "nakit_yogun_yerlestirme": "Repeated cash deposits placing physical cash into the system.",
+      "kripto_cikis": "Funds converted and moved to crypto exchanges or wallets.",
+      "ticari_gorunumlu": "Flows disguised as trade or contracting payments.",
+      "hesap_ele_gecirme": "The pattern suggests the account is controlled by someone other than the customer.",
+      "olagan": "Ordinary activity consistent with the customer profile."
+    }
+  },
+  "sib_gerekcesi": {
+    "type": "score",
+    "instructions": "How strong is the case for filing a suspicious transaction report?",
+    "criteria": [
+      "Weak: activity is explainable; monitor only.",
+      "Moderate: unusual pattern that needs an analyst to request documents first.",
+      "Strong: pattern matches a known typology with no plausible economic explanation."
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "sim_swap_belirtisi": {
+    "type": "noul",
+    "instructions": "The caller describes losing mobile network service in a way consistent with their SIM being ported or re-issued without their request."
+  },
+  "ele_gecirme_suruyor": {
+    "type": "noul",
+    "instructions": "The recorded account events indicate an attacker is currently in control of the account and preparing to move money.",
+    "criteria": {
+      "true": "Credential, contact-detail, limit or payee changes cluster together in a short window.",
+      "false": "The events look like ordinary self-service activity by the customer."
+    }
+  },
+  "arayan_supheli": {
+    "type": "noul",
+    "instructions": "There is reason to doubt that the caller is the genuine customer.",
+    "criteria": {
+      "true": "The caller's account is inconsistent, evasive, or fits a social-engineering attempt against the call centre.",
+      "false": "The caller's account is coherent and matches the recorded events."
+    }
+  },
+  "teknik_ariza": {
+    "type": "noul",
+    "instructions": "The symptoms are explained by an ordinary technical fault rather than an attack."
+  },
+  "olay_tipi": {
+    "type": "choice",
+    "instructions": "What is happening on this account?",
+    "criteria": {
+      "sim_swap_ato": "SIM swap used to take over the account.",
+      "kimlik_avi_ato": "Credentials harvested by phishing and now used by an attacker.",
+      "zararli_yazilim": "Device malware or a remote-access tool driving the session.",
+      "yetkili_kisi": "A family member or acquaintance with legitimate access made the changes.",
+      "teknik_sorun": "No attack: app, SIM or network fault."
+    }
+  },
+  "mudahale_aciliyeti": {
+    "type": "score",
+    "instructions": "How fast must the bank act?",
+    "criteria": [
+      "Routine: can be handled in the normal support queue.",
+      "Same day: act within hours to prevent loss.",
+      "Immediate: money is at imminent risk; act within minutes."
+    ]
+  }
+}

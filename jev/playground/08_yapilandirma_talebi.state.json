@@ -1,0 +1,14 @@
+{
+  "dosya": {
+    "urun": "konut_kredisi",
+    "kalan_anapara_tl": 1240000,
+    "kalan_vade_ay": 84,
+    "aylik_taksit_tl": 21800,
+    "beyan_gelir_tl": 46000,
+    "gecikme_gun": 0,
+    "onceki_yapilandirma": false
+  },
+  "kanal": "e_posta",
+  "konu": "Kredi taksitim hakkında",
+  "metin": "Merhaba,\n\n2021'de kullandığım konut kredisinin taksitini bugüne kadar hiç aksatmadım. Ancak çalıştığım şirket eylül ayında kısa çalışma ödeneğine geçti, maaşımın %40'ını alıyorum ve bu durumun en az 4-5 ay süreceği söylendi. Eşim çalışmıyor, iki çocuğum var.\n\nTaksitimi ödeyemeyeceğim aşamaya gelmeden size yazmak istedim. Önümüzdeki 6 ay için taksitimi düşürebilir miyiz, vadeyi uzatmak da olur. Ya da 3 ay sadece faiz ödeyeyim, sonra normale döneyim. Sicilimin bozulmasını istemiyorum.\n\nŞubeye iki kez gittim, 'gecikmeye düşmeden bir şey yapamayız' dediler. Bu bana çok mantıksız geldi, gecikmeye düşmemi mi bekliyorsunuz? Gerekirse BDDK'ya da yazacağım ama önce sizden çözüm bekliyorum.\n\nİyi çalışmalar."
+}

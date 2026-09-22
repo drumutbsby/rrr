@@ -1,0 +1,14 @@
+{
+  "musteri": {
+    "yas": 75,
+    "sube_musterisi_yil": 22,
+    "son_1_yil_nakit_cekim_ortalama_tl": 12000
+  },
+  "islem": {
+    "tip": "nakit_cekim",
+    "tutar_tl": 350000.0,
+    "vadeli_hesap_bozuldu": true,
+    "faiz_kaybi_tl": 41000
+  },
+  "gise_notu": "Müşteri yanında 40'lı yaşlarda bir erkekle geldi. Tutarı soran gişe görevlisine önce yanındaki kişi cevap verdi. Müşteriye parayı ne için çektiğini sorduğumuzda 'evi tadilat yaptıracağım, usta nakit istiyor' dedi ama tadilat yapacak firmanın adını söyleyemedi. Vadeli hesabını bozmanın 41.000 TL faiz kaybı doğuracağını açıkladığımızda tereddüt etti, yanındaki kişi 'nasıl olsa geri yatıracağız' dedi. Müşteri telefonuna sürekli mesaj geliyordu ve her mesajdan sonra yanındaki kişiye bakıyordu. Ayrıca 'bankadan aradılar, hesabım güvenli değilmiş, parayı çekip güvenli hesaba yatıracakmışım' cümlesini bir kez kurdu, sonra konuyu değiştirdi. Müşteri daha önce hiç bu tutarda nakit çekmedi."
+}

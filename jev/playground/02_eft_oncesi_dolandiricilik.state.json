@@ -1,0 +1,20 @@
+{
+  "islem": {
+    "tip": "FAST",
+    "tutar_tl": 185000.0,
+    "alici_iban_yeni": true,
+    "alici_ad": "M** K**",
+    "aciklama": "borc odemesi",
+    "saat": "22:41"
+  },
+  "hesap_gecmisi": {
+    "ortalama_aylik_giden_tl": 9500,
+    "son_24_saat": [
+      "vadeli hesap bozuldu: 150.000 TL",
+      "kredi kullanimi: 50.000 TL"
+    ],
+    "musteri_yasi": 63,
+    "kanal": "mobil"
+  },
+  "cagri_ozeti": "Müşteri, üç haftadır bir yatırım danışmanıyla WhatsApp'tan görüştüğünü söyledi. Ekran paylaşımıyla bir platformda kâr ettiğini gösteriyorlarmış, ilk 20 bin lirayı çekebilmiş. Şimdi 'kâr payını çekmek için teminat yatırman gerek' demişler. Görüşme sırasında müşteri temsilcisine 'bankaya borç ödemesi yaz dediler, yoksa işlem gecikirmiş' dedi. Arama boyunca yanında biri olduğu ve ona ne söyleyeceğini fısıldadığı duyuldu. Aceleci, teyit sorularına kısa cevap veriyor."
+}

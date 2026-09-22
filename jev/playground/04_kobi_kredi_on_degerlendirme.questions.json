@@ -1,0 +1,46 @@
+{
+  "amac_tutarsiz": {
+    "type": "noul",
+    "instructions": "The stated use of the loan contradicts the product the application was opened under.",
+    "criteria": {
+      "true": "The borrower describes an investment or asset purchase while the application is for working capital, or vice versa.",
+      "false": "The described use matches the requested product."
+    }
+  },
+  "musteri_yogunlasmasi": {
+    "type": "noul",
+    "instructions": "The company's revenue depends heavily on a single customer or a very small number of customers."
+  },
+  "belge_eksik": {
+    "type": "noul",
+    "instructions": "Required financial or ownership documents are described as missing, outdated or not provided."
+  },
+  "gizlenen_iliski": {
+    "type": "noul",
+    "instructions": "There are related parties or affiliated companies whose details the borrower avoided sharing."
+  },
+  "odeme_disiplini_sorunu": {
+    "type": "noul",
+    "instructions": "The record mentions past payment failures such as bounced cheques, arrears or restructured debt."
+  },
+  "kredi_amaci": {
+    "type": "choice",
+    "instructions": "What is the loan really going to be used for, based on the branch note?",
+    "criteria": {
+      "isletme_sermayesi": "Day-to-day working capital: stock, payroll, supplier payments.",
+      "yatirim": "Buying machinery, property or other fixed assets.",
+      "borc_kapatma": "Repaying or refinancing existing debt.",
+      "alacak_finansmani": "Bridging receivables that customers have not yet paid.",
+      "belirsiz": "The purpose cannot be determined from the file."
+    }
+  },
+  "dosya_kalitesi": {
+    "type": "score",
+    "instructions": "How ready is this credit file for a decision without further information?",
+    "criteria": [
+      "Not ready: key documents or explanations are missing.",
+      "Partly ready: decision possible but conditions or extra documents are needed.",
+      "Ready: file is complete and internally consistent."
+    ]
+  }
+}

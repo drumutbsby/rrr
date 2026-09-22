@@ -1,0 +1,47 @@
+{
+  "yapilandirma_talebi": {
+    "type": "noul",
+    "instructions": "The message asks the bank to change the terms of an existing loan."
+  },
+  "gecici_zorluk": {
+    "type": "noul",
+    "instructions": "The difficulty described is temporary with a foreseeable end, rather than permanent.",
+    "criteria": {
+      "true": "The customer names a limited period or an expected recovery (reduced hours, short-term leave, seasonal drop).",
+      "false": "The income loss looks permanent or open-ended."
+    }
+  },
+  "proaktif_basvuru": {
+    "type": "noul",
+    "instructions": "The customer is reaching out before missing a payment rather than after falling behind."
+  },
+  "sikayet_tonu": {
+    "type": "noul",
+    "instructions": "The message contains a complaint about how the bank or a branch handled the customer."
+  },
+  "regulator_tehdidi": {
+    "type": "noul",
+    "instructions": "The customer threatens to escalate to a regulator, ombudsman, consumer arbitration or the press."
+  },
+  "istenen_cozum": {
+    "type": "choice",
+    "instructions": "What relief is the customer actually asking for?",
+    "criteria": {
+      "vade_uzatimi": "Extend the term so the monthly instalment falls.",
+      "odemesiz_donem": "A payment holiday for a number of months.",
+      "sadece_faiz": "Pay interest only for a period, then return to normal.",
+      "faiz_indirimi": "A lower interest rate.",
+      "tam_kapatma_indirimi": "A discount to settle the debt in one payment.",
+      "bilgi_talebi": "No relief requested; the customer only wants information."
+    }
+  },
+  "odeme_kapasitesi": {
+    "type": "score",
+    "instructions": "How much of the current instalment can this customer sustain during the difficulty?",
+    "criteria": [
+      "Almost none: needs a full payment holiday.",
+      "Partial: can pay a reduced instalment.",
+      "Most of it: a small adjustment is enough."
+    ]
+  }
+}

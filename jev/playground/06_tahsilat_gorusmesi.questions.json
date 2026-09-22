@@ -1,0 +1,54 @@
+{
+  "odeme_vaadi": {
+    "type": "noul",
+    "instructions": "The customer commits to a specific payment amount on a specific date.",
+    "criteria": {
+      "true": "A concrete amount and a date are stated by the customer.",
+      "false": "The customer makes no concrete commitment, or only says they will 'try'."
+    }
+  },
+  "mali_zorluk_beyani": {
+    "type": "noul",
+    "instructions": "The customer states a genuine change in circumstances that reduced their ability to pay.",
+    "criteria": {
+      "true": "Job loss, illness, bereavement, disability or a similar event is described.",
+      "false": "No such event is described; the customer simply refuses or avoids payment."
+    }
+  },
+  "hassas_musteri": {
+    "type": "noul",
+    "instructions": "The customer shows signs of vulnerability that require special care: bereavement, serious illness, mental health treatment, disability or sole reliance on state benefits."
+  },
+  "odeme_niyeti_yok": {
+    "type": "noul",
+    "instructions": "The customer shows no intention to pay and avoids engaging with the debt."
+  },
+  "uygunsuz_tahsilat_dili": {
+    "type": "noul",
+    "instructions": "The collections agent used pressure, threats, or improper instructions that a regulator would treat as unfair debt collection practice.",
+    "criteria": {
+      "true": "Threats beyond the bank's actual legal rights, shaming, or telling the customer to borrow from family or third parties.",
+      "false": "The agent stayed factual and respectful about consequences."
+    }
+  },
+  "sonraki_adim": {
+    "type": "choice",
+    "instructions": "What should the bank do next with this file?",
+    "criteria": {
+      "yapilandirma_teklifi": "Offer a restructuring or payment plan matched to the customer's capacity.",
+      "odemesiz_donem": "Grant a temporary payment holiday because of hardship.",
+      "vaadi_takip": "Record the promise to pay and follow up on the promised date.",
+      "hukuki_takip": "Move the file to legal enforcement.",
+      "sosyal_destek_yonlendirme": "Pause collection and refer to the bank's vulnerable-customer process."
+    }
+  },
+  "tahsil_edilebilirlik": {
+    "type": "score",
+    "instructions": "How likely is this debt to be recovered through voluntary payment over the next 12 months?",
+    "criteria": [
+      "Unlikely: no capacity and no intent.",
+      "Partial: some capacity, recovery only with a long, reduced plan.",
+      "Likely: capacity and intent are both present."
+    ]
+  }
+}

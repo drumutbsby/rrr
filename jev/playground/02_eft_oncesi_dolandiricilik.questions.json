@@ -1,0 +1,47 @@
+{
+  "yonlendirilmis_odeme": {
+    "type": "noul",
+    "instructions": "The customer is being coached or instructed by a third party about how to answer the bank and how to label the transfer.",
+    "criteria": {
+      "true": "Someone is telling the customer what to say to the bank, or the stated purpose was supplied by that third party.",
+      "false": "The customer explains the payment in their own words with no outside coaching."
+    }
+  },
+  "yatirim_vaadi": {
+    "type": "noul",
+    "instructions": "The customer describes an investment opportunity with promised or already shown profits."
+  },
+  "aciklama_tutarsiz": {
+    "type": "noul",
+    "instructions": "The stated purpose of the transfer contradicts what the customer actually describes.",
+    "criteria": {
+      "true": "The reference or reason given for the payment does not match the customer's own account of it.",
+      "false": "The stated purpose matches the customer's explanation."
+    }
+  },
+  "baski_altinda": {
+    "type": "noul",
+    "instructions": "The customer appears to be under pressure, urgency or fear while making this payment."
+  },
+  "senaryo": {
+    "type": "choice",
+    "instructions": "Which known payment-fraud pattern best matches the customer's story?",
+    "criteria": {
+      "sahte_yatirim": "A fake investment or trading platform showing profits and asking for more deposits.",
+      "kamu_gorevlisi_taklidi": "Someone posing as police, prosecutor, tax office or the bank's own security team.",
+      "romantizm": "A romantic or online relationship asking for money.",
+      "sahte_satici": "Payment for goods, property or a rental from a seller the customer never met.",
+      "yakin_taklidi": "Someone posing as a family member or friend in urgent need.",
+      "mesru_odeme": "A genuine payment with no fraud pattern: known counterparty, ordinary purpose."
+    }
+  },
+  "zarar_riski": {
+    "type": "score",
+    "instructions": "How likely is it that this money is lost for good once it leaves the account?",
+    "criteria": [
+      "Low: ordinary payment to a plausible counterparty, funds recoverable if wrong.",
+      "Medium: some fraud indicators, but the story could be genuine.",
+      "High: multiple classic fraud indicators; funds will very likely be moved on immediately."
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "baski_altinda": {
+    "type": "noul",
+    "instructions": "The customer appears to be acting under pressure or direction from the person accompanying them.",
+    "criteria": {
+      "true": "The companion answers for the customer, corrects them, or the customer looks to them before responding.",
+      "false": "The customer speaks and decides for themselves."
+    }
+  },
+  "gerekce_tutarsiz": {
+    "type": "noul",
+    "instructions": "The stated reason for the withdrawal does not hold up under simple questioning."
+  },
+  "banka_gorevlisi_taklidi": {
+    "type": "noul",
+    "instructions": "The customer repeats the claim that the bank or an official told them to move money to a 'safe account', a classic impersonation scam."
+  },
+  "yakin_istismari": {
+    "type": "noul",
+    "instructions": "The situation fits financial abuse of an older person by a relative, carer or acquaintance."
+  },
+  "kendi_iradesi": {
+    "type": "noul",
+    "instructions": "The customer understands the transaction and its cost and genuinely wants it.",
+    "criteria": {
+      "true": "The customer explains the purpose consistently and accepts the cost knowingly.",
+      "false": "The customer is confused about the purpose or unaware of what they are giving up."
+    }
+  },
+  "durum": {
+    "type": "choice",
+    "instructions": "What best describes this counter request?",
+    "criteria": {
+      "guvenli_hesap_dolandiriciligi": "Impersonation scam telling the customer to move money for safety.",
+      "yakin_istismari": "Financial abuse by a family member, carer or acquaintance.",
+      "ucuncu_kisi_yonlendirmesi": "The customer is being directed by someone they met recently.",
+      "mesru_ihtiyac": "A genuine personal need for cash.",
+      "belirsiz": "There is not enough in the note to tell."
+    }
+  },
+  "mudahale_gerekliligi": {
+    "type": "score",
+    "instructions": "How strongly should the branch intervene before releasing the cash?",
+    "criteria": [
+      "None: complete the transaction normally.",
+      "Speak privately: separate the customer from the companion and ask again.",
+      "Withhold: delay the transaction and escalate before any cash leaves."
+    ]
+  }
+}

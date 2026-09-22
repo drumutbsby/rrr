@@ -1,0 +1,15 @@
+{
+  "musteri_no": "9032118",
+  "profil": {
+    "meslek": "emekli",
+    "yas": 71,
+    "beyan_gelir_tl": 22000,
+    "hesap_yasi_gun": 5100
+  },
+  "hareketler": [
+    "Son 10 gunde 6 farkli ATM'den toplam 148.000 TL nakit yatirma",
+    "Yatirmalarin ardindan yurtdisi kripto borsasina 3 transfer: 145.000 TL",
+    "Musteri daha once hic kripto islemi yapmamis",
+    "Hesaba yeni eklenen mobil cihaz: 9 gun once"
+  ]
+}

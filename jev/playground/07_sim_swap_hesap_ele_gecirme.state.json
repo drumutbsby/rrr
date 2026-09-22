@@ -1,0 +1,20 @@
+{
+  "telemetri": {
+    "son_giris": {
+      "cihaz": "yeni_cihaz",
+      "cihaz_yasi_saat": 3,
+      "ip_ulke": "TR",
+      "ip_asn": "mobil_operator"
+    },
+    "son_1_saatte": [
+      "sifre degisikligi",
+      "telefon numarasi guncelleme denemesi (basarisiz)",
+      "gunluk transfer limiti 10.000 -> 250.000 TL yukseltildi",
+      "yeni IBAN tanimlandi",
+      "e-posta adresi degistirildi"
+    ],
+    "sms_otp": "son 40 dakikada 6 OTP gonderildi, 5'i dogru girildi",
+    "musteri_kayitli_cihaz_sayisi": 2
+  },
+  "arayan_beyani": "Sabahtan beri telefonum şebeke bulmuyor, 'SIM kart yok' yazıyor. Operatörü aradım, hattımın dün akşam başka bir yerde yeniden düzenlendiğini söylediler, ben talep etmedim. Uygulamaya girmeye çalışıyorum, şifrem çalışmıyor. E-postama da giremiyorum. Hesabımda 260 bin lira var, lütfen hemen durdurun."
+}

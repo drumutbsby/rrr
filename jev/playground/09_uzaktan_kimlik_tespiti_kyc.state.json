@@ -1,0 +1,22 @@
+{
+  "basvuru": {
+    "musteri_tipi": "gercek_kisi",
+    "yas": 24,
+    "beyan_meslek": "ithalat_ihracat_danismani",
+    "beyan_aylik_gelir_tl": 180000,
+    "beyan_islem_hacmi_tl_ay": 2500000,
+    "beyan_ulkeler": [
+      "TR",
+      "AE",
+      "RU"
+    ],
+    "adres_belgesi": "3 ay once duzenlenmis fatura, farkli isim uzerine"
+  },
+  "cihaz": {
+    "yeni_cihaz": true,
+    "ip_vpn": true,
+    "ayni_cihazdan_onceki_basvuru_sayisi": 2,
+    "ekran_paylasimi_tespiti": "aktif"
+  },
+  "video_tutanagi": "Görüşme 6 dakika sürdü. Müşteri ekranını başka bir uygulamada paylaşıyordu; sorulara cevap vermeden önce her seferinde 2-3 saniye duraksadı ve kamera dışından gelen bir sesi dinlediği izlenimi verdi. 'Aylık işlem hacminiz neden bu kadar yüksek?' sorusuna 'ailemin şirketi var, detayını bilmiyorum, öyle yazmamı söylediler' dedi. Kimlik belgesindeki hologram açı değiştiğinde kaybolmadı. Müşteri, hesabın kartını kimin kullanacağı sorulduğunda 'ben kullanacağım' dedi ama kart teslim adresi olarak başka bir ildeki iş yerini verdi. Devlet görevinde olup olmadığı sorulduğunda 'babam belediyede müdürdü, emekli oldu' bilgisini kendiliğinden paylaştı."
+}

@@ -1,0 +1,34 @@
+{
+  "dosya": {
+    "urun": "ihtiyac_kredisi",
+    "gecikme_gun": 92,
+    "bakiye_tl": 74300.0,
+    "onceki_vaat_sayisi": 2
+  },
+  "gorusme_dokumu": [
+    {
+      "taraf": "temsilci",
+      "metin": "İyi günler, 74.300 TL gecikmiş borcunuz için arıyorum. Bugün ödeme yapabilecek misiniz?"
+    },
+    {
+      "taraf": "musteri",
+      "metin": "Eşim altı ay önce vefat etti, tek gelir bendim, şubatta da işten çıkarıldım. Şu an işsizlik maaşı alıyorum, 14 bin lira."
+    },
+    {
+      "taraf": "temsilci",
+      "metin": "Anlıyorum ama bu borç sizin sorumluluğunuzda. Ödemezseniz icra takibi başlar, evinize haciz gelir."
+    },
+    {
+      "taraf": "musteri",
+      "metin": "Biliyorum, kaçmıyorum. Ayda 3 bin lira ödeyebilirim, daha fazlasına gücüm yetmez. Doktor raporum da var, depresyon tedavisi görüyorum."
+    },
+    {
+      "taraf": "temsilci",
+      "metin": "3 bin lira olmaz, en az 10 bin lira ödemeniz gerekiyor, yoksa dosyayı avukata devrederim. Akrabalarınızdan borç alın."
+    },
+    {
+      "taraf": "musteri",
+      "metin": "Bu ay 3 bin lirayı 28'inde yatırırım, söz veriyorum. Gerisi için yapılandırma istiyorum."
+    }
+  ]
+}

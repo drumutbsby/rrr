@@ -1,0 +1,15 @@
+{
+  "kanal": "mobil_uygulama_itiraz_formu",
+  "kart": {
+    "tip": "kredi_karti",
+    "3d_secure": false,
+    "yurtdisi": true
+  },
+  "islem": {
+    "isyeri": "GLOBALTECH STORE / NL",
+    "mcc": 5732,
+    "tutar_tl": 12400.0,
+    "tarih": "2026-06-14"
+  },
+  "musteri_aciklamasi": "14 Haziran'da yurtdışı bir siteden telefon siparişi verdim, kartımdan 12.400 TL çekildi. Kargo takip numarası verdiler ama kargo hiç hareket etmedi, ürün elime ulaşmadı. Satıcıya üç kez mail attım, iki tanesine hiç cevap vermediler, sonuncusunda 'kargoya verildi' yazıp kestiler. İade de yapmıyorlar. Bankadan paramı geri istiyorum."
+}

@@ -1,0 +1,26 @@
+{
+  "firma": {
+    "unvan": "ÖRNEK MAKİNA SAN. TİC. LTD. ŞTİ.",
+    "sektor": "metal_isleme",
+    "faaliyet_yili": 14,
+    "calisan": 38,
+    "kredi_notu": 1240
+  },
+  "talep": {
+    "urun": "isletme_kredisi",
+    "tutar_tl": 3000000.0,
+    "vade_ay": 36,
+    "teminat": "ipotek_2_derece"
+  },
+  "finansal": {
+    "net_satis_tl": 41200000,
+    "faaliyet_kari_tl": 3050000,
+    "faiz_amortisman_oncesi_kar_tl": 4100000,
+    "toplam_finansal_borc_tl": 9800000,
+    "ozkaynak_tl": 5200000,
+    "yillik_borc_servisi_tl": 3400000,
+    "stok_devir_gun": 118,
+    "alacak_tahsil_gun": 96
+  },
+  "sube_notu": "Firma sahibiyle görüşüldü. Son iki yıl ciro büyümesi güçlü ancak büyümenin tamamı tek bir otomotiv yan sanayi müşterisinden geliyor; bu müşteriden alacak vadesi 90 günü aşmış durumda. Ortak, 'yeni CNC tezgâhı alacağız, ödemesini peşin yapacağız' dedi, ancak talep işletme kredisi olarak açıldı. Geçen yıl iki çek karşılıksız çıkmış, aynı gün kapatılmış. Bilanço 2025 yıl sonu; 2026 ara dönem verisi henüz verilmedi. Ortakların başka bir firmada da ortaklığı olduğu söylendi, detay paylaşılmadı."
+}

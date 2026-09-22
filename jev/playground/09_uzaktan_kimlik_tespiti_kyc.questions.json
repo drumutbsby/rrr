@@ -1,0 +1,50 @@
+{
+  "baskasi_adina_hesap": {
+    "type": "noul",
+    "instructions": "The account appears to be opened for someone else's use rather than the applicant's own.",
+    "criteria": {
+      "true": "The applicant is prompted by a third party, does not know their own declared details, or the card/access is destined for another person.",
+      "false": "The applicant clearly opens and will use the account themselves."
+    }
+  },
+  "yonlendirilme_belirtisi": {
+    "type": "noul",
+    "instructions": "During the video call the applicant appears to be coached or read answers supplied by someone else."
+  },
+  "belge_supheli": {
+    "type": "noul",
+    "instructions": "The identity or address documents show signs of tampering or do not belong to the applicant."
+  },
+  "beyan_profil_uyumsuz": {
+    "type": "noul",
+    "instructions": "The declared income and transaction volume are inconsistent with the applicant's age, occupation and stated circumstances."
+  },
+  "pep_baglantisi": {
+    "type": "noul",
+    "instructions": "The applicant is, or is a close associate or family member of, a politically exposed person.",
+    "criteria": {
+      "true": "The applicant or a close relative holds or held a prominent public function.",
+      "false": "No connection to a public function is described."
+    }
+  },
+  "red_gerekcesi": {
+    "type": "choice",
+    "instructions": "If this application cannot be completed as-is, what is the main reason?",
+    "criteria": {
+      "kimlik_supheli": "Doubt about who the applicant is.",
+      "para_katiri_supheli": "The account is likely to be used as a mule account.",
+      "belge_eksik": "Documents are missing or invalid but the applicant seems genuine.",
+      "yuksek_risk_profil": "Genuine applicant, but the risk profile needs enhanced due diligence.",
+      "engel_yok": "Nothing blocks completion."
+    }
+  },
+  "musteri_riski": {
+    "type": "score",
+    "instructions": "What customer risk rating does this application deserve?",
+    "criteria": [
+      "Low: simplified due diligence is sufficient.",
+      "Standard: normal due diligence.",
+      "High: enhanced due diligence, senior approval and ongoing monitoring required."
+    ]
+  }
+}

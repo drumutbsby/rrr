@@ -1,0 +1,51 @@
+{
+  "mal_teslim_edilmedi": {
+    "type": "noul",
+    "instructions": "The cardholder states that goods or services paid for were never received.",
+    "criteria": {
+      "true": "The cardholder says the purchased item or service was not delivered or not provided.",
+      "false": "The item was received, or the dispute is about quality, price, duplicate billing, or an unrecognised charge."
+    }
+  },
+  "islemi_kendi_yapmadi": {
+    "type": "noul",
+    "instructions": "The cardholder denies authorising the transaction at all.",
+    "criteria": {
+      "true": "The cardholder says they did not make or authorise this purchase.",
+      "false": "The cardholder admits making the purchase but is unhappy with the outcome."
+    }
+  },
+  "satici_ile_cozum_denendi": {
+    "type": "noul",
+    "instructions": "The cardholder describes having already contacted the merchant to resolve the problem before coming to the bank.",
+    "criteria": {
+      "true": "The cardholder contacted the merchant (email, phone, ticket) and got no resolution.",
+      "false": "There is no sign the cardholder tried the merchant first."
+    }
+  },
+  "dijital_teslimat": {
+    "type": "noul",
+    "instructions": "The purchase is a digital good or service delivered online rather than a physical shipment."
+  },
+  "itiraz_kalibi": {
+    "type": "choice",
+    "instructions": "Which dispute pattern does the cardholder's account fit best?",
+    "criteria": {
+      "mal_hizmet_alinmadi": "Paid for goods or services that were never delivered or provided.",
+      "yetkisiz_islem": "The cardholder says the transaction was not made by them at all.",
+      "cift_cekim": "The same purchase was charged more than once.",
+      "iptal_iade_yapilmadi": "The order was cancelled or returned but the refund never arrived.",
+      "urun_farkli": "The item arrived but is materially different from what was described.",
+      "abonelik_devam": "A subscription kept charging after the cardholder cancelled it."
+    }
+  },
+  "kanit_yeterliligi": {
+    "type": "score",
+    "instructions": "How well does the cardholder's own account support opening a dispute without asking for more documents?",
+    "criteria": [
+      "Vague: no dates, no merchant contact, no order details.",
+      "Partial: the story is clear but key evidence (order number, correspondence, tracking) is missing.",
+      "Strong: dates, merchant contact attempts and the merchant's response are all described."
+    ]
+  }
+}

@@ -1,0 +1,753 @@
+{
+  "01_kart_itirazi_chargeback": {
+    "baslik": "01 — Kredi kartı harcama itirazı: chargeback uygunluğu.",
+    "state": {
+      "kanal": "mobil_uygulama_itiraz_formu",
+      "kart": {
+        "tip": "kredi_karti",
+        "3d_secure": false,
+        "yurtdisi": true
+      },
+      "islem": {
+        "isyeri": "GLOBALTECH STORE / NL",
+        "mcc": 5732,
+        "tutar_tl": 12400.0,
+        "tarih": "2026-06-14"
+      },
+      "musteri_aciklamasi": "14 Haziran'da yurtdışı bir siteden telefon siparişi verdim, kartımdan 12.400 TL çekildi. Kargo takip numarası verdiler ama kargo hiç hareket etmedi, ürün elime ulaşmadı. Satıcıya üç kez mail attım, iki tanesine hiç cevap vermediler, sonuncusunda 'kargoya verildi' yazıp kestiler. İade de yapmıyorlar. Bankadan paramı geri istiyorum."
+    },
+    "questions": {
+      "mal_teslim_edilmedi": {
+        "type": "noul",
+        "instructions": "The cardholder states that goods or services paid for were never received.",
+        "criteria": {
+          "true": "The cardholder says the purchased item or service was not delivered or not provided.",
+          "false": "The item was received, or the dispute is about quality, price, duplicate billing, or an unrecognised charge."
+        }
+      },
+      "islemi_kendi_yapmadi": {
+        "type": "noul",
+        "instructions": "The cardholder denies authorising the transaction at all.",
+        "criteria": {
+          "true": "The cardholder says they did not make or authorise this purchase.",
+          "false": "The cardholder admits making the purchase but is unhappy with the outcome."
+        }
+      },
+      "satici_ile_cozum_denendi": {
+        "type": "noul",
+        "instructions": "The cardholder describes having already contacted the merchant to resolve the problem before coming to the bank.",
+        "criteria": {
+          "true": "The cardholder contacted the merchant (email, phone, ticket) and got no resolution.",
+          "false": "There is no sign the cardholder tried the merchant first."
+        }
+      },
+      "dijital_teslimat": {
+        "type": "noul",
+        "instructions": "The purchase is a digital good or service delivered online rather than a physical shipment."
+      },
+      "itiraz_kalibi": {
+        "type": "choice",
+        "instructions": "Which dispute pattern does the cardholder's account fit best?",
+        "criteria": {
+          "mal_hizmet_alinmadi": "Paid for goods or services that were never delivered or provided.",
+          "yetkisiz_islem": "The cardholder says the transaction was not made by them at all.",
+          "cift_cekim": "The same purchase was charged more than once.",
+          "iptal_iade_yapilmadi": "The order was cancelled or returned but the refund never arrived.",
+          "urun_farkli": "The item arrived but is materially different from what was described.",
+          "abonelik_devam": "A subscription kept charging after the cardholder cancelled it."
+        }
+      },
+      "kanit_yeterliligi": {
+        "type": "score",
+        "instructions": "How well does the cardholder's own account support opening a dispute without asking for more documents?",
+        "criteria": [
+          "Vague: no dates, no merchant contact, no order details.",
+          "Partial: the story is clear but key evidence (order number, correspondence, tracking) is missing.",
+          "Strong: dates, merchant contact attempts and the merchant's response are all described."
+        ]
+      }
+    }
+  },
+  "02_eft_oncesi_dolandiricilik": {
+    "baslik": "02 — Gönderim öncesi EFT/FAST müdahalesi (ikna edilmiş müşteri dolandırıcılığı).",
+    "state": {
+      "islem": {
+        "tip": "FAST",
+        "tutar_tl": 185000.0,
+        "alici_iban_yeni": true,
+        "alici_ad": "M** K**",
+        "aciklama": "borc odemesi",
+        "saat": "22:41"
+      },
+      "hesap_gecmisi": {
+        "ortalama_aylik_giden_tl": 9500,
+        "son_24_saat": [
+          "vadeli hesap bozuldu: 150.000 TL",
+          "kredi kullanimi: 50.000 TL"
+        ],
+        "musteri_yasi": 63,
+        "kanal": "mobil"
+      },
+      "cagri_ozeti": "Müşteri, üç haftadır bir yatırım danışmanıyla WhatsApp'tan görüştüğünü söyledi. Ekran paylaşımıyla bir platformda kâr ettiğini gösteriyorlarmış, ilk 20 bin lirayı çekebilmiş. Şimdi 'kâr payını çekmek için teminat yatırman gerek' demişler. Görüşme sırasında müşteri temsilcisine 'bankaya borç ödemesi yaz dediler, yoksa işlem gecikirmiş' dedi. Arama boyunca yanında biri olduğu ve ona ne söyleyeceğini fısıldadığı duyuldu. Aceleci, teyit sorularına kısa cevap veriyor."
+    },
+    "questions": {
+      "yonlendirilmis_odeme": {
+        "type": "noul",
+        "instructions": "The customer is being coached or instructed by a third party about how to answer the bank and how to label the transfer.",
+        "criteria": {
+          "true": "Someone is telling the customer what to say to the bank, or the stated purpose was supplied by that third party.",
+          "false": "The customer explains the payment in their own words with no outside coaching."
+        }
+      },
+      "yatirim_vaadi": {
+        "type": "noul",
+        "instructions": "The customer describes an investment opportunity with promised or already shown profits."
+      },
+      "aciklama_tutarsiz": {
+        "type": "noul",
+        "instructions": "The stated purpose of the transfer contradicts what the customer actually describes.",
+        "criteria": {
+          "true": "The reference or reason given for the payment does not match the customer's own account of it.",
+          "false": "The stated purpose matches the customer's explanation."
+        }
+      },
+      "baski_altinda": {
+        "type": "noul",
+        "instructions": "The customer appears to be under pressure, urgency or fear while making this payment."
+      },
+      "senaryo": {
+        "type": "choice",
+        "instructions": "Which known payment-fraud pattern best matches the customer's story?",
+        "criteria": {
+          "sahte_yatirim": "A fake investment or trading platform showing profits and asking for more deposits.",
+          "kamu_gorevlisi_taklidi": "Someone posing as police, prosecutor, tax office or the bank's own security team.",
+          "romantizm": "A romantic or online relationship asking for money.",
+          "sahte_satici": "Payment for goods, property or a rental from a seller the customer never met.",
+          "yakin_taklidi": "Someone posing as a family member or friend in urgent need.",
+          "mesru_odeme": "A genuine payment with no fraud pattern: known counterparty, ordinary purpose."
+        }
+      },
+      "zarar_riski": {
+        "type": "score",
+        "instructions": "How likely is it that this money is lost for good once it leaves the account?",
+        "criteria": [
+          "Low: ordinary payment to a plausible counterparty, funds recoverable if wrong.",
+          "Medium: some fraud indicators, but the story could be genuine.",
+          "High: multiple classic fraud indicators; funds will very likely be moved on immediately."
+        ]
+      }
+    }
+  },
+  "03_masak_supheli_islem": {
+    "baslik": "03 — MASAK şüpheli işlem taraması (toplu / batch kullanım).",
+    "state": [
+      {
+        "musteri_no": "4471902",
+        "profil": {
+          "meslek": "ogrenci",
+          "yas": 21,
+          "beyan_gelir_tl": 0,
+          "hesap_yasi_gun": 38
+        },
+        "hareketler": [
+          "11 farkli gercek kisiden 3 gun icinde toplam 412.000 TL gelen havale",
+          "Her gelen tutar 9.000-9.800 TL araliginda",
+          "Gelen tutarlarin %94'u ayni gun icinde 3 farkli IBAN'a cikti",
+          "Kalan bakiye: 2.140 TL"
+        ]
+      },
+      {
+        "musteri_no": "1180553",
+        "profil": {
+          "meslek": "insaat_muteahhidi",
+          "yas": 47,
+          "beyan_gelir_tl": 320000,
+          "hesap_yasi_gun": 2900
+        },
+        "hareketler": [
+          "Tek seferde 2.400.000 TL gelen havale — gonderen: ticari musteri, aciklama 'hakedis'",
+          "Ertesi gun 1.900.000 TL tedarikcilere odendi (4 fatura referansli)",
+          "Ayni hafta 180.000 TL nakit cekim — sahsi harcama beyani mevcut"
+        ]
+      },
+      {
+        "musteri_no": "9032118",
+        "profil": {
+          "meslek": "emekli",
+          "yas": 71,
+          "beyan_gelir_tl": 22000,
+          "hesap_yasi_gun": 5100
+        },
+        "hareketler": [
+          "Son 10 gunde 6 farkli ATM'den toplam 148.000 TL nakit yatirma",
+          "Yatirmalarin ardindan yurtdisi kripto borsasina 3 transfer: 145.000 TL",
+          "Musteri daha once hic kripto islemi yapmamis",
+          "Hesaba yeni eklenen mobil cihaz: 9 gun once"
+        ]
+      }
+    ],
+    "questions": {
+      "parcalama": {
+        "type": "noul",
+        "instructions": "The account activity looks like structuring: amounts deliberately kept below a reporting threshold, or one large sum split across many smaller movements."
+      },
+      "gecis_hesabi": {
+        "type": "noul",
+        "instructions": "The account behaves as a pass-through: money arrives and leaves almost immediately, leaving little balance behind.",
+        "criteria": {
+          "true": "Incoming funds are forwarded out within a very short time, with almost nothing retained.",
+          "false": "Funds stay in the account and are used in a way consistent with normal personal or business use."
+        }
+      },
+      "profil_uyumsuz": {
+        "type": "noul",
+        "instructions": "The volume or nature of the activity is inconsistent with the customer's stated occupation, age and declared income."
+      },
+      "ekonomik_gerekce_var": {
+        "type": "noul",
+        "instructions": "The activity has a visible, documented business or economic rationale.",
+        "criteria": {
+          "true": "Invoices, contracts, payroll, progress payments or similar explain the flow.",
+          "false": "No economic explanation is visible in the records."
+        }
+      },
+      "tipoloji": {
+        "type": "choice",
+        "instructions": "Which money-laundering typology does this activity fit best?",
+        "criteria": {
+          "para_katiri": "A mule account collecting funds from many senders and forwarding them on.",
+          "nakit_yogun_yerlestirme": "Repeated cash deposits placing physical cash into the system.",
+          "kripto_cikis": "Funds converted and moved to crypto exchanges or wallets.",
+          "ticari_gorunumlu": "Flows disguised as trade or contracting payments.",
+          "hesap_ele_gecirme": "The pattern suggests the account is controlled by someone other than the customer.",
+          "olagan": "Ordinary activity consistent with the customer profile."
+        }
+      },
+      "sib_gerekcesi": {
+        "type": "score",
+        "instructions": "How strong is the case for filing a suspicious transaction report?",
+        "criteria": [
+          "Weak: activity is explainable; monitor only.",
+          "Moderate: unusual pattern that needs an analyst to request documents first.",
+          "Strong: pattern matches a known typology with no plausible economic explanation."
+        ]
+      }
+    }
+  },
+  "04_kobi_kredi_on_degerlendirme": {
+    "baslik": "04 — KOBİ kredi başvurusu ön değerlendirme (dosya triyajı).",
+    "state": {
+      "firma": {
+        "unvan": "ÖRNEK MAKİNA SAN. TİC. LTD. ŞTİ.",
+        "sektor": "metal_isleme",
+        "faaliyet_yili": 14,
+        "calisan": 38,
+        "kredi_notu": 1240
+      },
+      "talep": {
+        "urun": "isletme_kredisi",
+        "tutar_tl": 3000000.0,
+        "vade_ay": 36,
+        "teminat": "ipotek_2_derece"
+      },
+      "finansal": {
+        "net_satis_tl": 41200000,
+        "faaliyet_kari_tl": 3050000,
+        "faiz_amortisman_oncesi_kar_tl": 4100000,
+        "toplam_finansal_borc_tl": 9800000,
+        "ozkaynak_tl": 5200000,
+        "yillik_borc_servisi_tl": 3400000,
+        "stok_devir_gun": 118,
+        "alacak_tahsil_gun": 96
+      },
+      "sube_notu": "Firma sahibiyle görüşüldü. Son iki yıl ciro büyümesi güçlü ancak büyümenin tamamı tek bir otomotiv yan sanayi müşterisinden geliyor; bu müşteriden alacak vadesi 90 günü aşmış durumda. Ortak, 'yeni CNC tezgâhı alacağız, ödemesini peşin yapacağız' dedi, ancak talep işletme kredisi olarak açıldı. Geçen yıl iki çek karşılıksız çıkmış, aynı gün kapatılmış. Bilanço 2025 yıl sonu; 2026 ara dönem verisi henüz verilmedi. Ortakların başka bir firmada da ortaklığı olduğu söylendi, detay paylaşılmadı."
+    },
+    "questions": {
+      "amac_tutarsiz": {
+        "type": "noul",
+        "instructions": "The stated use of the loan contradicts the product the application was opened under.",
+        "criteria": {
+          "true": "The borrower describes an investment or asset purchase while the application is for working capital, or vice versa.",
+          "false": "The described use matches the requested product."
+        }
+      },
+      "musteri_yogunlasmasi": {
+        "type": "noul",
+        "instructions": "The company's revenue depends heavily on a single customer or a very small number of customers."
+      },
+      "belge_eksik": {
+        "type": "noul",
+        "instructions": "Required financial or ownership documents are described as missing, outdated or not provided."
+      },
+      "gizlenen_iliski": {
+        "type": "noul",
+        "instructions": "There are related parties or affiliated companies whose details the borrower avoided sharing."
+      },
+      "odeme_disiplini_sorunu": {
+        "type": "noul",
+        "instructions": "The record mentions past payment failures such as bounced cheques, arrears or restructured debt."
+      },
+      "kredi_amaci": {
+        "type": "choice",
+        "instructions": "What is the loan really going to be used for, based on the branch note?",
+        "criteria": {
+          "isletme_sermayesi": "Day-to-day working capital: stock, payroll, supplier payments.",
+          "yatirim": "Buying machinery, property or other fixed assets.",
+          "borc_kapatma": "Repaying or refinancing existing debt.",
+          "alacak_finansmani": "Bridging receivables that customers have not yet paid.",
+          "belirsiz": "The purpose cannot be determined from the file."
+        }
+      },
+      "dosya_kalitesi": {
+        "type": "score",
+        "instructions": "How ready is this credit file for a decision without further information?",
+        "criteria": [
+          "Not ready: key documents or explanations are missing.",
+          "Partly ready: decision possible but conditions or extra documents are needed.",
+          "Ready: file is complete and internally consistent."
+        ]
+      }
+    }
+  },
+  "05_ifrs9_erken_uyari": {
+    "baslik": "05 — Ticari kredi erken uyarı ve izleme grubu (IFRS 9 aşama geçişi).",
+    "state": {
+      "firma": {
+        "unvan": "ANADOLU TEKSTIL A.S.",
+        "sektor": "hazir_giyim_ihracat",
+        "risk_bakiyesi_tl": 47500000.0
+      },
+      "sayisal_sinyaller": {
+        "nakdi_limit_kullanim_orani": 0.97,
+        "en_uzun_gecikme_gun": 24,
+        "son_6_ay_karsiliksiz_cek_adet": 3,
+        "vergi_sgk_borcu_tl": 4900000,
+        "kredi_notu_degisimi": "1.380 -> 1.055 (6 ay)",
+        "teminat_kapsama_orani": 0.62
+      },
+      "niteliksel_sinyaller": [
+        "Sektör haberi: firmanın en büyük Avrupa alıcısı konkordato ilan etti (basında, 12 gün önce).",
+        "Firma, iki üretim vardiyasından birini süresiz durdurduğunu duyurdu.",
+        "CFO istifa etti, yerine atama yapılmadı.",
+        "Müşteri ziyaret notu: 'İhracat alacaklarımız donduğu için kısa vadeli sıkışıklık var, yeni alıcıyla sözleşme imzalanmak üzere, üç ayda toparlarız' dendi. Sözleşme taslağı gösterilmedi.",
+        "Firma, başka bir bankadaki kredisini 24 ay vade uzatımıyla yapılandırdığını söyledi."
+      ]
+    },
+    "questions": {
+      "temerrut_yakin": {
+        "type": "noul",
+        "instructions": "Taken together, the signals indicate that the borrower is unlikely to pay its credit obligations in full without the bank realising collateral or granting relief."
+      },
+      "yapisal_bozulma": {
+        "type": "noul",
+        "instructions": "The deterioration looks structural rather than a temporary liquidity squeeze.",
+        "criteria": {
+          "true": "The borrower's business model, main market or capacity is impaired in a lasting way.",
+          "false": "The problem is timing of cash flows and the underlying business is intact."
+        }
+      },
+      "baska_bankada_yapilandirma": {
+        "type": "noul",
+        "instructions": "The borrower has restructured or extended debt with another creditor because of financial difficulty."
+      },
+      "yonetim_zayifligi": {
+        "type": "noul",
+        "instructions": "There are governance or management stability problems at the borrower."
+      },
+      "beyan_dogrulanabilir": {
+        "type": "noul",
+        "instructions": "The borrower's recovery claims are backed by verifiable evidence.",
+        "criteria": {
+          "true": "Contracts, orders or documents supporting the recovery plan were actually shown.",
+          "false": "The recovery plan rests on statements only, with no document produced."
+        }
+      },
+      "ana_risk": {
+        "type": "choice",
+        "instructions": "What is the dominant driver of risk in this file?",
+        "criteria": {
+          "alici_yogunlasmasi": "Loss or distress of a dominant buyer.",
+          "sektorel_daralma": "Sector-wide contraction in demand or margins.",
+          "likidite": "Cash-flow timing problems with an otherwise sound business.",
+          "yonetim": "Management or governance failure.",
+          "asiri_borcluluk": "Debt load too large for the business to service."
+        }
+      },
+      "izleme_siddeti": {
+        "type": "score",
+        "instructions": "How closely should this exposure be monitored from now on?",
+        "criteria": [
+          "Standard: no change in monitoring.",
+          "Close watch: quarterly review, tighter limits, collateral review.",
+          "Intensive: monthly review, no new limits, exit or restructuring plan required."
+        ]
+      }
+    }
+  },
+  "06_tahsilat_gorusmesi": {
+    "baslik": "06 — Tahsilat görüşmesi: ödeme vaadi, hassas müşteri ve görüşme kalitesi.",
+    "state": {
+      "dosya": {
+        "urun": "ihtiyac_kredisi",
+        "gecikme_gun": 92,
+        "bakiye_tl": 74300.0,
+        "onceki_vaat_sayisi": 2
+      },
+      "gorusme_dokumu": [
+        {
+          "taraf": "temsilci",
+          "metin": "İyi günler, 74.300 TL gecikmiş borcunuz için arıyorum. Bugün ödeme yapabilecek misiniz?"
+        },
+        {
+          "taraf": "musteri",
+          "metin": "Eşim altı ay önce vefat etti, tek gelir bendim, şubatta da işten çıkarıldım. Şu an işsizlik maaşı alıyorum, 14 bin lira."
+        },
+        {
+          "taraf": "temsilci",
+          "metin": "Anlıyorum ama bu borç sizin sorumluluğunuzda. Ödemezseniz icra takibi başlar, evinize haciz gelir."
+        },
+        {
+          "taraf": "musteri",
+          "metin": "Biliyorum, kaçmıyorum. Ayda 3 bin lira ödeyebilirim, daha fazlasına gücüm yetmez. Doktor raporum da var, depresyon tedavisi görüyorum."
+        },
+        {
+          "taraf": "temsilci",
+          "metin": "3 bin lira olmaz, en az 10 bin lira ödemeniz gerekiyor, yoksa dosyayı avukata devrederim. Akrabalarınızdan borç alın."
+        },
+        {
+          "taraf": "musteri",
+          "metin": "Bu ay 3 bin lirayı 28'inde yatırırım, söz veriyorum. Gerisi için yapılandırma istiyorum."
+        }
+      ]
+    },
+    "questions": {
+      "odeme_vaadi": {
+        "type": "noul",
+        "instructions": "The customer commits to a specific payment amount on a specific date.",
+        "criteria": {
+          "true": "A concrete amount and a date are stated by the customer.",
+          "false": "The customer makes no concrete commitment, or only says they will 'try'."
+        }
+      },
+      "mali_zorluk_beyani": {
+        "type": "noul",
+        "instructions": "The customer states a genuine change in circumstances that reduced their ability to pay.",
+        "criteria": {
+          "true": "Job loss, illness, bereavement, disability or a similar event is described.",
+          "false": "No such event is described; the customer simply refuses or avoids payment."
+        }
+      },
+      "hassas_musteri": {
+        "type": "noul",
+        "instructions": "The customer shows signs of vulnerability that require special care: bereavement, serious illness, mental health treatment, disability or sole reliance on state benefits."
+      },
+      "odeme_niyeti_yok": {
+        "type": "noul",
+        "instructions": "The customer shows no intention to pay and avoids engaging with the debt."
+      },
+      "uygunsuz_tahsilat_dili": {
+        "type": "noul",
+        "instructions": "The collections agent used pressure, threats, or improper instructions that a regulator would treat as unfair debt collection practice.",
+        "criteria": {
+          "true": "Threats beyond the bank's actual legal rights, shaming, or telling the customer to borrow from family or third parties.",
+          "false": "The agent stayed factual and respectful about consequences."
+        }
+      },
+      "sonraki_adim": {
+        "type": "choice",
+        "instructions": "What should the bank do next with this file?",
+        "criteria": {
+          "yapilandirma_teklifi": "Offer a restructuring or payment plan matched to the customer's capacity.",
+          "odemesiz_donem": "Grant a temporary payment holiday because of hardship.",
+          "vaadi_takip": "Record the promise to pay and follow up on the promised date.",
+          "hukuki_takip": "Move the file to legal enforcement.",
+          "sosyal_destek_yonlendirme": "Pause collection and refer to the bank's vulnerable-customer process."
+        }
+      },
+      "tahsil_edilebilirlik": {
+        "type": "score",
+        "instructions": "How likely is this debt to be recovered through voluntary payment over the next 12 months?",
+        "criteria": [
+          "Unlikely: no capacity and no intent.",
+          "Partial: some capacity, recovery only with a long, reduced plan.",
+          "Likely: capacity and intent are both present."
+        ]
+      }
+    }
+  },
+  "07_sim_swap_hesap_ele_gecirme": {
+    "baslik": "07 — Dijital bankacılık hesap ele geçirme (SIM swap / ATO) triyajı.",
+    "state": {
+      "telemetri": {
+        "son_giris": {
+          "cihaz": "yeni_cihaz",
+          "cihaz_yasi_saat": 3,
+          "ip_ulke": "TR",
+          "ip_asn": "mobil_operator"
+        },
+        "son_1_saatte": [
+          "sifre degisikligi",
+          "telefon numarasi guncelleme denemesi (basarisiz)",
+          "gunluk transfer limiti 10.000 -> 250.000 TL yukseltildi",
+          "yeni IBAN tanimlandi",
+          "e-posta adresi degistirildi"
+        ],
+        "sms_otp": "son 40 dakikada 6 OTP gonderildi, 5'i dogru girildi",
+        "musteri_kayitli_cihaz_sayisi": 2
+      },
+      "arayan_beyani": "Sabahtan beri telefonum şebeke bulmuyor, 'SIM kart yok' yazıyor. Operatörü aradım, hattımın dün akşam başka bir yerde yeniden düzenlendiğini söylediler, ben talep etmedim. Uygulamaya girmeye çalışıyorum, şifrem çalışmıyor. E-postama da giremiyorum. Hesabımda 260 bin lira var, lütfen hemen durdurun."
+    },
+    "questions": {
+      "sim_swap_belirtisi": {
+        "type": "noul",
+        "instructions": "The caller describes losing mobile network service in a way consistent with their SIM being ported or re-issued without their request."
+      },
+      "ele_gecirme_suruyor": {
+        "type": "noul",
+        "instructions": "The recorded account events indicate an attacker is currently in control of the account and preparing to move money.",
+        "criteria": {
+          "true": "Credential, contact-detail, limit or payee changes cluster together in a short window.",
+          "false": "The events look like ordinary self-service activity by the customer."
+        }
+      },
+      "arayan_supheli": {
+        "type": "noul",
+        "instructions": "There is reason to doubt that the caller is the genuine customer.",
+        "criteria": {
+          "true": "The caller's account is inconsistent, evasive, or fits a social-engineering attempt against the call centre.",
+          "false": "The caller's account is coherent and matches the recorded events."
+        }
+      },
+      "teknik_ariza": {
+        "type": "noul",
+        "instructions": "The symptoms are explained by an ordinary technical fault rather than an attack."
+      },
+      "olay_tipi": {
+        "type": "choice",
+        "instructions": "What is happening on this account?",
+        "criteria": {
+          "sim_swap_ato": "SIM swap used to take over the account.",
+          "kimlik_avi_ato": "Credentials harvested by phishing and now used by an attacker.",
+          "zararli_yazilim": "Device malware or a remote-access tool driving the session.",
+          "yetkili_kisi": "A family member or acquaintance with legitimate access made the changes.",
+          "teknik_sorun": "No attack: app, SIM or network fault."
+        }
+      },
+      "mudahale_aciliyeti": {
+        "type": "score",
+        "instructions": "How fast must the bank act?",
+        "criteria": [
+          "Routine: can be handled in the normal support queue.",
+          "Same day: act within hours to prevent loss.",
+          "Immediate: money is at imminent risk; act within minutes."
+        ]
+      }
+    }
+  },
+  "08_yapilandirma_talebi": {
+    "baslik": "08 — Bireysel kredi yapılandırma talebi (serbest metin e-posta).",
+    "state": {
+      "dosya": {
+        "urun": "konut_kredisi",
+        "kalan_anapara_tl": 1240000,
+        "kalan_vade_ay": 84,
+        "aylik_taksit_tl": 21800,
+        "beyan_gelir_tl": 46000,
+        "gecikme_gun": 0,
+        "onceki_yapilandirma": false
+      },
+      "kanal": "e_posta",
+      "konu": "Kredi taksitim hakkında",
+      "metin": "Merhaba,\n\n2021'de kullandığım konut kredisinin taksitini bugüne kadar hiç aksatmadım. Ancak çalıştığım şirket eylül ayında kısa çalışma ödeneğine geçti, maaşımın %40'ını alıyorum ve bu durumun en az 4-5 ay süreceği söylendi. Eşim çalışmıyor, iki çocuğum var.\n\nTaksitimi ödeyemeyeceğim aşamaya gelmeden size yazmak istedim. Önümüzdeki 6 ay için taksitimi düşürebilir miyiz, vadeyi uzatmak da olur. Ya da 3 ay sadece faiz ödeyeyim, sonra normale döneyim. Sicilimin bozulmasını istemiyorum.\n\nŞubeye iki kez gittim, 'gecikmeye düşmeden bir şey yapamayız' dediler. Bu bana çok mantıksız geldi, gecikmeye düşmemi mi bekliyorsunuz? Gerekirse BDDK'ya da yazacağım ama önce sizden çözüm bekliyorum.\n\nİyi çalışmalar."
+    },
+    "questions": {
+      "yapilandirma_talebi": {
+        "type": "noul",
+        "instructions": "The message asks the bank to change the terms of an existing loan."
+      },
+      "gecici_zorluk": {
+        "type": "noul",
+        "instructions": "The difficulty described is temporary with a foreseeable end, rather than permanent.",
+        "criteria": {
+          "true": "The customer names a limited period or an expected recovery (reduced hours, short-term leave, seasonal drop).",
+          "false": "The income loss looks permanent or open-ended."
+        }
+      },
+      "proaktif_basvuru": {
+        "type": "noul",
+        "instructions": "The customer is reaching out before missing a payment rather than after falling behind."
+      },
+      "sikayet_tonu": {
+        "type": "noul",
+        "instructions": "The message contains a complaint about how the bank or a branch handled the customer."
+      },
+      "regulator_tehdidi": {
+        "type": "noul",
+        "instructions": "The customer threatens to escalate to a regulator, ombudsman, consumer arbitration or the press."
+      },
+      "istenen_cozum": {
+        "type": "choice",
+        "instructions": "What relief is the customer actually asking for?",
+        "criteria": {
+          "vade_uzatimi": "Extend the term so the monthly instalment falls.",
+          "odemesiz_donem": "A payment holiday for a number of months.",
+          "sadece_faiz": "Pay interest only for a period, then return to normal.",
+          "faiz_indirimi": "A lower interest rate.",
+          "tam_kapatma_indirimi": "A discount to settle the debt in one payment.",
+          "bilgi_talebi": "No relief requested; the customer only wants information."
+        }
+      },
+      "odeme_kapasitesi": {
+        "type": "score",
+        "instructions": "How much of the current instalment can this customer sustain during the difficulty?",
+        "criteria": [
+          "Almost none: needs a full payment holiday.",
+          "Partial: can pay a reduced instalment.",
+          "Most of it: a small adjustment is enough."
+        ]
+      }
+    }
+  },
+  "09_uzaktan_kimlik_tespiti_kyc": {
+    "baslik": "09 — Uzaktan müşteri edinimi: video kimlik tespiti + KYC/PEP kontrolü.",
+    "state": {
+      "basvuru": {
+        "musteri_tipi": "gercek_kisi",
+        "yas": 24,
+        "beyan_meslek": "ithalat_ihracat_danismani",
+        "beyan_aylik_gelir_tl": 180000,
+        "beyan_islem_hacmi_tl_ay": 2500000,
+        "beyan_ulkeler": [
+          "TR",
+          "AE",
+          "RU"
+        ],
+        "adres_belgesi": "3 ay once duzenlenmis fatura, farkli isim uzerine"
+      },
+      "cihaz": {
+        "yeni_cihaz": true,
+        "ip_vpn": true,
+        "ayni_cihazdan_onceki_basvuru_sayisi": 2,
+        "ekran_paylasimi_tespiti": "aktif"
+      },
+      "video_tutanagi": "Görüşme 6 dakika sürdü. Müşteri ekranını başka bir uygulamada paylaşıyordu; sorulara cevap vermeden önce her seferinde 2-3 saniye duraksadı ve kamera dışından gelen bir sesi dinlediği izlenimi verdi. 'Aylık işlem hacminiz neden bu kadar yüksek?' sorusuna 'ailemin şirketi var, detayını bilmiyorum, öyle yazmamı söylediler' dedi. Kimlik belgesindeki hologram açı değiştiğinde kaybolmadı. Müşteri, hesabın kartını kimin kullanacağı sorulduğunda 'ben kullanacağım' dedi ama kart teslim adresi olarak başka bir ildeki iş yerini verdi. Devlet görevinde olup olmadığı sorulduğunda 'babam belediyede müdürdü, emekli oldu' bilgisini kendiliğinden paylaştı."
+    },
+    "questions": {
+      "baskasi_adina_hesap": {
+        "type": "noul",
+        "instructions": "The account appears to be opened for someone else's use rather than the applicant's own.",
+        "criteria": {
+          "true": "The applicant is prompted by a third party, does not know their own declared details, or the card/access is destined for another person.",
+          "false": "The applicant clearly opens and will use the account themselves."
+        }
+      },
+      "yonlendirilme_belirtisi": {
+        "type": "noul",
+        "instructions": "During the video call the applicant appears to be coached or read answers supplied by someone else."
+      },
+      "belge_supheli": {
+        "type": "noul",
+        "instructions": "The identity or address documents show signs of tampering or do not belong to the applicant."
+      },
+      "beyan_profil_uyumsuz": {
+        "type": "noul",
+        "instructions": "The declared income and transaction volume are inconsistent with the applicant's age, occupation and stated circumstances."
+      },
+      "pep_baglantisi": {
+        "type": "noul",
+        "instructions": "The applicant is, or is a close associate or family member of, a politically exposed person.",
+        "criteria": {
+          "true": "The applicant or a close relative holds or held a prominent public function.",
+          "false": "No connection to a public function is described."
+        }
+      },
+      "red_gerekcesi": {
+        "type": "choice",
+        "instructions": "If this application cannot be completed as-is, what is the main reason?",
+        "criteria": {
+          "kimlik_supheli": "Doubt about who the applicant is.",
+          "para_katiri_supheli": "The account is likely to be used as a mule account.",
+          "belge_eksik": "Documents are missing or invalid but the applicant seems genuine.",
+          "yuksek_risk_profil": "Genuine applicant, but the risk profile needs enhanced due diligence.",
+          "engel_yok": "Nothing blocks completion."
+        }
+      },
+      "musteri_riski": {
+        "type": "score",
+        "instructions": "What customer risk rating does this application deserve?",
+        "criteria": [
+          "Low: simplified due diligence is sufficient.",
+          "Standard: normal due diligence.",
+          "High: enhanced due diligence, senior approval and ongoing monitoring required."
+        ]
+      }
+    }
+  },
+  "10_gise_nakit_cekim_baski": {
+    "baslik": "10 — Gişede yüksek tutarlı nakit çekim: baskı altındaki müşteri.",
+    "state": {
+      "musteri": {
+        "yas": 75,
+        "sube_musterisi_yil": 22,
+        "son_1_yil_nakit_cekim_ortalama_tl": 12000
+      },
+      "islem": {
+        "tip": "nakit_cekim",
+        "tutar_tl": 350000.0,
+        "vadeli_hesap_bozuldu": true,
+        "faiz_kaybi_tl": 41000
+      },
+      "gise_notu": "Müşteri yanında 40'lı yaşlarda bir erkekle geldi. Tutarı soran gişe görevlisine önce yanındaki kişi cevap verdi. Müşteriye parayı ne için çektiğini sorduğumuzda 'evi tadilat yaptıracağım, usta nakit istiyor' dedi ama tadilat yapacak firmanın adını söyleyemedi. Vadeli hesabını bozmanın 41.000 TL faiz kaybı doğuracağını açıkladığımızda tereddüt etti, yanındaki kişi 'nasıl olsa geri yatıracağız' dedi. Müşteri telefonuna sürekli mesaj geliyordu ve her mesajdan sonra yanındaki kişiye bakıyordu. Ayrıca 'bankadan aradılar, hesabım güvenli değilmiş, parayı çekip güvenli hesaba yatıracakmışım' cümlesini bir kez kurdu, sonra konuyu değiştirdi. Müşteri daha önce hiç bu tutarda nakit çekmedi."
+    },
+    "questions": {
+      "baski_altinda": {
+        "type": "noul",
+        "instructions": "The customer appears to be acting under pressure or direction from the person accompanying them.",
+        "criteria": {
+          "true": "The companion answers for the customer, corrects them, or the customer looks to them before responding.",
+          "false": "The customer speaks and decides for themselves."
+        }
+      },
+      "gerekce_tutarsiz": {
+        "type": "noul",
+        "instructions": "The stated reason for the withdrawal does not hold up under simple questioning."
+      },
+      "banka_gorevlisi_taklidi": {
+        "type": "noul",
+        "instructions": "The customer repeats the claim that the bank or an official told them to move money to a 'safe account', a classic impersonation scam."
+      },
+      "yakin_istismari": {
+        "type": "noul",
+        "instructions": "The situation fits financial abuse of an older person by a relative, carer or acquaintance."
+      },
+      "kendi_iradesi": {
+        "type": "noul",
+        "instructions": "The customer understands the transaction and its cost and genuinely wants it.",
+        "criteria": {
+          "true": "The customer explains the purpose consistently and accepts the cost knowingly.",
+          "false": "The customer is confused about the purpose or unaware of what they are giving up."
+        }
+      },
+      "durum": {
+        "type": "choice",
+        "instructions": "What best describes this counter request?",
+        "criteria": {
+          "guvenli_hesap_dolandiriciligi": "Impersonation scam telling the customer to move money for safety.",
+          "yakin_istismari": "Financial abuse by a family member, carer or acquaintance.",
+          "ucuncu_kisi_yonlendirmesi": "The customer is being directed by someone they met recently.",
+          "mesru_ihtiyac": "A genuine personal need for cash.",
+          "belirsiz": "There is not enough in the note to tell."
+        }
+      },
+      "mudahale_gerekliligi": {
+        "type": "score",
+        "instructions": "How strongly should the branch intervene before releasing the cash?",
+        "criteria": [
+          "None: complete the transaction normally.",
+          "Speak privately: separate the customer from the companion and ask again.",
+          "Withhold: delay the transaction and escalate before any cash leaves."
+        ]
+      }
+    }
+  }
+}
