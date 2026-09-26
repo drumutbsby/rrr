@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hesap Makinesi</title>
+<meta name="description" content="Basit, tek dosya, çevrimdışı çalışan hesap makinesi demosu.">
+<style>
+  :root {
+    --arka: #0d1117; --panel: #161b22; --panel2: #1c2333; --cizgi: #2d3548;
+    --metin: #e6e8ee; --soluk: #8b93a7; --vurgu: #4f8cff; --vurgu2: #2563eb;
+    --islem: #24304a; --esit: #2563eb; --tehlike: #f87171;
+  }
+  :root[data-theme="light"] {
+    --arka: #f3f5f9; --panel: #ffffff; --panel2: #eef1f6; --cizgi: #d6dbe5;
+    --metin: #14181f; --soluk: #5b6474; --islem: #dfe6f3; --esit: #2563eb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--arka); color: var(--metin); min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .kart {
+    width: 100%; max-width: 340px; background: var(--panel); border: 1px solid var(--cizgi);
+    border-radius: 18px; padding: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  .baslik { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .logo {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f8cff, #9333ea);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;
+  }
+  .baslik h1 { font-size: 15px; }
+  .baslik small { display: block; font-size: 11px; color: var(--soluk); font-weight: 400; }
+  #tema {
+    margin-left: auto; background: var(--panel2); color: var(--soluk); border: 1px solid var(--cizgi);
+    border-radius: 8px; padding: 5px 9px; font-size: 12px; cursor: pointer;
+  }
+  .ekran {
+    background: var(--panel2); border: 1px solid var(--cizgi); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 12px; text-align: right; min-height: 78px;
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  }
+  #gecmis { font-size: 13px; color: var(--soluk); min-height: 16px; overflow-wrap: anywhere; }
+  #sonuc {
+    font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere; line-height: 1.15;
+  }
+  #sonuc.hata { color: var(--tehlike); font-size: 22px; }
+  .tuslar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  button.tus {
+    height: 56px; border: 1px solid var(--cizgi); border-radius: 12px; background: var(--panel2);
+    color: var(--metin); font-size: 20px; font-family: inherit; cursor: pointer;
+    transition: transform .05s, filter .1s;
+  }
+  button.tus:hover { filter: brightness(1.15); }
+  button.tus:active { transform: scale(.96); }
+  button.tus.islem { background: var(--islem); color: var(--vurgu); font-weight: 600; }
+  button.tus.esit { background: var(--esit); color: #fff; font-weight: 700; grid-column: span 2; }
+  button.tus.soluk { color: var(--soluk); }
+  .not { margin-top: 12px; font-size: 11.5px; color: var(--soluk); text-align: center; line-height: 1.5; }
+  .not kbd {
+    background: var(--panel2); border: 1px solid var(--cizgi); border-radius: 4px;
+    padding: 0 5px; font-size: 11px; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<main class="kart">
+  <div class="baslik">
+    <div class="logo">=</div>
+    <h1>Hesap Makinesi<small>Basit demo · tek dosya · çevrimdışı</small></h1>
+    <button id="tema" type="button" aria-label="Temayı değiştir">Tema</button>
+  </div>
+
+  <div class="ekran" aria-live="polite">
+    <div id="gecmis"></div>
+    <div id="sonuc">0</div>
+  </div>
+
+  <div class="tuslar">
+    <button class="tus soluk" data-eylem="temizle">C</button>
+    <button class="tus soluk" data-eylem="sil">⌫</button>
+    <button class="tus soluk" data-eylem="yuzde">%</button>
+    <button class="tus islem" data-islem="/">÷</button>
+
+    <button class="tus" data-rakam="7">7</button>
+    <button class="tus" data-rakam="8">8</button>
+    <button class="tus" data-rakam="9">9</button>
+    <button class="tus islem" data-islem="*">×</button>
+
+    <button class="tus" data-rakam="4">4</button>
+    <button class="tus" data-rakam="5">5</button>
+    <button class="tus" data-rakam="6">6</button>
+    <button class="tus islem" data-islem="-">−</button>
+
+    <button class="tus" data-rakam="1">1</button>
+    <button class="tus" data-rakam="2">2</button>
+    <button class="tus" data-rakam="3">3</button>
+    <button class="tus islem" data-islem="+">+</button>
+
+    <button class="tus" data-eylem="isaret">±</button>
+    <button class="tus" data-rakam="0">0</button>
+    <button class="tus" data-rakam=".">,</button>
+    <button class="tus esit" data-eylem="esit">=</button>
+  </div>
+
+  <p class="not">Klavye: rakamlar, <kbd>+</kbd> <kbd>-</kbd> <kbd>*</kbd> <kbd>/</kbd>, <kbd>Enter</kbd> = , <kbd>Esc</kbd> C, <kbd>Backspace</kbd> sil</p>
+</main>
+
+<script>
+(function () {
+  var sonucEl = document.getElementById('sonuc');
+  var gecmisEl = document.getElementById('gecmis');
+  var temaBtn = document.getElementById('tema');
+
+  var giris = '0';      // ekrandaki sayı
+  var birikim = null;   // önceki sayı
+  var islem = null;     // bekleyen işlem
+  var yeniSayi = true;  // sonraki rakam yeni sayı başlatır mı
+  var sembol = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+
+  function bicim(n) {
+    if (!isFinite(n)) return 'Hata';
+    var s = parseFloat(n.toPrecision(12)).toString();
+    return s.replace('.', ',');
+  }
+  function ciz() {
+    sonucEl.classList.toggle('hata', giris === 'Hata');
+    sonucEl.textContent = giris === 'Hata' ? 'Tanımsız işlem' : giris.replace('.', ',');
+    gecmisEl.textContent = birikim !== null && islem ? bicim(birikim) + ' ' + sembol[islem] : '';
+  }
+  function hesapla(a, op, b) {
+    switch (op) {
+      case '+': return a + b;
+      case '-': return a - b;
+      case '*': return a * b;
+      case '/': return b === 0 ? NaN : a / b;
+    }
+    return b;
+  }
+  function rakam(r) {
+    if (giris === 'Hata') giris = '0';
+    if (yeniSayi) { giris = r === '.' ? '0.' : r; yeniSayi = false; }
+    else if (r === '.') { if (giris.indexOf('.') === -1) giris += '.'; }
+    else if (giris === '0') giris = r;
+    else if (giris.replace(/[-.]/g, '').length < 15) giris += r;
+    ciz();
+  }
+  function islemSec(op) {
+    if (giris === 'Hata') return;
+    var deger = parseFloat(giris);
+    if (birikim !== null && islem && !yeniSayi) {
+      var r = hesapla(birikim, islem, deger);
+      if (!isFinite(r)) { giris = 'Hata'; birikim = null; islem = null; yeniSayi = true; ciz(); return; }
+      birikim = r; giris = bicim(r).replace(',', '.');
+    } else if (birikim === null) {
+      birikim = deger;
+    }
+    islem = op; yeniSayi = true; ciz();
+  }
+  function esit() {
+    if (giris === 'Hata' || birikim === null || !islem) return;
+    var r = hesapla(birikim, islem, parseFloat(giris));
+    giris = isFinite(r) ? bicim(r).replace(',', '.') : 'Hata';
+    birikim = null; islem = null; yeniSayi = true; ciz();
+  }
+  function temizle() { giris = '0'; birikim = null; islem = null; yeniSayi = true; ciz(); }
+  function sil() {
+    if (giris === 'Hata' || yeniSayi) { giris = '0'; yeniSayi = true; ciz(); return; }
+    giris = giris.length > 1 ? giris.slice(0, -1) : '0';
+    if (giris === '-') giris = '0';
+    ciz();
+  }
+  function isaret() {
+    if (giris === 'Hata' || giris === '0') return;
+    giris = giris.charAt(0) === '-' ? giris.slice(1) : '-' + giris; ciz();
+  }
+  function yuzde() {
+    if (giris === 'Hata') return;
+    giris = bicim(parseFloat(giris) / 100).replace(',', '.'); ciz();
+  }
+
+  document.querySelector('.tuslar').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.rakam !== undefined) rakam(b.dataset.rakam);
+    else if (b.dataset.islem) islemSec(b.dataset.islem);
+    else if (b.dataset.eylem === 'esit') esit();
+    else if (b.dataset.eylem === 'temizle') temizle();
+    else if (b.dataset.eylem === 'sil') sil();
+    else if (b.dataset.eylem === 'isaret') isaret();
+    else if (b.dataset.eylem === 'yuzde') yuzde();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (/^[0-9]$/.test(k)) rakam(k);
+    else if (k === '.' || k === ',') rakam('.');
+    else if (k === '+' || k === '-' || k === '*' || k === '/') islemSec(k);
+    else if (k === 'Enter' || k === '=') { e.preventDefault(); esit(); }
+    else if (k === 'Escape') temizle();
+    else if (k === 'Backspace') sil();
+    else if (k === '%') yuzde();
+    else return;
+  });
+
+  // Tema: sistem tercihi + kalıcı seçim
+  var kok = document.documentElement;
+  function temaUygula(t) { if (t === 'light') kok.setAttribute('data-theme', 'light'); else kok.removeAttribute('data-theme'); }
+  try {
+    var kayit = localStorage.getItem('hesap-tema');
+    if (kayit) temaUygula(kayit);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) temaUygula('light');
+  } catch (_) {}
+  temaBtn.addEventListener('click', function () {
+    var yeni = kok.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    temaUygula(yeni);
+    try { localStorage.setItem('hesap-tema', yeni); } catch (_) {}
+  });
+
+  ciz();
+})();
+</script>
+</body>
+</html>
