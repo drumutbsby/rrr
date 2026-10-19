@@ -336,7 +336,7 @@ function scoreCrit(c){
  const derece= icsel>=15?"High":icsel>=8?"Medium":"Low";
  return {mat:+mat.toFixed(2),kar:+kar.toFixed(2),icsel,tier,derece,rules};
 }
-const FREQMON={"Annual":12,"Biennial":24,"Triennial":36,"Event-Triggered":0};
+const FREQMON={"Annual":12,"Biennial":24,"Triennial":36,"Event-Triggered":0,"Materiality-Triggered":0}; // SR 26-2: materiality-based cycle option instead of the calendar
 function tierFreq(t){return t==="Tier 1"?"Annual":t==="Tier 2"?"Biennial":t==="Tier 3"?"Triennial":"Event-Triggered";}
 function addMonths(ds,m){if(!ds||!m)return"";const d=new Date(ds);d.setMonth(d.getMonth()+ +m);return d.toISOString().slice(0,10);}
 function nextVal(m){const f=FREQMON[m.valFrekans||tierFreq(m.tier)]||0;return m.sonValidasyon&&f?addMonths(m.sonValidasyon,f):"";}
@@ -1084,7 +1084,7 @@ window.modelForm=function(id){
    ${fld("Development Date","gelistirmeTarihi",m.gelistirmeTarihi,"date")}
    ${fld("Production Date","prodTarihi",m.prodTarihi,"date")}
    ${fld("Last Validation Date","sonValidasyon",m.sonValidasyon,"date")}
-   ${fldSel("Validation Frequency","valFrekans",m.valFrekans,["Annual","Biennial","Triennial","Event-Triggered"])}
+   ${fldSel("Validation Frequency","valFrekans",m.valFrekans,["Annual","Biennial","Triennial","Event-Triggered","Materiality-Triggered"])}
   </div>
   <div class="beyan-sec">7 · Documentation &amp; Links</div>
   <div class="form-grid">
@@ -1307,7 +1307,7 @@ window.beyanForm=function(){
   <div class="beyan-sec">6 · Validation Calendar</div>
   <div class="form-grid">
    ${bsel("sonVal","When was the last validation?",BEYAN_SONVAL,false)}
-   ${bsel("valFrekans","Validation Frequency",["(auto from Tier)","Annual","Biennial","Triennial","Event-Triggered"],false)}
+   ${bsel("valFrekans","Validation Frequency",["(auto from Tier)","Annual","Biennial","Triennial","Event-Triggered","Materiality-Triggered"],false)}
   </div>
   <div class="beyan-sec">7 · Halkbank Model Inventory — Official Declaration Fields</div>
   ${fld("Model Purpose (*)","amacDetay","","textarea",false,true)}
@@ -1373,7 +1373,7 @@ window.saveBeyan=function(){
  const crit={M1:num("M1"),M2:num("M2"),M3:num("M3"),M4:num("M4"),M5:num("M5"),K1:num("K1"),K2:num("K2"),K3:num("K3"),K4:num("K4"),K5:num("K5"),K6:num("K6"),K7:num("K7"),O1:num("O1"),B1:num("B1"),duzenleyici:gb("duzenleyici")==="Yes",genai:gb("genai")==="Yes"};
  // Simple mode: if detailed M/K were not entered, apply the "Overall Criticality Level" preset.
  // H1 fix: if no criticality information is given, a CONSERVATIVE default of "Medium" applies —
- // a declaration with no information can never fall into the "Negligible" class (SR 11-7 conservatism principle).
+ // a declaration with no information can never fall into the "Negligible" class (SR 26-2 conservatism principle).
  const mkSum=["M1","M2","M3","M4","M5","K1","K2","K3","K4","K5","K6","K7"].reduce((s,k)=>s+(crit[k]||0),0);
  const gk=gb("genelKrit");
  if(mkSum===0){const lvl=KRIT_PRESET[gk]?gk:"Medium";const p=critFromLevel(lvl,crit.duzenleyici,gb("aiml")==="Yes");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
@@ -1399,7 +1399,7 @@ window.saveBeyan=function(){
  if(m.karsilikEtkisi){logAudit("Stakeholder notification","MDL "+m.id,"Provisioning impact — Financial Reporting / IFRS9 / MRM / Validation notified");}
  state.models.push(m);
  genMetricsForModel(m);
- // E4: new model → automatic "Initial Validation" record (SR 11-7: every new model is subject to initial validation)
+ // E4: new model → automatic "Initial Validation" record (SR 26-2: every new model is subject to initial validation)
  state.validations.push({id:uid("VAL-"),baslik:ad+" — Initial Validation",modelId:m.id,tur:"Initial Validation",tetik:"New Model",validator:"Independent Validation Unit",bagimsizlik:"Fully Independent – Separate Line",durum:"Planned"});
  logAudit("Business unit model declaration","MDL "+m.id,esc(ad)+" · "+m.sahipBirim+" · "+m.tier);
  save();closeDrawer();
@@ -1482,7 +1482,7 @@ window.applyCrit=function(){
 /* ============ VALIDATION ============ */
 function viewValidasyon(v){
  v.innerHTML=`
-  <p class="vlead">SR 11-7 three components + SS1/23 P4 + ECB TRIM. The <b>validation RECOMMENDATION</b> and the <b>APPROVAL DECISION</b> are separate fields; approval belongs to the Model Risk Committee.</p>
+  <p class="vlead">SR 26-2 three components + SS1/23 P4 + ECB TRIM. The <b>validation RECOMMENDATION</b> and the <b>APPROVAL DECISION</b> are separate fields; approval belongs to the Model Risk Committee.</p>
   <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newVal">+ New Validation</button></div>
   <div class="tablewrap"><table><thead><tr><th>Validation</th><th>Model</th><th>Type</th><th>Independence</th><th>Recommendation</th><th>Approval Decision</th><th>Status</th></tr></thead><tbody>
    ${state.validations.map(vv=>{const m=state.models.find(x=>x.id===vv.modelId);return `<tr onclick="valDetail('${vv.id}')">
@@ -1507,7 +1507,7 @@ function valTestCatalog(vv){
  const rows=VAL_TESTS.filter(t=>!t.initOnly||initRel);
  const pass=rows.filter(t=>vv.tests[t.k]==="Passed").length;
  const opts=["Not Performed","Passed","Failed","N/A"];
- return `<div class="section-h">Validation Test Catalog <span class="cnt">${pass}/${rows.length} passed · ECB TRIM / SR 11-7</span></div>
+ return `<div class="section-h">Validation Test Catalog <span class="cnt">${pass}/${rows.length} passed · ECB TRIM / SR 26-2</span></div>
   <div class="tablewrap" style="box-shadow:none;margin-bottom:6px"><table><thead><tr><th>Test / Task</th><th style="width:210px">Result</th></tr></thead><tbody>
    ${rows.map(t=>{const s=vv.tests[t.k]||"Not Performed";const c=s==="Passed"?"good":s==="Failed"?"crit":s==="N/A"?"muted":"warn";return `<tr style="cursor:default"><td>${t.l}${t.initOnly?' <span class="chip muted" style="padding:0 6px">initial-only</span>':''}</td><td><select onchange="valTestSet('${vv.id}','${t.k}',this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px;margin-right:6px">${opts.map(o=>`<option ${s===o?"selected":""}>${o}</option>`).join("")}</select><span class="chip ${c}" style="padding:0 7px">${s}</span></td></tr>`;}).join("")}
   </tbody></table></div>`;
@@ -1665,14 +1665,14 @@ window.delFind=function(id){if(!roleGuard("Finding / remediation"))return;if(!co
 
 /* ============ REQUIREMENTS MATRIX ============ */
 const REQS=[
- ["A","Model definition & scope","Single firm-wide model definition (3 components); deterministic/EUC distinction; AI/ML/GenAI flags; all risk types.","Policy · Inventory flags","SR 11-7; SS1/23 P1; OSFI E-23"],
+ ["A","Model definition & scope","Single firm-wide model definition (3 components); deterministic/EUC distinction; AI/ML/GenAI flags; all risk types.","Policy · Inventory flags","SR 26-2; SS1/23 P1; OSFI E-23"],
  ["B","Model inventory","Single firm-wide, evergreen inventory; OSFI E-23 minimum field set; dependencies; vendor/group distinction.","Model Inventory application","OSFI E-23; SS1/23 1.2c"],
  ["C","Criticality / tiering","Materiality × complexity; inherent risk = vulnerability×materiality; tier→validation frequency; periodic independent review.","Criticality Assessment (questionnaire)","SS1/23 1.3; OSFI E-23"],
- ["D","Development & use","Purpose/design, data suitability, development testing, adjustments, documentation, system environment.","Inventory + Validation fields","SR 11-7; SS1/23 P3"],
- ["E","Independent validation","Independence; conceptual soundness + process verification + outcome analysis; revalidation; RECOMMENDATION ≠ APPROVAL; effective challenge.","Model Validation application","SR 11-7; SS1/23 P4; ECB TRIM"],
- ["F","Ongoing monitoring","Metric set & thresholds (AUC/Gini/KS, PSI/CSI, fairness, override); backtesting; drift → revalidation/retraining.","Metrics / Metric Results","SR 11-7; ECB TRIM; NIST"],
+ ["D","Development & use","Purpose/design, data suitability, development testing, adjustments, documentation, system environment.","Inventory + Validation fields","SR 26-2; SS1/23 P3"],
+ ["E","Independent validation","Independence; conceptual soundness + process verification + outcome analysis; revalidation; RECOMMENDATION ≠ APPROVAL; effective challenge.","Model Validation application","SR 26-2; SS1/23 P4; ECB TRIM"],
+ ["F","Ongoing monitoring","Metric set & thresholds (AUC/Gini/KS, PSI/CSI, fairness, override); backtesting; drift → revalidation/retraining.","Metrics / Metric Results","SR 26-2; ECB TRIM; NIST"],
  ["G","Mitigants","PMA/overlay, use restriction, exception & escalation; independent review.","PMA-Exception application","SS1/23 P5"],
- ["H","Governance","Board/senior management, model risk appetite, SMF; MRM policy; roles; three lines of defense; annual self-assessment.","Policies · roles · dashboard","SR 11-7; SS1/23 P2; OSFI E-23"],
+ ["H","Governance","Board/senior management, model risk appetite, SMF; MRM policy; roles; three lines of defense; annual self-assessment.","Policies · roles · dashboard","SR 26-2; SS1/23 P2; OSFI E-23"],
  ["I","AI/ML additional requirements","Explainability, fairness, data lineage, robustness, retraining, human oversight, FRIA, GenAI guardrails.","AI/ML Extra Assessment","EU AI Act; NIST AI RMF"],
  ["J","Data quality","7+ dimensions (completeness, accuracy, consistency…); DQF; BCBS 239 readiness.","Data quality fields · DQF","ECB TRIM; BCBS 239"],
  ["K","Reporting & BRSA","Aggregate model risk; board reporting; ICAAP/validation report production.","Dashboard · report templates","SS1/23; BRSA ICAAP"],
@@ -1682,7 +1682,7 @@ function viewGereklilik(v){
   <div class="tablewrap"><table><thead><tr><th>#</th><th>Main Requirement</th><th>Sub-requirement / description</th><th>Archer counterpart</th><th>Source</th></tr></thead><tbody>
    ${REQS.map(r=>`<tr style="cursor:default"><td><span class="chip ai">${r[0]}</span></td><td class="tname">${esc(r[1])}</td><td class="tsub" style="white-space:normal;max-width:420px">${esc(r[2])}</td><td class="tsub">${esc(r[3])}</td><td class="pill-src">${esc(r[4])}</td></tr>`).join("")}
   </tbody></table></div>
-  <div class="footnote">Source frameworks: US Fed SR 11-7 · OSFI E-23 (2027) · PRA SS1/23 · ECB TRIM · EU AI Act · NIST AI RMF · BRSA ICAAP/IRB-AMA/IFRS 9.</div>`;
+  <div class="footnote">Source frameworks: US Fed SR 26-2 (supersedes SR 11-7) · OSFI E-23 (2027) · PRA SS1/23 · ECB Internal Models Guide (TRIM) · EU AI Act · NIST AI RMF · BRSA ICAAP/IRB-AMA/IFRS 9.</div>`;
 }
 
 /* ============ REGULATION MAPPING ============ */
@@ -1704,7 +1704,7 @@ const REG=[
 function regCell(v){const c=v==="✔"?"good":v==="partial"?"warn":v==="—"?"muted":"info";return `<td style="text-align:center"><span class="chip ${c}" style="padding:0 7px">${esc(v)}</span></td>`;}
 function viewRegulasyon(v){
  v.innerHTML=`<p class="vlead">Requirement area ↔ regulation traceability. The BRSA column is for forward-looking compliance (no standalone MRM regulation today).</p>
-  <div class="tablewrap"><table><thead><tr><th>Requirement</th><th>SR 11-7</th><th>OSFI E-23</th><th>PRA SS1/23</th><th>ECB TRIM</th><th>EU AI/NIST</th><th>BRSA</th></tr></thead><tbody>
+  <div class="tablewrap"><table><thead><tr><th>Requirement</th><th>SR 26-2</th><th>OSFI E-23</th><th>PRA SS1/23</th><th>ECB TRIM</th><th>EU AI/NIST</th><th>BRSA</th></tr></thead><tbody>
    ${REG.map(r=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(r[0])}</td>${regCell(r[1])}${regCell(r[2])}${regCell(r[3])}${regCell(r[4])}${regCell(r[5])}<td class="tsub">${esc(r[6])}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
@@ -1715,7 +1715,7 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Console — Simulation (v1).</b> This prototype brings Model Risk Management requirements to life end-to-end on the Archer architecture. The goal is to show business-analysis outputs (inventory, criticality/tiering, validation, governance) in a working interface. It is a foundation to be improved iteratively.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Covered MRM steps</h3><div class="list">
-    ${["Firm-wide model inventory (CRUD, tier, status, validation calendar)","Criticality/tiering calculator — Materiality×Complexity, hard rules","AI/ML Extra Assessment — explainability, fairness, drift, guardrails; AI/ML Readiness indicator","Independent validation — RECOMMENDATION ≠ APPROVAL, model write-back","Monitoring metrics — sparkline time series, breach → automatic finding","Model Change (material → revalidation trigger) & PMA/Exceptions","Lifecycle — status board (kanban) + workflow transitions","Role-based view (three lines of defense) & JSON export/import","Risk Dashboard & Board — 5×5 heat map, category/unit breakdown","Tier-based automatic metric thresholds","Finding SLAs & remediation calendar","Permission matrix (FLS) & audit trail","Data Feed / API integration (simulation)","Model Risk Appetite & annual self-assessment/attestation","Validation test catalog execution tracking (ECB TRIM/SR 11-7)","Dependency & impact analysis (network graph, recursive impact)","EU AI Act compliance tracker (Articles 9-15/17/27)","Notification & escalation engine (rule → task)","Requirements matrix and regulation mapping","Total Model Risk Index & risk appetite thresholds (board indicator)","Multi-user approval workflow (Declaration → MRM Program → Committee; segregation of duties)","Business-unit model declaration — dropdown questionnaire + official Halkbank inventory fields (23 fields)","IFRS9 ECL overlay governance (impact/stage/scenario + committee approval)","Finding remediation lifecycle (action → evidence → re-test → 2nd-line closure approval)","Risk-based validation plan: 12-month calendar + validator capacity","BRSA / ICAAP evidence pack (ICAAP-model linkage, CSV/PDF)","Vendor & GenAI assurance: third-party due diligence + guardrail/red-team log","CSV import/export + XLSX report (10-sheet Excel workbook)","Email notification rules — Archer Notifications (software request + outbox simulation)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Firm-wide model inventory (CRUD, tier, status, validation calendar)","Criticality/tiering calculator — Materiality×Complexity, hard rules","AI/ML Extra Assessment — explainability, fairness, drift, guardrails; AI/ML Readiness indicator","Independent validation — RECOMMENDATION ≠ APPROVAL, model write-back","Monitoring metrics — sparkline time series, breach → automatic finding","Model Change (material → revalidation trigger) & PMA/Exceptions","Lifecycle — status board (kanban) + workflow transitions","Role-based view (three lines of defense) & JSON export/import","Risk Dashboard & Board — 5×5 heat map, category/unit breakdown","Tier-based automatic metric thresholds","Finding SLAs & remediation calendar","Permission matrix (FLS) & audit trail","Data Feed / API integration (simulation)","Model Risk Appetite & annual self-assessment/attestation","Validation test catalog execution tracking (ECB TRIM/SR 26-2)","Dependency & impact analysis (network graph, recursive impact)","EU AI Act compliance tracker (Articles 9-15/17/27)","Notification & escalation engine (rule → task)","Requirements matrix and regulation mapping","Total Model Risk Index & risk appetite thresholds (board indicator)","Multi-user approval workflow (Declaration → MRM Program → Committee; segregation of duties)","Business-unit model declaration — dropdown questionnaire + official Halkbank inventory fields (23 fields)","IFRS9 ECL overlay governance (impact/stage/scenario + committee approval)","Finding remediation lifecycle (action → evidence → re-test → 2nd-line closure approval)","Risk-based validation plan: 12-month calendar + validator capacity","BRSA / ICAAP evidence pack (ICAAP-model linkage, CSV/PDF)","Vendor & GenAI assurance: third-party due diligence + guardrail/red-team log","CSV import/export + XLSX report (10-sheet Excel workbook)","Email notification rules — Archer Notifications (software request + outbox simulation)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Next enhancements</h3><div class="list">
     ${["Multi-user persistent server and a real Archer REST connection","Automated model document generation","Scenario & stress testing module","Model risk KRI trend and predictive analytics","Full integration of the 10-phase PMJ Model Journey lifecycle into /mrm"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
@@ -1726,7 +1726,7 @@ function viewHakkinda(v){
    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="tbtn" onclick="exportJSON()">⭳ Export JSON</button><button class="tbtn" onclick="document.getElementById('impFile').click()">⭱ Import JSON</button><input type="file" id="impFile" accept="application/json" style="display:none" onchange="importJSON(this.files[0])"></div>
   </div>
   <div class="card panel" style="margin-top:14px"><h3>Reference frameworks</h3>
-   <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 11-7</b> · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>TRIM</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BRSA <b>Internal Systems/ICAAP</b>, IRB-AMA validation guide (Doc.1041), IFRS 9 ECL.</div></div>
+   <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 26-2</b> (Apr 2026 — supersedes SR 11-7) · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>Internal Models Guide (TRIM)</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BRSA <b>Internal Systems/ICAAP</b>, IRB-AMA validation guide (Doc.1041), IFRS 9 ECL.</div></div>
   <div class="footnote">Data is stored only in this browser (localStorage); nothing is sent to a server. The “Sample Data” button resets everything to the sample set.</div>`;
 }
 
@@ -1933,7 +1933,7 @@ function viewIzleme(v){
  const withM=models.filter(m=>modelMetricTypes(m.id).length);
  if(!izlSel||!models.find(m=>m.id===izlSel))izlSel=((withM[0]||models[0])||{}).id||"";
  v.innerHTML=`
-  <p class="vlead">Time series of model performance and drift metrics; threshold breaches (upper for PSI/CSI, lower for AUC/Gini/KS) can be converted to <b>automatic findings</b>. SR 11-7 ongoing monitoring · ECB TRIM thresholds · NIST/EU AI Act drift.</p>
+  <p class="vlead">Time series of model performance and drift metrics; threshold breaches (upper for PSI/CSI, lower for AUC/Gini/KS) can be converted to <b>automatic findings</b>. SR 26-2 ongoing monitoring · ECB TRIM thresholds · NIST/EU AI Act drift.</p>
   <div class="toolbar">
    <label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="izl-model" style="min-width:320px">${models.map(m=>`<option value="${m.id}" ${izlSel===m.id?"selected":""}>${esc(m.ad)}${modelBreaching(m.id)?" · ⚠ breach":""}</option>`).join("")}</select>
@@ -2057,7 +2057,7 @@ function viewValplan(v){
  const M=state.models.slice();
  const rows=M.map(m=>({m,next:nextVal(m),o:overdue(nextVal(m))}));
  const planned=rows.filter(x=>x.next);
- const unplanned=rows.filter(x=>!x.next&&(x.m.valFrekans||tierFreq(x.m.tier))!=="Event-Triggered"); // Y2: event-triggered requires no calendar entry
+ const unplanned=rows.filter(x=>!x.next&&!["Event-Triggered","Materiality-Triggered"].includes(x.m.valFrekans||tierFreq(x.m.tier))); // Y2: event-triggered requires no calendar entry
  const overdueR=planned.filter(x=>x.o.c==="crit").sort((a,b)=>new Date(a.next)-new Date(b.next));
  const soonR=planned.filter(x=>x.o.c==="warn").sort((a,b)=>new Date(a.next)-new Date(b.next));
  // 12-month calendar
@@ -2138,7 +2138,7 @@ window.vendorForm=function(id){const m=state.models.find(x=>x.id===id);if(!m)ret
    ${fldSel("Due Diligence","dueDiligence",vd.dueDiligence,["Not Performed","Performed — Conditional","Performed — Adequate"])}
    ${fld("Last Review","sonGozden",vd.sonGozden,"date")}
   </div>
-  <div class="callout" style="margin-top:10px">EBA outsourcing & SR 11-7: vendor models are subject to the same MRM standard as internal models; black-box access constraints shape the validation approach, and an exit strategy is mandatory.</div>
+  <div class="callout" style="margin-top:10px">EBA outsourcing & SR 26-2: vendor models are subject to the same MRM standard as internal models; black-box access constraints shape the validation approach, and an exit strategy is mandatory.</div>
   <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Cancel</button><button class="tbtn primary" onclick="saveVendor('${id}')">Save</button></div>`);
 };
 window.saveVendor=function(id){if(!guardWrite())return;const m=state.models.find(x=>x.id===id);if(!m)return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(g("tedarikci"))m.tedarikci=g("tedarikci");m.vendor={tedarikci:g("tedarikci"),kutuTipi:g("kutuTipi"),sla:g("sla"),cikisStrateji:g("cikisStrateji"),kutuKisit:g("kutuKisit"),dueDiligence:g("dueDiligence"),sonGozden:g("sonGozden")};logAudit("Vendor governance updated","MDL "+id,m.ad+" · "+g("dueDiligence"));save();closeDrawer();render();};
@@ -2380,7 +2380,7 @@ function viewRisk(v){
       ${(state.tmrHistory||[]).length>1?sparkline((state.tmrHistory||[]).map(x=>x.i),appetite().red,"low",210,40):'<div class="tsub">The trend builds as daily snapshots accumulate.</div>'}
     </div>
    </div>
-   <div class="footnote" style="border:none;padding-top:8px">The index aggregates tier mix, overdue validations, open high findings, monitoring breaches and conditional approval load (SR 11-7 “aggregate model risk” · PRA SS1/23 — model risk as a risk discipline in its own right). Thresholds are set by the <b>Model Risk Appetite Statement</b>; in Archer it is derived as a calculated field over cross-referenced model records.</div>
+   <div class="footnote" style="border:none;padding-top:8px">The index aggregates tier mix, overdue validations, open high findings, monitoring breaches and conditional approval load (SR 26-2 “aggregate model risk” · PRA SS1/23 — model risk as a risk discipline in its own right). Thresholds are set by the <b>Model Risk Appetite Statement</b>; in Archer it is derived as a calculated field over cross-referenced model records.</div>
   </div>
   <div class="grid kpis">
    ${kpi("Aggregate Risk Score",exposure,"Σ inherent risk (materiality×complexity)","info")}
@@ -2417,7 +2417,7 @@ function viewRisk(v){
   <div class="card panel" style="margin-top:16px">
     <h3>Board Summary (Model Risk Profile vs Appetite)</h3>
     <p style="margin:0 0 6px;font-size:13px;line-height:1.7">The firm tracks <b>${M.length}</b> models, of which <b>${t1}</b> are Tier 1. The aggregate inherent risk score is <b>${exposure}</b>. The key appetite indicator, <b>overdue validations</b>, stands at <b>${overdueV}</b> (target: 0) — ${appetiteOk?'<span class="chip good">within appetite</span>':'<span class="chip crit">appetite breached, escalation required</span>'}. Monitoring shows threshold breaches in <b>${breach}</b> models, <b>${highF}</b> open high-priority findings and <b>${activePma}</b> active mitigants (PMA/exceptions).</p>
-    <div class="footnote" style="border:none;padding-top:6px">SR 11-7 & SS1/23 2.1d: the board regularly monitors the model risk profile against appetite and challenges the output of the most material models.</div>
+    <div class="footnote" style="border:none;padding-top:6px">SR 26-2 & SS1/23 2.1d: the board regularly monitors the model risk profile against appetite and challenges the output of the most material models.</div>
   </div>`;
 }
 window.riskCell=function(y,x){
@@ -2628,7 +2628,7 @@ function viewEuai(v){
  const m=models.find(x=>x.id===euaiSel);const kat=(m.aimlEk||{}).euAiKategori||"—";
  const highRisk=kat==="High Risk";const pct=euaiPct(m);const col=pct>=80?"good":pct>=50?"warn":"crit";
  v.innerHTML=`
-  <p class="vlead">EU AI Act (2024/1689) high-risk obligation tracker. Creditworthiness/scoring AI is high-risk under Annex III; obligations apply from 2 August 2026. Controls derive automatically from the AI/ML assessment; the rest are flagged manually.</p>
+  <p class="vlead">EU AI Act (2024/1689) high-risk obligation tracker. Creditworthiness/scoring AI is high-risk under Annex III; Annex III obligations have been IN FORCE since 2 August 2026. Controls derive automatically from the AI/ML assessment; the rest are flagged manually.</p>
   <div class="toolbar"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="euai-model" style="min-width:320px">${models.map(x=>`<option value="${x.id}" ${euaiSel===x.id?"selected":""}>${esc(x.ad)}${x.genai?" · GenAI":""}</option>`).join("")}</select>
    <div class="sp"></div><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
@@ -2644,7 +2644,7 @@ function viewEuai(v){
    <div class="result"><div class="card panel" style="position:sticky;top:78px">
      <div class="gauge"><div class="big" style="color:var(--${col})">${pct}%</div><div class="cap">EU AI Act Compliance</div></div>
      <div style="text-align:center;margin:-4px 0 10px"><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
-     ${highRisk&&pct<100?`<div class="rule-note">High-risk model: open obligations must be closed before 2 Aug 2026${euaiStatus(m,EUAI_ARTS[8])==='gap'?'; FRIA (Article 27) required':''}.</div>`:""}
+     ${highRisk&&pct<100?`<div class="rule-note">High-risk model: obligations are in force (2 Aug 2026) — open gaps must be closed immediately${euaiStatus(m,EUAI_ARTS[8])==='gap'?'; FRIA (Article 27) required':''}.</div>`:""}
      <button class="tbtn" style="width:100%;justify-content:center;margin-top:12px" onclick="euaiGaps('${m.id}')">Convert gaps to findings</button>
    </div></div>
   </div>
