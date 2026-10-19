@@ -328,7 +328,7 @@ function scoreCrit(c){
  const derece= icsel>=15?"Yüksek":icsel>=8?"Orta":"Düşük";
  return {mat:+mat.toFixed(2),kar:+kar.toFixed(2),icsel,tier,derece,rules};
 }
-const FREQMON={"Yıllık":12,"2 Yıllık":24,"3 Yıllık":36,"Olay-Tetikli":0};
+const FREQMON={"Yıllık":12,"2 Yıllık":24,"3 Yıllık":36,"Olay-Tetikli":0,"Materyalite-Tetikli":0}; // SR 26-2: takvim yerine materyalite bazlı döngü seçeneği
 function tierFreq(t){return t==="Tier 1"?"Yıllık":t==="Tier 2"?"2 Yıllık":t==="Tier 3"?"3 Yıllık":"Olay-Tetikli";}
 function addMonths(ds,m){if(!ds||!m)return"";const d=new Date(ds);d.setMonth(d.getMonth()+ +m);return d.toISOString().slice(0,10);}
 function nextVal(m){const f=FREQMON[m.valFrekans||tierFreq(m.tier)]||0;return m.sonValidasyon&&f?addMonths(m.sonValidasyon,f):"";}
@@ -1076,7 +1076,7 @@ window.modelForm=function(id){
    ${fld("Geliştirme Tarihi","gelistirmeTarihi",m.gelistirmeTarihi,"date")}
    ${fld("Prod'a Alınma Tarihi","prodTarihi",m.prodTarihi,"date")}
    ${fld("Son Validasyon Tarihi","sonValidasyon",m.sonValidasyon,"date")}
-   ${fldSel("Validasyon Frekansı","valFrekans",m.valFrekans,["Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"])}
+   ${fldSel("Validasyon Frekansı","valFrekans",m.valFrekans,["Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli","Materyalite-Tetikli"])}
   </div>
   <div class="beyan-sec">7 · Dokümantasyon &amp; Linkler</div>
   <div class="form-grid">
@@ -1299,7 +1299,7 @@ window.beyanForm=function(){
   <div class="beyan-sec">6 · Validasyon Takvimi</div>
   <div class="form-grid">
    ${bsel("sonVal","Son validasyon ne zaman?",BEYAN_SONVAL,false)}
-   ${bsel("valFrekans","Validasyon Frekansı",["(Tier'dan otomatik)","Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli"],false)}
+   ${bsel("valFrekans","Validasyon Frekansı",["(Tier'dan otomatik)","Yıllık","2 Yıllık","3 Yıllık","Olay-Tetikli","Materyalite-Tetikli"],false)}
   </div>
   <div class="beyan-sec">7 · Halkbank Model Envanteri — Resmi Beyan Alanları</div>
   ${fld("Model Amacı (*)","amacDetay","","textarea",false,true)}
@@ -1365,7 +1365,7 @@ window.saveBeyan=function(){
  const crit={M1:num("M1"),M2:num("M2"),M3:num("M3"),M4:num("M4"),M5:num("M5"),K1:num("K1"),K2:num("K2"),K3:num("K3"),K4:num("K4"),K5:num("K5"),K6:num("K6"),K7:num("K7"),O1:num("O1"),B1:num("B1"),duzenleyici:gb("duzenleyici")==="Evet",genai:gb("genai")==="Evet"};
  // Basit mod: ayrıntılı M/K girilmemişse "Genel Kritiklik Düzeyi" presetini uygula.
  // H1 düzeltmesi: hiçbir kritiklik bilgisi verilmezse MUHAFAZAKÂR varsayılan "Orta" uygulanır —
- // bilgi vermeyen beyan asla "İhmal Edilebilir" sınıfına düşemez (SR 11-7 muhafazakârlık ilkesi).
+ // bilgi vermeyen beyan asla "İhmal Edilebilir" sınıfına düşemez (SR 26-2 muhafazakârlık ilkesi).
  const mkSum=["M1","M2","M3","M4","M5","K1","K2","K3","K4","K5","K6","K7"].reduce((s,k)=>s+(crit[k]||0),0);
  const gk=gb("genelKrit");
  if(mkSum===0){const lvl=KRIT_PRESET[gk]?gk:"Orta";const p=critFromLevel(lvl,crit.duzenleyici,gb("aiml")==="Evet");Object.assign(crit,{M1:p.M1,M2:p.M2,M3:p.M3,M4:p.M4,M5:p.M5,K1:p.K1,K2:p.K2,K3:p.K3,K4:p.K4,K5:p.K5,K6:p.K6,K7:p.K7,O1:Math.max(crit.O1,p.O1),B1:Math.max(crit.B1,p.B1)});}
@@ -1391,7 +1391,7 @@ window.saveBeyan=function(){
  if(m.karsilikEtkisi){logAudit("Paydaş bilgilendirme","MDL "+m.id,"Karşılık etkisi — Finansal Raporlama / IFRS9 / MRM / Validasyon bilgilendirildi");}
  state.models.push(m);
  genMetricsForModel(m);
- // E4: yeni model → otomatik "İlk Validasyon" kaydı (SR 11-7: her yeni model ilk validasyona tabidir)
+ // E4: yeni model → otomatik "İlk Validasyon" kaydı (SR 26-2: her yeni model ilk validasyona tabidir)
  state.validations.push({id:uid("VAL-"),baslik:ad+" — İlk Validasyon",modelId:m.id,tur:"İlk (Initial) Validasyon",tetik:"Yeni Model",validator:"Bağımsız Validasyon Birimi",bagimsizlik:"Tam Bağımsız-Ayrı Hat",durum:"Planlandı"});
  logAudit("İş birimi model beyanı","MDL "+m.id,esc(ad)+" · "+m.sahipBirim+" · "+m.tier);
  save();closeDrawer();
@@ -1474,7 +1474,7 @@ window.applyCrit=function(){
 /* ============ VALIDASYON ============ */
 function viewValidasyon(v){
  v.innerHTML=`
-  <p class="vlead">SR 11-7 üç bileşen + SS1/23 P4 + ECB TRIM. <b>Validasyon ÖNERİSİ</b> ile <b>ONAY KARARI</b> ayrı alanlardır; onay Model Risk Komitesine aittir.</p>
+  <p class="vlead">SR 26-2 üç bileşen + SS1/23 P4 + ECB TRIM. <b>Validasyon ÖNERİSİ</b> ile <b>ONAY KARARI</b> ayrı alanlardır; onay Model Risk Komitesine aittir.</p>
   <div class="toolbar"><div class="sp"></div><button class="tbtn primary" id="newVal">+ Yeni Validasyon</button></div>
   <div class="tablewrap"><table><thead><tr><th>Validasyon</th><th>Model</th><th>Tür</th><th>Bağımsızlık</th><th>Öneri</th><th>Onay Kararı</th><th>Durum</th></tr></thead><tbody>
    ${state.validations.map(vv=>{const m=state.models.find(x=>x.id===vv.modelId);return `<tr onclick="valDetail('${vv.id}')">
@@ -1499,7 +1499,7 @@ function valTestCatalog(vv){
  const rows=VAL_TESTS.filter(t=>!t.initOnly||initRel);
  const pass=rows.filter(t=>vv.tests[t.k]==="Geçti").length;
  const opts=["Uygulanmadı","Geçti","Kaldı","Uygun Değil"];
- return `<div class="section-h">Validasyon Test Kataloğu <span class="cnt">${pass}/${rows.length} geçti · ECB TRIM / SR 11-7</span></div>
+ return `<div class="section-h">Validasyon Test Kataloğu <span class="cnt">${pass}/${rows.length} geçti · ECB TRIM / SR 26-2</span></div>
   <div class="tablewrap" style="box-shadow:none;margin-bottom:6px"><table><thead><tr><th>Test / Görev</th><th style="width:210px">Sonuç</th></tr></thead><tbody>
    ${rows.map(t=>{const s=vv.tests[t.k]||"Uygulanmadı";const c=s==="Geçti"?"good":s==="Kaldı"?"crit":s==="Uygun Değil"?"muted":"warn";return `<tr style="cursor:default"><td>${t.l}${t.initOnly?' <span class="chip muted" style="padding:0 6px">ilk-only</span>':''}</td><td><select onchange="valTestSet('${vv.id}','${t.k}',this.value)" style="padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12px;margin-right:6px">${opts.map(o=>`<option ${s===o?"selected":""}>${o}</option>`).join("")}</select><span class="chip ${c}" style="padding:0 7px">${s}</span></td></tr>`;}).join("")}
   </tbody></table></div>`;
@@ -1657,14 +1657,14 @@ window.delFind=function(id){if(!roleGuard("Bulgu / remediation"))return;if(!conf
 
 /* ============ GEREKLILIK MATRISI ============ */
 const REQS=[
- ["A","Model tanımı & kapsam","Kurum geneli tek model tanımı (3 bileşen); deterministik/EUC ayrımı; AI/ML/GenAI bayrakları; tüm risk türleri.","Politika · Envanter bayrakları","SR 11-7; SS1/23 P1; OSFI E-23"],
+ ["A","Model tanımı & kapsam","Kurum geneli tek model tanımı (3 bileşen); deterministik/EUC ayrımı; AI/ML/GenAI bayrakları; tüm risk türleri.","Politika · Envanter bayrakları","SR 26-2; SS1/23 P1; OSFI E-23"],
  ["B","Model envanteri","Kurum geneli tekil, güncel (evergreen) envanter; OSFI E-23 asgari alan seti; bağımlılıklar; satıcı/grup ayrımı.","Model Envanteri uygulaması","OSFI E-23; SS1/23 1.2c"],
  ["C","Kritiklik / tiering","Materyalite × karmaşıklık; içsel risk = zafiyet×materyalite; tier→validasyon frekansı; periyodik bağımsız gözden geçirme.","Kritiklik Değerlendirmesi (questionnaire)","SS1/23 1.3; OSFI E-23"],
- ["D","Geliştirme & kullanım","Amaç/tasarım, veri uygunluğu, geliştirme testleri, düzeltmeler, dokümantasyon, sistem ortamı.","Envanter + Validasyon alanları","SR 11-7; SS1/23 P3"],
- ["E","Bağımsız validasyon","Bağımsızlık; kavramsal sağlamlık + süreç doğrulama + çıktı analizi; revalidasyon; ÖNERİ ≠ ONAY; etkin sorgulama.","Model Validasyonu uygulaması","SR 11-7; SS1/23 P4; ECB TRIM"],
- ["F","Sürekli izleme","Metrik seti & eşikler (AUC/Gini/KS, PSI/CSI, fairness, override); backtesting; drift → revalidasyon/retrain.","Metrikler / Metrik Sonuçları","SR 11-7; ECB TRIM; NIST"],
+ ["D","Geliştirme & kullanım","Amaç/tasarım, veri uygunluğu, geliştirme testleri, düzeltmeler, dokümantasyon, sistem ortamı.","Envanter + Validasyon alanları","SR 26-2; SS1/23 P3"],
+ ["E","Bağımsız validasyon","Bağımsızlık; kavramsal sağlamlık + süreç doğrulama + çıktı analizi; revalidasyon; ÖNERİ ≠ ONAY; etkin sorgulama.","Model Validasyonu uygulaması","SR 26-2; SS1/23 P4; ECB TRIM"],
+ ["F","Sürekli izleme","Metrik seti & eşikler (AUC/Gini/KS, PSI/CSI, fairness, override); backtesting; drift → revalidasyon/retrain.","Metrikler / Metrik Sonuçları","SR 26-2; ECB TRIM; NIST"],
  ["G","Azaltıcılar (mitigants)","PMA/overlay, kullanım kısıtı, istisna & eskalasyon; bağımsız gözden geçirme.","PMA-İstisna uygulaması","SS1/23 P5"],
- ["H","Yönetişim","Board/üst yönetim, model risk iştahı, SMF; MRM politikası; roller; üç savunma hattı; yıllık öz-değerlendirme.","Politikalar · roller · dashboard","SR 11-7; SS1/23 P2; OSFI E-23"],
+ ["H","Yönetişim","Board/üst yönetim, model risk iştahı, SMF; MRM politikası; roller; üç savunma hattı; yıllık öz-değerlendirme.","Politikalar · roller · dashboard","SR 26-2; SS1/23 P2; OSFI E-23"],
  ["I","AI/ML ek gereklilikleri","Açıklanabilirlik, fairness, veri lineage, robustluk, retraining, insan gözetimi, FRIA, GenAI guardrail.","AI/ML Ek Değerlendirmesi","EU AI Act; NIST AI RMF"],
  ["J","Veri kalitesi","7+ boyut (tamlık, doğruluk, tutarlılık…); DQF; BCBS 239 hazırlık.","Veri kalitesi alanları · DQF","ECB TRIM; BCBS 239"],
  ["K","Raporlama & BDDK","Toplulaştırılmış model riski; board raporlama; İSEDES/validasyon raporu üretimi.","Dashboard · rapor şablonları","SS1/23; BDDK İSEDES"],
@@ -1674,7 +1674,7 @@ function viewGereklilik(v){
   <div class="tablewrap"><table><thead><tr><th>#</th><th>Ana Gereklilik</th><th>Alt gereklilik / açıklama</th><th>Archer karşılığı</th><th>Kaynak</th></tr></thead><tbody>
    ${REQS.map(r=>`<tr style="cursor:default"><td><span class="chip ai">${r[0]}</span></td><td class="tname">${esc(r[1])}</td><td class="tsub" style="white-space:normal;max-width:420px">${esc(r[2])}</td><td class="tsub">${esc(r[3])}</td><td class="pill-src">${esc(r[4])}</td></tr>`).join("")}
   </tbody></table></div>
-  <div class="footnote">Kaynak çerçeveler: US Fed SR 11-7 · OSFI E-23 (2027) · PRA SS1/23 · ECB TRIM · EU AI Act · NIST AI RMF · BDDK İSEDES/IRB-AMA/TFRS 9.</div>`;
+  <div class="footnote">Kaynak çerçeveler: US Fed SR 26-2 (SR 11-7'nin yerini aldı) · OSFI E-23 (2027) · PRA SS1/23 · ECB İç Model Rehberi (TRIM) · EU AI Act · NIST AI RMF · BDDK İSEDES/IRB-AMA/TFRS 9.</div>`;
 }
 
 /* ============ REGULASYON ESLEME ============ */
@@ -1696,7 +1696,7 @@ const REG=[
 function regCell(v){const c=v==="✔"?"good":v==="kısmi"?"warn":v==="—"?"muted":"info";return `<td style="text-align:center"><span class="chip ${c}" style="padding:0 7px">${esc(v)}</span></td>`;}
 function viewRegulasyon(v){
  v.innerHTML=`<p class="vlead">Gereklilik alanı ↔ düzenleme izlenebilirliği. BDDK sütunu ileriye dönük uyum içindir (bugün müstakil MRM düzenlemesi yok).</p>
-  <div class="tablewrap"><table><thead><tr><th>Gereklilik</th><th>SR 11-7</th><th>OSFI E-23</th><th>PRA SS1/23</th><th>ECB TRIM</th><th>EU AI/NIST</th><th>BDDK</th></tr></thead><tbody>
+  <div class="tablewrap"><table><thead><tr><th>Gereklilik</th><th>SR 26-2</th><th>OSFI E-23</th><th>PRA SS1/23</th><th>ECB TRIM</th><th>EU AI/NIST</th><th>BDDK</th></tr></thead><tbody>
    ${REG.map(r=>`<tr style="cursor:default"><td class="tname" style="white-space:normal">${esc(r[0])}</td>${regCell(r[1])}${regCell(r[2])}${regCell(r[3])}${regCell(r[4])}${regCell(r[5])}<td class="tsub">${esc(r[6])}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
@@ -1707,7 +1707,7 @@ function viewHakkinda(v){
   <div class="callout"><b>MRM Konsolu — Simülasyon (v1).</b> Bu prototip, Model Riski Yönetimi gerekliliklerinin Archer mimarisi üzerinde uçtan uca nasıl işleyeceğini canlandırır. Amaç, iş analizi çıktılarını (envanter, kritiklik/tiering, validasyon, yönetişim) çalışan bir arayüzde göstermektir. “Git gide geliştirilecek” bir temeldir.</div>
   <div class="grid panels">
    <div class="card panel"><h3>Kapsanan MRM adımları</h3><div class="list">
-    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 11-7)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi","Toplam Model Riski Endeksi & risk iştahı eşikleri (board göstergesi)","Çok kullanıcılı onay akışı (Beyan → MRM Programı → Komite; görevler ayrılığı)","İş birimi model beyanı — dropdown anket + resmi Halkbank envanter alanları (23 alan)","TFRS9 BKZ overlay yönetişimi (etki/aşama/senaryo + komite onayı)","Bulgu remediation yaşam döngüsü (aksiyon → kanıt → re-test → 2. hat kapanış onayı)","Risk-bazlı validasyon planı: 12 aylık takvim + validatör kapasitesi","BDDK / İSEDES kanıt paketi (İSEDES-model bağı, CSV/PDF)","Vendor & GenAI güvence: 3. taraf durum tespiti + guardrail/red-team logu","CSV içe/dışa aktarma + XLSX raporu (10 sheet Excel çalışma kitabı)","E-posta bildirim kuralları — Archer Notifications (yazılım talebi + giden kutusu simülasyonu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
+    ${["Kurum geneli model envanteri (CRUD, tier, durum, validasyon takvimi)","Kritiklik/tiering hesaplayıcı — Materyalite×Karmaşıklık, sert kurallar","AI/ML Ek Değerlendirme — açıklanabilirlik, fairness, drift, guardrail; AI/ML Hazırlık göstergesi","Bağımsız validasyon — ÖNERİ ≠ ONAY, model geri güncelleme","İzleme metrikleri — sparkline zaman serisi, eşik aşımı → otomatik bulgu","Model Değişiklik (materyal → revalidasyon tetiği) & PMA/İstisna","Yaşam Döngüsü — durum panosu (kanban) + iş akışı geçişleri","Rol bazlı görünüm (üç savunma hattı) & JSON dışa/içe aktarma","Risk Panosu & Board — 5×5 ısı haritası, kategori/birim kırılımı","Tier-bazlı otomatik metrik eşikleri","Bulgu SLA & remediation takvimi","Yetki matrisi (FLS) & denetim izi (audit log)","Veri Feed / API entegrasyonu (simülasyon)","Model Risk İştahı & yıllık öz-değerlendirme/attestasyon","Validasyon test kataloğu yürütme takibi (ECB TRIM/SR 26-2)","Bağımlılık & etki analizi (ağ grafiği, özyinelemeli etki)","EU AI Act uyum izleyici (Madde 9-15/17/27)","Bildirim & eskalasyon motoru (kural → görev)","Gereklilik matrisi ve regülasyon eşlemesi","Toplam Model Riski Endeksi & risk iştahı eşikleri (board göstergesi)","Çok kullanıcılı onay akışı (Beyan → MRM Programı → Komite; görevler ayrılığı)","İş birimi model beyanı — dropdown anket + resmi Halkbank envanter alanları (23 alan)","TFRS9 BKZ overlay yönetişimi (etki/aşama/senaryo + komite onayı)","Bulgu remediation yaşam döngüsü (aksiyon → kanıt → re-test → 2. hat kapanış onayı)","Risk-bazlı validasyon planı: 12 aylık takvim + validatör kapasitesi","BDDK / İSEDES kanıt paketi (İSEDES-model bağı, CSV/PDF)","Vendor & GenAI güvence: 3. taraf durum tespiti + guardrail/red-team logu","CSV içe/dışa aktarma + XLSX raporu (10 sheet Excel çalışma kitabı)","E-posta bildirim kuralları — Archer Notifications (yazılım talebi + giden kutusu simülasyonu)"].map(t=>`<div class="li-row"><span class="chip good">✓</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
    </div></div>
    <div class="card panel"><h3>Sıradaki geliştirmeler</h3><div class="list">
     ${["Çok kullanıcılı kalıcı sunucu ve gerçek Archer REST bağlantısı","Otomatik model dokümanı üretimi","Senaryo & stres testi modülü","Model riski KRI trend ve tahmin analitiği","10-fazlı PMJ Model Journey yaşam döngüsünün /mrm içine tam entegrasyonu"].map(t=>`<div class="li-row"><span class="chip muted">○</span><div class="grow"><div class="t" style="white-space:normal">${t}</div></div></div>`).join("")}
@@ -1718,7 +1718,7 @@ function viewHakkinda(v){
    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="tbtn" onclick="exportJSON()">⭳ JSON dışa aktar</button><button class="tbtn" onclick="document.getElementById('impFile').click()">⭱ JSON içe aktar</button><input type="file" id="impFile" accept="application/json" style="display:none" onchange="importJSON(this.files[0])"></div>
   </div>
   <div class="card panel" style="margin-top:14px"><h3>Referans çerçeveler</h3>
-   <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 11-7</b> · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>TRIM</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BDDK <b>İç Sistemler/İSEDES</b>, IRB-AMA validasyon rehberi (Dok.1041), TFRS 9 BKZ.</div></div>
+   <div class="tsub" style="white-space:normal;line-height:1.7">US Fed <b>SR 26-2</b> (Nis 2026 — SR 11-7'nin yerini aldı) · OSFI <b>E-23 (2027)</b> · PRA <b>SS1/23</b> · ECB <b>İç Model Rehberi (TRIM)</b> · <b>EU AI Act</b> · <b>NIST AI RMF</b> · BDDK <b>İç Sistemler/İSEDES</b>, IRB-AMA validasyon rehberi (Dok.1041), TFRS 9 BKZ.</div></div>
   <div class="footnote">Veriler yalnızca bu tarayıcıda (localStorage) saklanır; sunucuya gönderilmez. “Örnek Veri” düğmesi tüm veriyi örnek setine sıfırlar.</div>`;
 }
 
@@ -1925,7 +1925,7 @@ function viewIzleme(v){
  const withM=models.filter(m=>modelMetricTypes(m.id).length);
  if(!izlSel||!models.find(m=>m.id===izlSel))izlSel=((withM[0]||models[0])||{}).id||"";
  v.innerHTML=`
-  <p class="vlead">Model performans ve drift metriklerinin zaman serisi izlenir; eşik aşımı (PSI/CSI için üst, AUC/Gini/KS için alt) <b>otomatik bulguya</b> çevrilebilir. SR 11-7 sürekli izleme · ECB TRIM eşikler · NIST/EU AI Act drift.</p>
+  <p class="vlead">Model performans ve drift metriklerinin zaman serisi izlenir; eşik aşımı (PSI/CSI için üst, AUC/Gini/KS için alt) <b>otomatik bulguya</b> çevrilebilir. SR 26-2 sürekli izleme · ECB TRIM eşikler · NIST/EU AI Act drift.</p>
   <div class="toolbar">
    <label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="izl-model" style="min-width:320px">${models.map(m=>`<option value="${m.id}" ${izlSel===m.id?"selected":""}>${esc(m.ad)}${modelBreaching(m.id)?" · ⚠ aşım":""}</option>`).join("")}</select>
@@ -2049,7 +2049,7 @@ function viewValplan(v){
  const M=state.models.slice();
  const rows=M.map(m=>({m,next:nextVal(m),o:overdue(nextVal(m))}));
  const planned=rows.filter(x=>x.next);
- const unplanned=rows.filter(x=>!x.next&&(x.m.valFrekans||tierFreq(x.m.tier))!=="Olay-Tetikli"); // Y2: olay-tetikli takvim gerektirmez
+ const unplanned=rows.filter(x=>!x.next&&!["Olay-Tetikli","Materyalite-Tetikli"].includes(x.m.valFrekans||tierFreq(x.m.tier))); // Y2: olay-tetikli takvim gerektirmez
  const overdueR=planned.filter(x=>x.o.c==="crit").sort((a,b)=>new Date(a.next)-new Date(b.next));
  const soonR=planned.filter(x=>x.o.c==="warn").sort((a,b)=>new Date(a.next)-new Date(b.next));
  // 12 aylık takvim
@@ -2130,7 +2130,7 @@ window.vendorForm=function(id){const m=state.models.find(x=>x.id===id);if(!m)ret
    ${fldSel("Durum Tespiti (Due Diligence)","dueDiligence",vd.dueDiligence,["Yapılmadı","Yapıldı — Şartlı","Yapıldı — Uygun"])}
    ${fld("Son Gözden Geçirme","sonGozden",vd.sonGozden,"date")}
   </div>
-  <div class="callout" style="margin-top:10px">EBA outsourcing & SR 11-7: vendor modeller iç modellerle aynı MRM standardına tabidir; kara-kutu erişim kısıtı validasyon yaklaşımını belirler, çıkış stratejisi zorunludur.</div>
+  <div class="callout" style="margin-top:10px">EBA outsourcing & SR 26-2: vendor modeller iç modellerle aynı MRM standardına tabidir; kara-kutu erişim kısıtı validasyon yaklaşımını belirler, çıkış stratejisi zorunludur.</div>
   <div class="formfoot"><div style="flex:1"></div><button class="tbtn" onclick="closeDrawer()">Vazgeç</button><button class="tbtn primary" onclick="saveVendor('${id}')">Kaydet</button></div>`);
 };
 window.saveVendor=function(id){if(!guardWrite())return;const m=state.models.find(x=>x.id===id);if(!m)return;const g=n=>{const e=document.querySelector(`[data-f="${n}"]`);return e?e.value.trim():"";};if(g("tedarikci"))m.tedarikci=g("tedarikci");m.vendor={tedarikci:g("tedarikci"),kutuTipi:g("kutuTipi"),sla:g("sla"),cikisStrateji:g("cikisStrateji"),kutuKisit:g("kutuKisit"),dueDiligence:g("dueDiligence"),sonGozden:g("sonGozden")};logAudit("Vendor yönetişim güncelle","MDL "+id,m.ad+" · "+g("dueDiligence"));save();closeDrawer();render();};
@@ -2372,7 +2372,7 @@ function viewRisk(v){
       ${(state.tmrHistory||[]).length>1?sparkline((state.tmrHistory||[]).map(x=>x.i),appetite().red,"low",210,40):'<div class="tsub">Trend, günlük anlık görüntüler biriktikçe oluşur.</div>'}
     </div>
    </div>
-   <div class="footnote" style="border:none;padding-top:8px">Endeks; tier karması, gecikmiş validasyon, açık yüksek bulgu, izleme eşik aşımı ve koşullu onay yükünü toplulaştırır (SR 11-7 “aggregate model risk” · PRA SS1/23 — model riski ayrı risk türü). Eşikler <b>Model Risk İştahı Beyanı</b> ile belirlenir; Archer’da cross-referenced model kayıtlarından hesaplanan alan olarak türetilir.</div>
+   <div class="footnote" style="border:none;padding-top:8px">Endeks; tier karması, gecikmiş validasyon, açık yüksek bulgu, izleme eşik aşımı ve koşullu onay yükünü toplulaştırır (SR 26-2 “aggregate model risk” · PRA SS1/23 — model riski ayrı risk türü). Eşikler <b>Model Risk İştahı Beyanı</b> ile belirlenir; Archer’da cross-referenced model kayıtlarından hesaplanan alan olarak türetilir.</div>
   </div>
   <div class="grid kpis">
    ${kpi("Toplulaştırılmış Risk Skoru",exposure,"Σ içsel risk (materyalite×karmaşıklık)","info")}
@@ -2409,7 +2409,7 @@ function viewRisk(v){
   <div class="card panel" style="margin-top:16px">
     <h3>Board Özeti (Model Riski Profili vs İştah)</h3>
     <p style="margin:0 0 6px;font-size:13px;line-height:1.7">Kurumda <b>${M.length}</b> model izlenmektedir; bunların <b>${t1}</b>’i Tier 1’dir. Toplulaştırılmış içsel risk skoru <b>${exposure}</b> düzeyindedir. Model risk iştahı açısından kritik gösterge olan <b>gecikmiş validasyon</b> sayısı <b>${overdueV}</b> (hedef: 0) — ${appetiteOk?'<span class="chip good">iştah dahilinde</span>':'<span class="chip crit">iştah aşıldı, eskalasyon gerekli</span>'}. İzlemede <b>${breach}</b> modelde eşik aşımı, <b>${highF}</b> açık yüksek öncelikli bulgu ve <b>${activePma}</b> aktif azaltıcı (PMA/istisna) bulunmaktadır.</p>
-    <div class="footnote" style="border:none;padding-top:6px">SR 11-7 & SS1/23 2.1d: board, model riski profilini iştaha karşı düzenli izler; en materyal modellerin çıktısını sorgular.</div>
+    <div class="footnote" style="border:none;padding-top:6px">SR 26-2 & SS1/23 2.1d: board, model riski profilini iştaha karşı düzenli izler; en materyal modellerin çıktısını sorgular.</div>
   </div>`;
 }
 window.riskCell=function(y,x){
@@ -2620,7 +2620,7 @@ function viewEuai(v){
  const m=models.find(x=>x.id===euaiSel);const kat=(m.aimlEk||{}).euAiKategori||"—";
  const highRisk=kat==="Yüksek Risk";const pct=euaiPct(m);const col=pct>=80?"good":pct>=50?"warn":"crit";
  v.innerHTML=`
-  <p class="vlead">EU AI Act (2024/1689) yüksek-risk yükümlülük izleyici. Kredi değerliliği/skorlama AI’ı Annex III’e göre yüksek-risktir; yükümlülükler 2 Ağustos 2026’dan itibaren. Kontroller AI/ML değerlendirmesinden otomatik türetilir; kalanlar elle işaretlenir.</p>
+  <p class="vlead">EU AI Act (2024/1689) yüksek-risk yükümlülük izleyici. Kredi değerliliği/skorlama AI’ı Annex III’e göre yüksek-risktir; Annex III yükümlülükleri 2 Ağustos 2026 itibarıyla YÜRÜRLÜKTEDİR. Kontroller AI/ML değerlendirmesinden otomatik türetilir; kalanlar elle işaretlenir.</p>
   <div class="toolbar"><label style="font-size:12px;color:var(--muted);font-weight:600">Model:</label>
    <select id="euai-model" style="min-width:320px">${models.map(x=>`<option value="${x.id}" ${euaiSel===x.id?"selected":""}>${esc(x.ad)}${x.genai?" · GenAI":""}</option>`).join("")}</select>
    <div class="sp"></div><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
@@ -2636,7 +2636,7 @@ function viewEuai(v){
    <div class="result"><div class="card panel" style="position:sticky;top:78px">
      <div class="gauge"><div class="big" style="color:var(--${col})">${pct}%</div><div class="cap">EU AI Act Uyum</div></div>
      <div style="text-align:center;margin:-4px 0 10px"><span class="chip ${highRisk?'crit':'muted'}">${esc(kat)}</span></div>
-     ${highRisk&&pct<100?`<div class="rule-note">Yüksek-risk model: eksik yükümlülükler 2 Ağu 2026’dan önce kapatılmalı${euaiStatus(m,EUAI_ARTS[8])==='gap'?'; FRIA (Madde 27) gerekli':''}.</div>`:""}
+     ${highRisk&&pct<100?`<div class="rule-note">Yüksek-risk model: yükümlülükler yürürlükte (2 Ağu 2026) — açık boşluklar derhal kapatılmalı${euaiStatus(m,EUAI_ARTS[8])==='gap'?'; FRIA (Madde 27) gerekli':''}.</div>`:""}
      <button class="tbtn" style="width:100%;justify-content:center;margin-top:12px" onclick="euaiGaps('${m.id}')">Boşlukları bulguya çevir</button>
    </div></div>
   </div>
