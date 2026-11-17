@@ -1,0 +1,633 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>MRM Metrik Kayıtları (v2)</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: GRC kayıt düzeni — liste (arama sonuçları) → kayıt sayfası: bölüm şeritleri, iki sütunlu etiket/değer alanları, altta sekmeler */
+:root{
+ --bg:#E9EDEB; --surface:#FCFDFC; --surface-2:#F0F3F1; --band:#E1E6E3;
+ --ink:#131B19; --ink-2:#3A4642; --muted:#56635E; --line:#C7D0CB; --edge:#7D8C87;
+ --accent:#2343C4; --accent-soft:#DFE5FB;
+ --good:#2A7861; --good-soft:#D9EDE6; --warn:#A9660B; --warn-soft:#F5E7D0; --crit:#B5302A; --crit-soft:#F6DFDC;
+ --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+ --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+ --bg:#0F1514; --surface:#1B2422; --surface-2:#212C2A; --band:#263230;
+ --ink:#E3EAE7; --ink-2:#B9C5C1; --muted:#97A5A0; --line:#2E3A37; --edge:#6E807A;
+ --accent:#8197FF; --accent-soft:#222F5E;
+ --good:#5DC4A3; --good-soft:#15382E; --warn:#E8A84D; --warn-soft:#3D2D13; --crit:#F07A6F; --crit-soft:#43211E;
+ color-scheme:dark; } }
+:root[data-theme="dark"]{
+ --bg:#0F1514; --surface:#1B2422; --surface-2:#212C2A; --band:#263230;
+ --ink:#E3EAE7; --ink-2:#B9C5C1; --muted:#97A5A0; --line:#2E3A37; --edge:#6E807A;
+ --accent:#8197FF; --accent-soft:#222F5E;
+ --good:#5DC4A3; --good-soft:#15382E; --warn:#E8A84D; --warn-soft:#3D2D13; --crit:#F07A6F; --crit-soft:#43211E;
+ color-scheme:dark; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+ padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 40px}
+button,select,input{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.crumb{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+h1{margin:0;font-family:var(--f-display);font-weight:740;font-stretch:84%;font-size:clamp(22px,2.4vw,29px);line-height:1.1;text-wrap:balance}
+h1 span{font-weight:500;color:var(--muted)}
+.lead{margin:6px 0 0;color:var(--muted);max-width:76ch;text-wrap:pretty}
+.mono{font-family:var(--f-mono)}
+.small{font-size:12px;color:var(--muted)}
+.btn{all:unset;cursor:pointer;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;font-weight:500}
+.btn:hover{border-color:var(--edge)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.4;cursor:default}
+.chip{font-size:11.5px;font-weight:500;padding:1px 8px;border-radius:9px;white-space:nowrap}
+.chip.good{background:var(--good-soft);color:var(--good)} .chip.crit{background:var(--crit-soft);color:var(--crit)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.off{background:var(--band);color:var(--muted)}
+
+/* Liste */
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools input,.tools select{padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:13px;min-width:0}
+.tools input{flex:1 1 240px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.bandh{background:var(--band);padding:7px 12px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px;border-radius:9px 9px 0 0}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+thead th{border-top:0;font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono);font-size:12px}
+#list table{min-width:860px}
+#list tbody tr{cursor:pointer}
+#list tbody tr:hover{background:var(--surface-2)}
+.idl{all:unset;cursor:pointer;color:var(--accent);font-family:var(--f-mono);font-size:12px;text-decoration:underline}
+.idl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Kayıt */
+.rhead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px}
+.rhead .sp{flex:1}
+.nav{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600}
+.pill span{padding:3px 12px;color:var(--muted)} .pill span.on{background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);border-radius:999px}
+details.sec{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+details.sec>summary{list-style:none;cursor:pointer;background:var(--band);padding:7px 12px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"";border:5px solid transparent;border-left-color:var(--ink);border-right-width:0;transition:transform .15s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary .small{margin-left:auto;text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 28px;padding:14px 16px}
+@media (max-width:760px){.fields{grid-template-columns:minmax(0,1fr)}}
+.f{display:grid;grid-template-columns:minmax(110px,38%) minmax(0,1fr);gap:10px;font-size:13px;align-items:baseline}
+.f dt{text-align:right;font-weight:600;color:var(--ink-2)}
+.f dd{margin:0;overflow-wrap:anywhere}
+.f.full{grid-column:1/-1;grid-template-columns:minmax(110px,18.2%) minmax(0,1fr)}
+@media (max-width:760px){.f,.f.full{grid-template-columns:minmax(96px,38%) minmax(0,1fr)}}
+.sub{padding:0 16px 14px}
+.sub h3{margin:0 0 6px;font-size:12.5px;font-weight:600}
+.trend{font-weight:700} .trend.up{color:var(--good)} .trend.dn{color:var(--good)} .trend.bd{color:var(--ink-2)}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:0 2px}
+.tabs button{all:unset;cursor:pointer;padding:7px 14px;font-size:12.5px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--surface-2);white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 2px 0 var(--accent)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tabp{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:12px;margin-top:-1px}
+.note{padding:10px 16px 0;font-size:12.5px;color:var(--muted);max-width:92ch;text-wrap:pretty}
+.chart{padding:6px 12px 12px}
+.chart svg{display:block;width:100%;height:auto;max-width:860px}
+.ax{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+.gl{stroke:var(--line);stroke-width:1}
+.ser{fill:none;stroke:var(--accent);stroke-width:2}
+.fc{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:5 4}
+.thr{stroke:var(--crit);stroke-width:1.4;stroke-dasharray:6 4}
+.thrl{font-family:var(--f-mono);font-size:10px;fill:var(--crit)}
+.pt{fill:var(--surface);stroke:var(--accent);stroke-width:2} .pt.br{fill:var(--crit);stroke:var(--crit)} .pt.f{stroke-width:1.4}
+.lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);padding:0 16px 10px}
+.lg i{display:inline-block;width:18px;border-top:2px solid var(--accent);vertical-align:middle;margin-right:5px}
+.lg i.d{border-top-style:dashed} .lg i.t{border-color:var(--crit);border-top-style:dashed}
+.docg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media (max-width:860px){.docg{grid-template-columns:minmax(0,1fr)}}
+.dsec{padding:14px 16px 16px;min-width:0}
+.dsec.full{grid-column:1/-1}
+.dsec h2{margin:0 0 8px;font-family:var(--f-display);font-stretch:88%;font-weight:720;font-size:17px}
+.dsec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.dsec li{text-wrap:pretty}
+.dict{min-width:720px}
+.dict td:nth-child(1),.dict td[rowspan]{font-weight:600;white-space:nowrap}
+.erd{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 12px}
+.ent{border:1px solid var(--ink-2);border-radius:6px;padding:6px 10px;display:flex;flex-direction:column;font-size:11.5px;background:var(--surface-2)}
+.ent.key{border-color:var(--accent);background:var(--accent-soft)}
+.ent b{font-size:12.5px}
+.ent span{color:var(--muted);font-family:var(--f-mono);font-size:10.5px}
+.rel{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.lnk{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.foot{font-size:11.5px;color:var(--muted);max-width:92ch}
+</style>
+<style>
+/* v2 ekleri: aksiyon düğmeleri, dialog formları, metrik kartı, karar geçmişi */
+.actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.sm{padding:2px 9px;font-size:11.5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11.5px;font-weight:600}
+.seg button{all:unset;cursor:pointer;padding:3px 12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);border-radius:999px}
+dialog.dlg{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:0;max-width:min(560px,94vw);width:100%;box-shadow:0 24px 70px #0005}
+dialog.dlg::backdrop{background:#0b1018aa;backdrop-filter:blur(2px)}
+dialog.dlg form{display:flex;flex-direction:column;gap:0}
+dialog.dlg .dh{background:var(--band);padding:10px 16px;font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+dialog.dlg .db{padding:14px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+@media (max-width:640px){dialog.dlg .db{grid-template-columns:minmax(0,1fr)}}
+dialog.dlg label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+dialog.dlg label.full{grid-column:1/-1}
+dialog.dlg input,dialog.dlg select,dialog.dlg textarea{padding:6px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:13px;font-weight:400;color:var(--ink);font-family:inherit}
+dialog.dlg textarea{min-height:56px;resize:vertical}
+dialog.dlg .gate{grid-column:1/-1;border:1px dashed var(--edge);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;background:var(--surface-2)}
+dialog.dlg .gate h4{grid-column:1/-1;margin:0;font-size:12px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--crit)}
+dialog.dlg .df{padding:10px 16px 14px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
+.ro{font-family:var(--f-mono);background:var(--band);border-radius:6px;padding:2px 8px;font-size:12px}
+.kart{padding:4px 16px 14px}
+.kart table{min-width:520px}
+.kart td.v{font-family:var(--f-mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.kart td.v.br{color:var(--crit);font-weight:600}
+.kart td.v.ok{color:var(--good)}
+.kart tr.ov td{border-top:2px solid var(--edge);font-weight:600}
+.kart td.ovc{background:var(--surface-2);font-weight:600}
+.badge{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:7px;background:var(--accent-soft);color:var(--accent);font-weight:600;white-space:nowrap}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:5px;background:var(--band);color:var(--ink-2);white-space:nowrap}
+.del{opacity:.7}
+.hist{padding:0 16px 14px;font-size:12.5px}
+.hist table{min-width:640px}
+</style>
+
+<div class="wrap">
+ <div id="list" hidden>
+  <div class="crumb">MRM · İzleme · Metrikler</div>
+  <h1>Metrikler</h1>
+  <p class="lead">Simülasyonun izleme ekranındaki ölçümler, GRC kayıt düzenine göre düzenlendi: her model ve metrik türü çifti tek bir metrik kaydıdır; ölçümler o kaydın sonuçlarıdır ve her sonuç modelin hangi <b>fazında</b> alındığını taşır (Geliştirme · İlk Validasyon · İzleme · Periyodik Validasyon). Bir satıra tıklayınca kayıt açılır.</p>
+  <div class="lnk"><div class="seg" aria-label="Metrik sistemi"><button type="button" id="segK" aria-pressed="true">Klasik modeller</button><button type="button" id="segM" aria-pressed="false">ML/AI modelleri</button></div><a class="btn" href="#aciklama">Açıklama: kapsam, alan sözlüğü, iş kuralları →</a><button type="button" class="btn pri" id="addMet">+ Metrik ekle</button><button type="button" class="btn" id="resetAll" title="Bu tarayıcıda yapılan tüm düzenlemeleri sil">↺ Düzenlemeleri sıfırla</button></div>
+  <div class="tools" style="margin-top:12px">
+   <input type="search" id="q" placeholder="Ara: metrik, model, sahip, kayıt no…" aria-label="Metriklerde ara">
+   <select id="fs" aria-label="İzleme durumu"><option value="">Tüm durumlar</option><option value="br">Eşik aşımı</option><option value="ok">Normal</option><option value="off">İnaktif</option><option value="del">Silinen (kararlı)</option></select>
+   <select id="ff" aria-label="Metrik çerçevesi"></select>
+   <select id="fp" aria-label="Faz"><option value="">Tüm fazlar</option></select>
+  </div>
+  <div id="classicList"><div class="card" style="margin-top:12px">
+   <div class="bandh"><span>Arama sonuçları — klasik modeller</span><span id="cnt"></span></div>
+   <div class="tw"><table><thead><tr><th>Metrik App ID</th><th>Metrik Adı</th><th>Faz</th><th>Metrik Sahibi</th><th>Durum</th><th class="num">Mevcut Değer</th><th class="num">Eşik</th><th>Son Ölçüm Tarihi</th><th>Periyot</th><th>Model</th><th>İzleme</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div></div>
+  <div id="mlList" hidden><div class="card" style="margin-top:12px">
+   <div class="bandh"><span>ML/AI modelleri — ayrı metrik sistemi (Kavramsal Sağlamlık · Model Performansı · Model Kullanımı)</span><span id="mlCnt"></span></div>
+   <div class="tw"><table><thead><tr><th>Kayıt</th><th>Model</th><th>Tip</th><th>Varsayılan Faz</th><th>Sahip</th><th class="num">Çerçeve metriği</th><th class="num">Özel metrik</th><th class="num">Açık bulgu</th><th>İzleme</th></tr></thead><tbody id="mlRows"></tbody></table></div>
+  </div></div>
+ </div>
+ <div id="rec" hidden></div>
+ <div id="doc" hidden>
+  <div class="crumb"><a href="#liste">MRM · İzleme · Metrikler</a> › Açıklama</div>
+  <h1>Açıklama: metrik kayıt düzeni (v2)</h1>
+  <p class="lead">Bu sayfa, MRM Konsolu simülasyonundaki izleme metriklerinin GRC metrik kaydı düzenine nasıl taşınacağını gösteren bir prototiptir. v2 ile alan seti sadeleştirildi, sonuç satırlarına bulgu yönetimi eklendi, metrik düzenleme/silme karar kapısına bağlandı, faz bilgisi ve model bazlı metrik kartı geldi.</p>
+
+  <div class="docg">
+   <section class="card dsec"><h2>1 · Amaç ve kapsam</h2>
+    <ul>
+     <li><b>Amaç:</b> Model performans ve drift metriklerini, bankanın metrik kayıtlarında kullandığı bölüm ve sekme yapısıyla izlemek; aynı metriğin model yaşam döngüsü boyunca (geliştirme → validasyon → izleme → periyodik validasyon) nasıl değiştiğini tek kartta göstermek.</li>
+     <li><b>Kapsam içi:</b> metrik listesi, metrik ekleme (faz seçimli), kayıt sayfası, eşik izleme, ölçüm sonuçları (aylık / 3 aylık / yıllık düzen), sonuç bazlı bulgu ekle-düzenle-çıkar, karar kapılı metrik düzenleme/silme, metrik kartı ve çapraz referans, tahmin analizi; ML/AI modelleri için üç bölümlü ayrı metrik sistemi (bkz. 6).</li>
+     <li><b>Kapsam dışı:</b> gerçek veri entegrasyonu, kullanıcı kimlik doğrulama. Düzenlemeler yalnız bu tarayıcıda (localStorage) saklanır.</li>
+     <li><b>Veri:</b> 24 modellik örnek envanter, 10 metrik çerçevesi, 18 metrik türü. Ölçüm değerleri örnek olarak üretilmiştir; gerçek ölçüm değildir.</li>
+    </ul></section>
+
+   <section class="card dsec"><h2>2 · Veri modeli</h2>
+    <div class="erd" role="img" aria-label="Veri modeli: bir modelin birden çok metrik kaydı, bir metrik kaydının birden çok fazlı sonucu vardır; sonuç bulguya bağlanabilir; metrik kaydı karar geçmişi taşır.">
+     <div class="ent"><b>Model</b><span>MDL-0001</span><span>tier, sahip, çerçeve, upstream</span></div><div class="rel">1 → N</div>
+     <div class="ent key"><b>Metrik kaydı</b><span>MET-003</span><span>model × metrik türü · faz · periyot</span></div><div class="rel">1 → N</div>
+     <div class="ent"><b>Metrik sonucu</b><span>MET-003-S6</span><span>faz, ölçüm tarihi, değer</span></div><div class="rel">0..1</div>
+     <div class="ent"><b>Bulgu</b><span>FND-…</span><span>ölçüm tarihi + düzenleme tarihi</span></div>
+    </div>
+    <ul>
+     <li><b>Metrik kaydı:</b> model kimliği + metrik türü (tekil). Metrik App ID <b>değiştirilemez</b>.</li>
+     <li><b>Sonuç:</b> metrik kaydı + ölçüm tarihi + faz. Faz değerleri: Geliştirme · İlk Validasyon · İzleme (Monitoring) · Periyodik Validasyon.</li>
+     <li><b>Bulgu:</b> sonuç satırına bağlıdır; ölçüm tarihini sonuçtan alır, ayrıca oluşturma ve <b>son düzenleme tarihi</b> taşır.</li>
+     <li><b>Karar geçmişi:</b> metrik kaydının her düzenleme/silme işlemi için validasyon kararı + MRM Komitesi kararı (karar no, tarih, gerekçe).</li>
+     <li><b>Çapraz referans:</b> aynı metrik türünün ilişkili modellerdeki (upstream/downstream veya elle eklenen) kayıtlarına bağ.</li>
+    </ul></section>
+
+   <section class="card dsec full"><h2>3 · Alan sözlüğü</h2>
+    <p class="small">Tür sütunu alanın nasıl dolduğunu gösterir: <b>Girdi</b> kullanıcı ya da kaynak sistemden gelir, <b>Miras</b> model kaydından okunur, <b>Tanım</b> metrik türü sözlüğünden gelir, <b>Hesap</b> sonuçlardan hesaplanır. v1'deki Trend Beklentisi, Barındıran Sistem, Toplama Frekansı, Toplama Seviyesi ve Bilginin Olası Kaynağı alanları kaldırıldı.</p>
+    <div class="tw"><table class="dict"><thead><tr><th>Bölüm</th><th>Alan</th><th>Tür</th><th>Kaynak ve kural</th></tr></thead><tbody>
+     <tr><td rowspan="9">Genel Bilgiler</td><td>Metrik App ID</td><td>Hesap</td><td>Sıra numarası, MET-001 biçiminde. Kalıcıdır; düzenleme ve silme kararlarında dahi değişmez.</td></tr>
+     <tr><td>Durum</td><td>Hesap</td><td>Model Taslak, Geliştirme, Validasyonda ya da Emekli ise İnaktif; aksi halde Aktif. Kararla silinen metrik "Silindi" görünür.</td></tr>
+     <tr><td>Metrik Adı</td><td>Hesap</td><td>Metrik türü adı + model adı.</td></tr>
+     <tr><td>Metrik Açıklaması</td><td>Tanım / Girdi</td><td>Metrik türü sözlüğündeki tanım; karar kapısından geçen düzenlemeyle değiştirilebilir.</td></tr>
+     <tr><td>Metrik Sahibi</td><td>Miras / Girdi</td><td>Varsayılan model sahibi; kararla değiştirilebilir.</td></tr>
+     <tr><td>Metrik Fazı</td><td>Girdi</td><td>Metrik eklenirken seçilir: Geliştirme · İlk Validasyon · İzleme (Monitoring) · Periyodik Validasyon. Yeni ölçümlerde varsayılan fazdır; her ölçüm kendi fazını da taşır.</td></tr>
+     <tr><td>Ölçüm Periyodu</td><td>Girdi</td><td>Aylık · 3 Aylık · Yıllık. Validasyon testleri 3 aylık ve yıllık düzenle değerlendirilir (Metrik Sonuçları sekmesindeki görünüm anahtarı).</td></tr>
+     <tr><td>Metrik Tipi</td><td>Tanım</td><td>PSI, CSI, HHI, VaR aşımı, halüsinasyon ve toksisite Anahtar Risk Göstergesi; diğerleri Anahtar Performans Göstergesi.</td></tr>
+     <tr><td>İzleme Tipi · Aktivasyon Tarihi</td><td>Tanım / Miras</td><td>Eşik ya da bant metodu; modelin prod'a alınma tarihi.</td></tr>
+     <tr><td rowspan="3">İlişkilendirmeler</td><td>Model · Sahip Birim · Model Sınıfı · NOTA Süreci</td><td>Miras</td><td>Model envanter kaydından okunur; metrik kaydında tekrar girilmez.</td></tr>
+     <tr><td>Kontrol (Dayanak mevzuat)</td><td>Tanım</td><td>Metrik türüne göre düzenleyici dayanak: SR 26-2 sürekli izleme / sonuç analizi, PRA SS1/23 P4, ECB iç model rehberi, BDDK İSEDES md.42/6 (geriye dönük test), IFRS 9 B5.5, EU AI Act md.15.</td></tr>
+     <tr><td>Risk · Metrik Çerçevesi · Aynı modelin diğer metrikleri</td><td>Miras / Hesap</td><td>Modelin tier'ı, seçili çerçeve ve aynı modele bağlı diğer metrik kayıtları.</td></tr>
+     <tr><td>Model Bazlı Skorlar</td><td>Eşik içi / dışı metrik sayısı · Model İzleme Durumu</td><td>Hesap</td><td>Aynı modele bağlı metrik kayıtlarından sayılır. v1'deki Model Sağlık Puanı kaldırıldı.</td></tr>
+     <tr><td rowspan="2">Durum İzleme</td><td>Kritiklik · Metrik Ağırlığı</td><td>Miras / Hesap</td><td>Tier 1 Kritik, Tier 2 Yüksek, Tier 3 Orta, İhmal Edilebilir Düşük. Ağırlık = 100 / çerçevedeki metrik sayısı.</td></tr>
+     <tr><td>Son Ölçüm Tarihi · Mevcut · Önceki · Yüzdesel Değişim</td><td>Hesap</td><td>Tarihe göre son iki sonuç; (mevcut − önceki) / |önceki| × 100.</td></tr>
+     <tr><td>Açıklama sekmesi</td><td>Hedef · Bilginin Gerçek Kaynağı · Tanım · Hesaplama Yöntemi · Metrik Fazı</td><td>Tanım</td><td>Hedef uygulanan eşiktir. v1'deki Hesaplama Formülü alanı kaldırıldı.</td></tr>
+     <tr><td>Metrik Analizleri sekmesi</td><td>Eşik · Eşik Yönlendirme · Eşik dışı ölçüm · Eşiğe uzaklık</td><td>Hesap</td><td>Eşik tier politikasından, yoksa metrik varsayılanından. Grafik ölçümleri ve eşik çizgisini gösterir.</td></tr>
+     <tr><td>Metrik Sonuçları sekmesi</td><td>Sonuç No · Faz · Ölçüm Tarihi · Düzenleme Tarihi · Değer · Eşik · Değişim · Durum · Bulgu</td><td>Girdi / Hesap</td><td>Aylık / 3 Aylık / Yıllık görünüm anahtarı (3 aylık ve yıllık değerler ortalamadır; VaR aşımı toplamdır). Her satırda Bulgu ekle / Düzenle / Çıkar; "+ Ölçüm ekle" faz seçimiyle yeni sonuç girer.</td></tr>
+     <tr><td>Metrik Kartı sekmesi</td><td>Faz × Yıl matrisi · Overall · Çapraz referans</td><td>Hesap / Girdi</td><td>Örn. "X modeli · Gini kartı": Geliştirme, İlk Validasyon, İzleme ve Periyodik Validasyon fazlarında yıl bazlı ve overall değer. Çapraz referans: aynı metriğin upstream/downstream modellerdeki kayıtları + elle eklenen bağlar.</td></tr>
+     <tr><td>Tahmin Analizi sekmesi</td><td>Alt / Üst Sınır · Tahmini Değer 1–5 · Tahmini Büyüme</td><td>Hesap</td><td>Son 6 izleme sonucu üzerinden doğrusal regresyon; 5 dönem ileri.</td></tr>
+     <tr><td>Karar Geçmişi</td><td>İşlem · Validasyon kararı · MRM Komitesi kararı · Gerekçe · Tarih</td><td>Girdi</td><td>Düzenleme ve silme işlemlerinin karar kaydı; metrik kaydının altında listelenir.</td></tr>
+    </tbody></table></div></section>
+
+   <section class="card dsec"><h2>4 · İş kuralları</h2>
+    <ul>
+     <li><b>Eşik aşımı:</b> "düşük iyi" metriklerde değer eşiğin üstündeyse, "yüksek iyi" metriklerde altındaysa, bant metriklerinde aralığın dışındaysa aşım.</li>
+     <li><b>Tier bazlı eşik:</b> PSI, CSI, AUC, Gini ve KS için eşik modelin tier'ına göre sıkılaşır. Diğer metriklerde tek varsayılan eşik kullanılır.</li>
+     <li><b>İzleme durumu:</b> yalnız en son sonuca bakılır. Model izleme durumu, metriklerinden biri eşik dışındaysa Eşik Aşımı olur.</li>
+     <li><b>Bulgu:</b> her sonuç satırına en fazla bir bulgu bağlanır; eklenirken ölçüm tarihi sonuçtan alınır, oluşturma ve düzenleme tarihleri ayrı tutulur. Düzenlemede düzenleme tarihi güncellenir; çıkarmada bulgu silinir ve işlem karar geçmişine not düşülür.</li>
+     <li><b>Metrik düzenleme / silme kapısı:</b> Metrik App ID dışındaki alanlar yalnız (a) validasyon kararı "Uygun" ya da "Koşullu uygun" ve (b) MRM Komitesi kararı "Onaylandı" ise değiştirilebilir; silme aynı kapıdan geçer. Karar no, tarih ve gerekçe zorunludur. Kararsız düzenleme engellenir.</li>
+     <li><b>Validasyon ölçüm düzeni:</b> 3 aylık ve yıllık değerler o dönemdeki ölçümlerin ortalamasıdır (VaR aşımı: toplam). Validasyon testlerinde dönem sonu ortalaması eşiğe karşı değerlendirilir.</li>
+     <li><b>Faz:</b> metrik eklenirken seçilen faz yeni ölçümlerin varsayılan fazıdır; ölçüm eklerken değiştirilebilir. Kart, fazları yıl bazında ayrı satırlarda gösterir.</li>
+    </ul></section>
+
+   <section class="card dsec"><h2>5 · Karar bekleyen konular</h2>
+    <ul>
+     <li><b>Metrik kimliği:</b> kalıcı numara Archer'da nerede üretilecek (Tracking ID) ve mevcut ölçüm numaralarıyla nasıl eşlenecek?</li>
+     <li><b>Karar kapısı:</b> validasyon ve komite kararları ayrı kayıt tipleri mi (cross-reference) yoksa metrik kaydındaki alanlar mı olacak?</li>
+     <li><b>Bulgu entegrasyonu:</b> sonuç bazlı bulgular Archer Findings uygulamasına mı yazılacak, yoksa metrik alt-formu mu?</li>
+     <li><b>Çapraz referans:</b> upstream/downstream otomatik mi türetilecek, elle bağ kim tarafından eklenecek?</li>
+     <li><b>Veri kaynağı:</b> ölçümler elle mi girilecek, yoksa izleme sisteminden beslenecek mi? Hangi sıklıkla?</li>
+    </ul></section>
+
+   <section class="card dsec full"><h2>6 · ML/AI modelleri için ayrı metrik sistemi</h2>
+    <ul>
+     <li><b>Kapsam:</b> Model sınıfı ML/AI olan modeller (klasik ML, GenAI, Agentic) klasik metrik listesinde değil, "ML/AI modelleri" sekmesinde model başına tek kayıtla (ML-MDL-####) izlenir.</li>
+     <li><b>Üç bölüm:</b> <b>Kavramsal Sağlamlık</b> (metodoloji, veri temsil gücü, açıklanabilirlik, yanlılık), <b>Model Performansı</b> (çerçeve metrikleri otomatik gelir: AUC/Gini/PSI/halüsinasyon…; özel metrik eklenebilir), <b>Model Kullanımı</b> (override oranı, insan gözetimi, kullanım kapsamı, istisnalar).</li>
+     <li><b>Tamamen özelleştirilebilir:</b> her bölümde metrik adı, açıklama, değer ve hedef serbest metindir; faz ve ölçüm tarihi seçilir; durum Uygun / İzlenecek / Aşım / Uygun değil. Bulgular da serbest metinle eklenir, düzenlenir, çıkarılır; tespit, oluşturma ve son düzenleme tarihleri ayrı tutulur.</li>
+     <li><b>Kart:</b> Model Performansı bölümündeki çerçeve metrikleri için "Kart" düğmesi faz × yıl matrisini ve çapraz referansı açar.</li>
+     <li><b>Dayanak:</b> SR 26-2 (geliştirme / validasyon / izleme bileşenleri) · EU AI Act md.9, 13-15 · NIST AI RMF · PRA SS1/23 P3-P4 — kayıt başlığındaki Kontrol alanında gösterilir.</li>
+    </ul></section>
+
+   <section class="card dsec full"><h2>7 · BT ekibi için uygulama notları</h2>
+    <ul>
+     <li><b>Bağımlılık yok:</b> sayfa tek dosyalık HTML, CSS ve JavaScript'tir; sunucu ya da veritabanı kullanmaz.</li>
+     <li><b>Kalıcılık:</b> kullanıcı düzenlemeleri (eklenen metrik/ölçüm, bulgular, karar geçmişi, çapraz referanslar) localStorage anahtarı <span class="mono">mrm_metrik_v2</span> altında örnek verinin üzerine katman olarak saklanır; "Düzenlemeleri sıfırla" temizler.</li>
+     <li><b>Üretim için gerekenler:</b> metrik kaydı, sonuç, bulgu ve karar tabloları; model kaydına yabancı anahtar; Metrik App ID için salt-okunur anahtar alan; karar kapısı için Advanced Workflow (validasyon adımı → komite adımı); alan-seviyesi denetim izi; ölçüm besleme arayüzü.</li>
+     <li><b>Gezinme:</b> her kaydın kendi bağlantısı vardır (ör. #MET-003); liste filtresi önceki ve sonraki kayıt sırasını belirler.</li>
+     <li><b>Örnek veri:</b> ölçümler sabit bir tohumla üretilir; izleme sonuçları bugüne göre son 6 aydır, geliştirme / ilk validasyon / periyodik validasyon sonuçları modelin tarihlerinden türetilir.</li>
+    </ul></section>
+  </div>
+ </div>
+
+ <p class="foot">Veriler MRM Konsolu simülasyonunun örnek envanterinden ve metrik tanımlarından türetildi: 10 metrik çerçevesi, 18 metrik türü, tier bazlı eşikler. Ölçüm serisi simülasyondaki üretim kuralıyla örnek olarak oluşturuldu; gerçek ölçüm değildir. v2: alan sadeleştirme, sonuç bazlı bulgu yönetimi, karar kapılı düzenleme/silme, faz ve metrik kartı.</p>
+</div>
+
+<dialog class="dlg" id="dlg"><form method="dialog" id="dlgForm"><div class="dh" id="dlgTitle"></div><div class="db" id="dlgBody"></div><div class="df"><button type="button" class="btn" id="dlgCancel">Vazgeç</button><button type="submit" class="btn pri" id="dlgOk">Kaydet</button></div></form></dialog>
+<script>
+/* ===== Modeller (simülasyon örnek envanteri) ===== */
+const C=(M1,M2,M3,M4,M5,K1,K2,K3,K4,K5,K6,K7,B1,O1,x)=>Object.assign({M1,M2,M3,M4,M5,K1,K2,K3,K4,K5,K6,K7,B1,O1},x||{});
+const C2=(mm,kk,o,x)=>Object.assign({M1:mm,M2:Math.max(1,mm-1),M3:mm,M4:mm,M5:Math.max(1,mm-2),K1:kk,K2:kk,K3:Math.max(1,kk-1),K4:kk,K5:kk,K6:Math.max(1,kk-1),K7:Math.max(1,kk-2),B1:1,O1:o||0},x||{});
+const D={duzenleyici:true}, G={genai:true};
+const MODELS=[
+ {id:"MDL-0001",ad:"IRB PD – Kurumsal Portföy",tip:"İstatistiksel",sinif:"Geleneksel",kat:["Kredi/IRB"],duz:true,amac:"Kurumsal kredi portföyünde temerrüt olasılığı (PD) tahmini; yasal sermaye ve karşılık hesabı.",unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",dev:"Model Geliştirme Ekibi",koken:"İç Geliştirme",sys:"Risk Hesaplama Motoru",met:"Lojistik regresyon + skorkart",crit:C(5,4,5,5,3,3,4,3,4,2,2,1,3,0,D),durum:"İzlemede",gt:"2022-03-01",pt:"2022-09-15",lv:"2025-09-20",mp:"pd_rating",deg:true,nota:"1.1.2. Kurumsal/Ticari Kredi Tahsis Süreci",up:[]},
+ {id:"MDL-0002",ad:"TFRS9 BKZ – Bireysel",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["TFRS9 BKZ","Kredi/IRB"],duz:true,amac:"Bireysel portföyde beklenen kredi zararı (12 ay / ömür boyu) hesabı; karşılık.",unit:"Finansal Yönetim ve Planlama GMY",sahip:"M. Demir",dev:"Model Geliştirme Ekibi",koken:"İç Geliştirme",sys:"IFRS9 Motoru",met:"PD/LGD/EAD + makro senaryo",crit:C(5,5,4,5,3,4,4,3,5,2,2,2,3,0,D),durum:"Revalidasyonda",gt:"2021-06-01",pt:"2021-12-01",lv:"2024-02-10",mp:"ifrs9",nota:"2.2. Karşılık / TFRS9 (BKZ) Süreci",up:["MDL-0001","MDL-0013"]},
+ {id:"MDL-0003",ad:"Kredi Kartı Suistimal (Fraud) – ML",tip:"AI/ML",sinif:"ML/AI",kat:["Operasyonel/AMA","AML/Suistimal"],aiml:true,amac:"Kredi kartı işlemlerinde gerçek zamanlı suistimal tespiti.",unit:"Operasyonel İşlemler ve Destek Hizmetleri GMY",sahip:"S. Kaya",dev:"Veri Bilimi Ekibi",koken:"İç Geliştirme",sys:"Fraud Platformu (MLOps)",met:"Gradient Boosting",alg:"GBM",crit:C(3,5,4,2,4,4,4,4,5,4,3,3,1,2),durum:"İzlemede",gt:"2023-01-15",pt:"2023-05-01",lv:"2025-05-05",mp:"ml_class",deg:true,nota:"4.1. AML / Şüpheli İşlem ve Suistimal İzleme Süreci",euai:"Sınırlı",up:[]},
+ {id:"MDL-0004",ad:"Piyasa Riski VaR (Tarihsel Simülasyon)",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["Piyasa/VaR"],duz:true,amac:"Alım-satım portföyü riske maruz değer (VaR) hesabı; yasal sermaye.",unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",dev:"Piyasa Riski Ekibi",koken:"İç Geliştirme",sys:"Hazine Risk Sistemi",met:"Tarihsel simülasyon 250 gün",crit:C(5,2,4,5,2,3,3,3,5,2,1,1,2,0,D),durum:"İzlemede",gt:"2020-01-01",pt:"2020-06-01",lv:"2025-06-15",mp:"var_market",nota:"2.3. Piyasa Riski Yönetimi Süreci",up:[]},
+ {id:"MDL-0005",ad:"Başvuru Skorkartı – Bireysel Krediler",tip:"İstatistiksel",sinif:"Geleneksel",kat:["Kredi/IRB"],amac:"Bireysel kredi başvurularında onay/limit kararı desteği.",unit:"Perakende Bankacılık GMY",sahip:"C. Temel",dev:"Model Geliştirme Ekibi",koken:"İç Geliştirme",sys:"Karar Motoru",met:"Skorkart",crit:C(3,4,4,2,3,2,2,3,5,2,2,1,2,1),durum:"Onaylı/Prod",gt:"2023-08-01",pt:"2024-01-10",lv:"2025-01-15",mp:"pd_rating",up:[]},
+ {id:"MDL-0006",ad:"GenAI Müşteri Asistanı (Çağrı Özeti)",tip:"GenAI/Temel Model",sinif:"ML/AI",kat:["Generative AI"],aiml:true,genai:true,amac:"Çağrı merkezi görüşmelerinin özetlenmesi ve yönlendirme önerisi.",unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",dev:"Yapay Zekâ Ekibi",koken:"Satıcı/Vendor",ted:"Bulut LLM Sağlayıcısı",sys:"Bulut (LLM API)",met:"Fine-tuned LLM + RAG",alg:"Transformer/LLM",crit:C(2,4,2,1,4,4,5,4,4,5,4,4,1,2,G),durum:"Koşullu Onaylı",gt:"2025-02-01",pt:"2025-06-01",lv:"2025-06-01",mp:"genai",deg:true,nota:"5.3. Dijital Kanallar ve Operasyonel Otomasyon Süreci",euai:"Sınırlı",up:[]},
+ {id:"MDL-0007",ad:"AML İşlem İzleme Skoru",tip:"Hibrit",sinif:"ML/AI",kat:["AML/Suistimal"],aiml:true,duz:true,amac:"Şüpheli işlem tespiti için kural + skor tabanlı izleme.",unit:"İç Sistemler Grup Başkanlığı",sahip:"N. Arslan",dev:"Uyum & Veri Ekibi",koken:"İç Geliştirme",sys:"AML Platformu",met:"Kural + lojistik skor",crit:C(3,5,3,2,5,3,3,4,5,3,2,2,2,1,D),durum:"İzlemede",gt:"2022-11-01",pt:"2023-03-01",lv:"2024-11-20",mp:"aml_fraud",euai:"Sınırlı",up:[]},
+ {id:"MDL-0008",ad:"ALM / IRRBB Davranışsal Model",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["ALM/IRRBB"],duz:true,amac:"Vadesiz mevduat davranışı ve faiz riski (IRRBB) modellemesi.",unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",dev:"Bilanço Yönetimi Ekibi",koken:"İç Geliştirme",sys:"ALM Sistemi",met:"Zaman serisi + davranışsal varsayım",crit:C(4,3,4,4,2,3,4,3,3,2,2,2,2,0,D),durum:"İzlemede",gt:"2021-09-01",pt:"2022-02-01",lv:"2025-02-25",mp:"alm_irrbb",up:["MDL-0002"]},
+ {id:"MDL-0009",ad:"Erken Uyarı Sistemi (EWS)",tip:"AI/ML",sinif:"ML/AI",kat:["Kredi/IRB"],aiml:true,amac:"Kredilerde bozulma sinyalleri için erken uyarı skoru.",unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",dev:"Veri Bilimi Ekibi",koken:"İç Geliştirme",sys:"Risk Analitik Platformu",met:"Random Forest",alg:"Random Forest",crit:C(2,3,3,1,2,3,3,2,3,3,2,2,1,1),durum:"Onaylı/Prod",gt:"2024-04-01",pt:"2024-09-01",lv:"2025-09-10",mp:"ml_class",euai:"Minimal",up:["MDL-0001"]},
+ {id:"MDL-0010",ad:"KOBİ PD Skorkartı",tip:"İstatistiksel",sinif:"Geleneksel",kat:["Kredi/IRB"],duz:true,unit:"Kredi Tahsis ve Yönetimi GMY",sahip:"H. Çakır",met:"Lojistik skorkart",alg:"Lojistik Reg.",crit:C2(4,3,0,D),mp:"pd_rating",up:[]},
+ {id:"MDL-0011",ad:"Bireysel LGD Modeli",tip:"İstatistiksel",sinif:"Geleneksel",kat:["Kredi/IRB"],duz:true,unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",met:"Beta regresyon",crit:C2(4,3,0,D),mp:"lgd_ead",up:["MDL-0001"]},
+ {id:"MDL-0012",ad:"Kurumsal EAD / CCF",tip:"İstatistiksel",sinif:"Geleneksel",kat:["Kredi/IRB"],duz:true,unit:"Kredi Tahsis ve Yönetimi GMY",sahip:"H. Çakır",met:"CCF regresyon",crit:C2(4,3,0,D),mp:"lgd_ead",up:[]},
+ {id:"MDL-0013",ad:"IFRS9 Makro Senaryo Modeli",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["TFRS9 BKZ"],duz:true,unit:"Finansal Yönetim ve Planlama GMY",sahip:"M. Demir",met:"VAR / makro regresyon",crit:C2(5,4,0,D),mp:"ifrs9",deg:true,up:[]},
+ {id:"MDL-0014",ad:"Stres Testi Makro Projeksiyon",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["İSEDES Sermaye"],duz:true,unit:"Finansal Yönetim ve Planlama GMY",sahip:"M. Demir",met:"Senaryo bazlı ekonometrik",crit:C2(5,4,0,D),mp:"stress",durum:"Revalidasyonda",nota:"2.1. Sermaye Yeterliliği (İSEDES) Süreci",up:["MDL-0013"]},
+ {id:"MDL-0015",ad:"Karşı Taraf Kredi Riski (CVA)",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["Karşı Taraf/CVA"],duz:true,unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",met:"CVA / maruziyet simülasyonu",crit:C2(4,4,0,D),mp:"var_market",up:[]},
+ {id:"MDL-0016",ad:"Faiz Oranı Riski (IRRBB)",tip:"İstatistiksel",sinif:"Ekonometrik",kat:["ALM/IRRBB"],duz:true,unit:"Hazine Yönetimi ve Uluslararası Bankacılık GMY",sahip:"E. Şahin",met:"Zaman serisi / repricing",crit:C2(4,3,0,D),mp:"alm_irrbb",up:[]},
+ {id:"MDL-0017",ad:"Müşteri Churn Tahmini",tip:"AI/ML",sinif:"ML/AI",kat:["Diğer"],aiml:true,unit:"Perakende Bankacılık GMY",sahip:"C. Temel",met:"XGBoost",alg:"GBM",crit:C2(3,4,1),mp:"ml_class",deg:true,euai:"Minimal",up:[]},
+ {id:"MDL-0018",ad:"Tahsilat Önceliklendirme",tip:"AI/ML",sinif:"ML/AI",kat:["Kredi/IRB"],aiml:true,unit:"Kredi Risk İzleme ve Yasal Takip GMY",sahip:"A. Yıldırım",met:"Random Forest",alg:"Random Forest",crit:C2(3,3,1),mp:"ml_class",up:["MDL-0001"]},
+ {id:"MDL-0019",ad:"Next-Best-Offer Skoru",tip:"AI/ML",sinif:"ML/AI",kat:["Diğer"],aiml:true,unit:"Kurumsal ve Ticari Pazarlama GMY",sahip:"S. Ünal",met:"Gradient Boosting Reg.",alg:"GBM",crit:C2(2,3,2),mp:"ml_reg",up:[]},
+ {id:"MDL-0020",ad:"AML Anomali Tespiti (Unsupervised)",tip:"AI/ML",sinif:"ML/AI",kat:["AML/Suistimal"],aiml:true,duz:true,unit:"İç Sistemler Grup Başkanlığı",sahip:"N. Arslan",met:"Isolation Forest",alg:"Isolation Forest",crit:C2(3,4,0,D),mp:"aml_fraud",deg:true,euai:"Sınırlı",up:[]},
+ {id:"MDL-0021",ad:"Belge OCR & Sınıflandırma",tip:"AI/ML",sinif:"ML/AI",kat:["Diğer"],aiml:true,unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",met:"CNN / Transformer",alg:"Sinir Ağı",crit:C2(2,4,2),mp:"ml_class",koken:"Satıcı/Vendor",ted:"OCR Sağlayıcısı",up:[]},
+ {id:"MDL-0022",ad:"Müşteri Segmentasyon",tip:"AI/ML",sinif:"ML/AI",kat:["Diğer"],aiml:true,unit:"Perakende Bankacılık GMY",sahip:"C. Temel",met:"K-Means + skorlama",alg:"Kümeleme",crit:C2(2,3,0),mp:"ml_reg",up:[]},
+ {id:"MDL-0023",ad:"GenAI Doküman Özetleme",tip:"GenAI/Temel Model",sinif:"ML/AI",kat:["Generative AI"],aiml:true,genai:true,unit:"Bilgi Teknolojileri Grup Başkanlığı",sahip:"K. Öz",met:"Fine-tuned LLM + RAG",alg:"Transformer/LLM",crit:C2(2,5,2,G),mp:"genai",koken:"Satıcı/Vendor",ted:"Bulut LLM Sağlayıcısı",durum:"Koşullu Onaylı",euai:"Sınırlı",up:[]},
+ {id:"MDL-0024",ad:"Agentic AI Operasyon Asistanı (Tool-Use)",tip:"GenAI/Temel Model",sinif:"ML/AI",kat:["Agentic AI"],aiml:true,genai:true,unit:"Dijital Dönüşüm Ofisi Daire Başkanlığı",sahip:"B. Aksoy",met:"LLM + araç çağırma (agent)",alg:"Transformer/LLM + Tools",crit:C2(3,5,3,G),mp:"genai",koken:"Satıcı/Vendor",ted:"Bulut LLM Sağlayıcısı",durum:"Validasyonda",deg:true,nota:"5.3. Dijital Kanallar ve Operasyonel Otomasyon Süreci",up:[]}
+].map(m=>Object.assign({durum:"İzlemede",gt:"2023-01-01",pt:"2023-06-01",lv:"2025-06-01",dev:"Model Geliştirme Ekibi",koken:"İç Geliştirme",sys:"—",ted:"",alg:"",amac:"",nota:"",euai:"",aiml:false,genai:false,duz:false,deg:false},m));
+
+
+/* ===== Tier ===== */
+const W={mat:{M1:.30,M2:.15,M3:.25,M4:.20,M5:.10},kar:{K1:.18,K2:.20,K3:.12,K4:.10,K5:.15,K6:.10,K7:.15}};
+const ORDER=["İhmal Edilebilir","Tier 3","Tier 2","Tier 1"];
+function tierOf(c){let mat=0,kar=0;for(const k in W.mat)mat+=(+c[k]||0)*W.mat[k];for(const k in W.kar)kar+=(+c[k]||0)*W.kar[k];const ic=+(mat*kar).toFixed(2);
+ let t=ic>=15?"Tier 1":ic>=8?"Tier 2":ic>=3?"Tier 3":"İhmal Edilebilir";
+ if((c.duzenleyici||(+c.O1||0)>=3||c.genai)&&ORDER.indexOf(t)<2)t="Tier 2";
+ if((+c.B1||0)>=3&&ORDER.indexOf(t)<3)t=ORDER[ORDER.indexOf(t)+1];return t;}
+
+/* ===== Metrik tanımları (simülasyondan) ===== */
+const DEF={
+ PSI:{dir:"low",esik:.25,lab:"PSI (popülasyon stabilite)",kri:1,ac:"Skor dağılımının geliştirme örneklemine göre kayması.",fm:"Σ (gerçek% − beklenen%) × ln(gerçek% / beklenen%)"},
+ CSI:{dir:"low",esik:.25,lab:"CSI (karakteristik stabilite)",kri:1,ac:"Tek bir değişkenin dağılımındaki kayma.",fm:"Değişken bazında PSI formülü"},
+ AUC:{dir:"high",esik:.70,lab:"AUC",ac:"Modelin iyi ve kötüyü ayırma gücü (ROC eğrisi altı alan).",fm:"ROC eğrisi altında kalan alan",cap:1},
+ Gini:{dir:"high",esik:.40,lab:"Gini",ac:"Ayrım gücü; AUC'den türetilir.",fm:"2 × AUC − 1",cap:1},
+ KS:{dir:"high",esik:.30,lab:"KS",ac:"İyi ve kötü kümülatif dağılımları arasındaki en büyük fark.",fm:"max |F_iyi(s) − F_kötü(s)|",cap:1},
+ F1:{dir:"high",esik:.60,lab:"F1",ac:"Precision ve recall'un harmonik ortalaması.",fm:"2 × P × R / (P + R)",cap:1},
+ Precision:{dir:"high",esik:.70,lab:"Precision",ac:"Pozitif tahminlerin doğru çıkma oranı.",fm:"DP / (DP + YP)",cap:1},
+ Recall:{dir:"high",esik:.70,lab:"Recall",ac:"Gerçek pozitiflerin yakalanma oranı.",fm:"DP / (DP + YN)",cap:1},
+ RMSE:{dir:"low",esik:.15,lab:"RMSE",ac:"Tahmin hatasının karekök ortalaması.",fm:"√(Σ (y − ŷ)² / n)"},
+ MAE:{dir:"low",esik:.12,lab:"MAE",ac:"Ortalama mutlak tahmin hatası.",fm:"Σ |y − ŷ| / n"},
+ R2:{dir:"high",esik:.70,lab:"R²",ac:"Modelin açıkladığı varyans oranı.",fm:"1 − SSE / SST",cap:1},
+ MAPE:{dir:"low",esik:.15,lab:"MAPE",ac:"Ortalama mutlak yüzde hata.",fm:"Σ |y − ŷ| / |y| / n"},
+ DW:{dir:"band",band:[1.5,2.5],esik:2.0,lab:"Durbin-Watson",ac:"Artıklarda otokorelasyon testi; 2'ye yakın olması beklenir.",fm:"Σ (e_t − e_t−1)² / Σ e_t²"},
+ VaRexc:{dir:"low",esik:4,lab:"VaR aşımı (12 ay)",kri:1,int:1,ac:"Son 250 iş gününde gerçekleşen zararın VaR'ı aştığı gün sayısı.",fm:"Geriye dönük test aşım sayısı"},
+ HHI:{dir:"low",esik:.20,lab:"HHI (yoğunlaşma)",kri:1,ac:"Derece sınıflarındaki yoğunlaşma.",fm:"Σ pay²"},
+ Halusinasyon:{dir:"low",esik:.15,lab:"Halüsinasyon",kri:1,ac:"Kaynağa dayanmayan yanıtların oranı.",fm:"dayanaksız yanıt / değerlendirilen yanıt"},
+ Toksisite:{dir:"low",esik:.10,lab:"Toksisite",kri:1,ac:"Uygunsuz içerik barındıran yanıtların oranı.",fm:"toksik yanıt / değerlendirilen yanıt"},
+ Faithfulness:{dir:"high",esik:.85,lab:"RAG Faithfulness",ac:"Yanıtın getirilen kaynakla tutarlılık oranı.",fm:"kaynakla tutarlı iddia / toplam iddia",cap:1}};
+const TT={"Tier 1":{PSI:.10,CSI:.10,AUC:.75,Gini:.50,KS:.35},"Tier 2":{PSI:.20,CSI:.20,AUC:.70,Gini:.42,KS:.30},"Tier 3":{PSI:.25,CSI:.25,AUC:.65,Gini:.38,KS:.28},"İhmal Edilebilir":{PSI:.30,CSI:.30,AUC:.60,Gini:.35,KS:.25}};
+const FW={pd_rating:["PD / Derecelendirme",["Gini","KS","PSI","HHI"]],lgd_ead:["LGD / EAD",["RMSE","MAE","R2"]],ifrs9:["IFRS9 BKZ (ekonometrik)",["RMSE","MAPE","R2","PSI"]],alm_irrbb:["ALM / IRRBB (zaman serisi)",["RMSE","MAPE","DW"]],var_market:["Piyasa / Karşı Taraf (VaR)",["VaRexc"]],stress:["Stres testi (ekonometrik)",["RMSE","MAPE","R2"]],ml_class:["ML Sınıflandırma",["AUC","Gini","KS","F1","Precision","Recall","PSI"]],ml_reg:["ML Regresyon",["RMSE","MAE","R2","PSI"]],aml_fraud:["AML / Suistimal",["Precision","Recall","PSI"]],genai:["GenAI",["Halusinasyon","Toksisite","Faithfulness"]]};
+const BASE={PSI:.06,CSI:.07,AUC:.82,Gini:.55,KS:.42,F1:.74,Precision:.80,Recall:.76,RMSE:.09,MAE:.07,R2:.80,MAPE:.09,DW:2.0,VaRexc:2,HHI:.12,Halusinasyon:.08,Toksisite:.03,Faithfulness:.92};
+const KRT={"Tier 1":"Kritik","Tier 2":"Yüksek","Tier 3":"Orta","İhmal Edilebilir":"Düşük"};
+function isBreach(t,v,e){const d=DEF[t];if(d.dir==="band")return v<d.band[0]||v>d.band[1];return d.dir==="low"?v>e:v<e;}
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const NOW=new Date();
+const MONTHS=[];for(let i=5;i>=0;i--)MONTHS.push(new Date(NOW.getFullYear(),NOW.getMonth()-i,1));
+const fmt=(t,v)=>v==null?"—":DEF[t].int?String(Math.round(v)):(+v).toFixed(t==="DW"?2:3);
+
+
+/* ===== v2: fazlar, kalıcı katman, karar kapısı ===== */
+const PHASES=["Geliştirme","İlk Validasyon","İzleme (Monitoring)","Periyodik Validasyon"];
+const PERIODS=["Aylık","3 Aylık","Yıllık"];
+const SKEY="mrm_metrik_v2";
+const today=()=>iso(new Date());
+function loadS(){try{const d=JSON.parse(localStorage.getItem(SKEY));if(d&&typeof d==="object")return Object.assign({added:[],removed:{},edits:{},extraRes:{},findings:{},xrefs:{},ml:{}},d);}catch(e){}return {added:[],removed:{},edits:{},extraRes:{},findings:{},xrefs:{},ml:{}};}
+let S=loadS();
+const saveS=()=>localStorage.setItem(SKEY,JSON.stringify(S));
+const defaultPhase=m=>m.durum==="Geliştirme"?"Geliştirme":m.durum==="Validasyonda"?"İlk Validasyon":m.durum==="Revalidasyonda"?"Periyodik Validasyon":"İzleme (Monitoring)";
+const DAYANAK=t=>{
+ if(["Halusinasyon","Toksisite","Faithfulness"].includes(t))return "EU AI Act md.15(1)/(5) doğruluk-sağlamlık · NIST AI 600-1 GenAI profili · SR 26-2 sürekli izleme";
+ if(t==="VaRexc")return "BDDK İSEDES Yön. md.42/6 geriye dönük test · Basel piyasa riski backtesting (trafik ışığı) · SR 26-2 sonuç analizi";
+ if(["PSI","CSI","HHI"].includes(t))return "SR 26-2 sürekli izleme (stabilite) · ECB iç model rehberi · PRA SS1/23 P4";
+ if(["AUC","Gini","KS","F1","Precision","Recall"].includes(t))return "ECB iç model rehberi — ayrım gücü · SR 26-2 sonuç analizi · BDDK İSEDES md.42/6";
+ if(t==="DW")return "SR 26-2 kavramsal sağlamlık (artık analizi) · PRA SS1/23 P3";
+ return "IFRS 9 B5.5 (tahmin hatası) · SR 26-2 sonuç analizi · PRA SS1/23 P4";};
+const DAYANAK_ML="SR 26-2 (geliştirme/validasyon/izleme) · EU AI Act md.9 risk yönetimi, md.13-15 şeffaflık-gözetim-sağlamlık · NIST AI RMF · PRA SS1/23 P3-P4";
+
+/* ===== Metrik kayıtları: model × metrik türü (tüm modeller; ML/AI ayrı sistemde listelenir) ===== */
+const METS=[];
+function mkRes(d,t,v,faz,esik){return {d,v,faz,br:isBreach(t,v,esik),rk:faz+"|"+iso(d),seed:true};}
+MODELS.forEach((m,mi)=>{m.tier=tierOf(m.crit);m.ml=m.sinif==="ML/AI";const fw=FW[m.mp];if(!fw)return;
+ fw[1].forEach((t,ti)=>{const d=DEF[t],r=rng(mi*131+ti*17+7),base=BASE[t];
+  const esik=TT[m.tier]&&TT[m.tier][t]!=null?TT[m.tier][t]:d.esik;
+  const noise=()=>(r()-.5)*(d.dir==="band"?.3:(base*.12+.008));
+  const clip=v=>d.int?Math.round(Math.max(0,v)):+v.toFixed(t==="DW"?2:3);
+  const res=[];
+  // geliştirme ve ilk validasyon fazı (modelin tarihlerinden)
+  const devV=clip(d.dir==="low"?base*.85+noise()*.5:d.dir==="high"?Math.min(d.cap?1:9e9,base*1.03+noise()*.5):2+noise()*.3);
+  res.push(mkRes(new Date(m.gt),t,devV,"Geliştirme",esik));
+  res.push(mkRes(new Date(m.pt),t,clip(base+noise()),"İlk Validasyon",esik));
+  // izleme: son 6 ay
+  MONTHS.forEach((dt,i)=>{let v=base+noise();if(m.deg&&i>=4){v=d.dir==="low"?d.esik*1.18:d.dir==="high"?d.esik*.9:d.band[1]+.35;v+=noise()*.25;}res.push(mkRes(dt,t,clip(v),"İzleme (Monitoring)",esik));});
+  // periyodik validasyon (son validasyon tarihi prod'dan sonraysa)
+  if(m.lv&&m.lv>m.pt)res.push(mkRes(new Date(m.lv),t,clip(base+noise()),"Periyodik Validasyon",esik));
+  METS.push({id:"MET-"+String(METS.length+1).padStart(3,"0"),m,t,d,esik0:esik,res0:res,fw:fw[0],fwk:m.mp,faz0:defaultPhase(m),periyot0:"Aylık",
+   active:!["Taslak","Geliştirme","Validasyonda","Emekli"].includes(m.durum),w:Math.round(100/fw[1].length)});});});
+/* kullanıcı eklediği metrikler */
+S.added.forEach(a=>{const m=MODELS.find(x=>x.id===a.modelId);const d=DEF[a.t];if(!m||!d)return;if(METS.some(x=>x.id===a.id))return;
+ const res=(a.firstRes?[Object.assign({d:new Date(a.firstRes.d)},{v:+a.firstRes.v,faz:a.faz,br:isBreach(a.t,+a.firstRes.v,+a.esik),rk:a.faz+"|"+a.firstRes.d,seed:true})]:[]);
+ METS.push({id:a.id,m,t:a.t,d,esik0:+a.esik,res0:res,fw:(FW[m.mp]||["—"])[0],fwk:m.mp,faz0:a.faz,periyot0:a.periyot||"Aylık",active:true,w:0,added:true});});
+const BYID={};METS.forEach(x=>BYID[x.id]=x);
+/* efektif görünüm: düzenlemeler + ek ölçümler */
+function eff(x){const e=S.edits[x.id]||{};const esik=e.esik!=null?+e.esik:x.esik0;
+ const extra=(S.extraRes[x.id]||[]).map(r=>({d:new Date(r.d),v:+r.v,faz:r.faz,br:isBreach(x.t,+r.v,esik),rk:r.faz+"|"+r.d,note:r.note,created:r.created}));
+ const res=x.res0.map(r=>Object.assign({},r,{br:isBreach(x.t,r.v,esik)})).concat(extra).sort((a,b)=>a.d-b.d);
+ res.forEach((r,i)=>r.no=x.id+"-S"+(i+1));
+ const mon=res.filter(r=>r.faz==="İzleme (Monitoring)");const last=res[res.length-1]||null,prev=res[res.length-2]||null;
+ return Object.assign({},x,{esik,res,mon,last,prev,sahip:e.sahip||x.m.sahip,faz:e.faz||x.faz0,periyot:e.periyot||x.periyot0,ac:e.aciklama||x.d.ac,
+  removed:!!S.removed[x.id],chg:prev&&prev.v?((last.v-prev.v)/Math.abs(prev.v))*100:0,decisions:(e.decisions||[]).concat(S.removed[x.id]?[S.removed[x.id]]:[])});}
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=s=>document.querySelector(s);
+const nameOf=x=>`${x.d.lab} · ${x.m.ad}`;
+const izType=x=>x.d.dir==="band"?"Bant Metodu (alt–üst sınır)":"Eşik Metodu (Threshold)";
+const stChip=x=>x.removed?`<span class="chip off">Silindi</span>`:!x.active?`<span class="chip off">İnaktif</span>`:x.last&&x.last.br?`<span class="chip crit">Eşik aşımı</span>`:`<span class="chip good">Normal</span>`;
+const thrTxt=x=>x.d.dir==="band"?`${x.d.band[0]} – ${x.d.band[1]}`:fmt(x.t,x.esik);
+const fazTag=f=>`<span class="tag">${esc(f)}</span>`;
+
+/* ===== Toplulaştırma: aylık / 3 aylık / yıllık (validasyon ölçüm düzeni) ===== */
+function agg(x,res,mode){
+ if(mode==="ay")return res.map(r=>({key:r.rk,lab:iso(r.d),faz:r.faz,v:r.v,n:1,br:r.br,rows:[r]}));
+ const g={};res.forEach(r=>{const y=r.d.getFullYear(),q=Math.floor(r.d.getMonth()/3)+1;const k=mode==="ceyrek"?`${y}-Ç${q}`:String(y);(g[k]=g[k]||[]).push(r);});
+ return Object.keys(g).sort().map(k=>{const rows=g[k];let v=rows.reduce((a,r)=>a+r.v,0);v=x.d.int?v:+(v/rows.length).toFixed(x.t==="DW"?2:3);
+  return {key:k,lab:k,faz:[...new Set(rows.map(r=>r.faz))].join(" · "),v,n:rows.length,br:isBreach(x.t,v,x.esik),rows};});}
+function phaseYearCard(x){
+ const years=[...new Set(x.res.map(r=>r.d.getFullYear()))].sort();
+ const cell=rows=>{if(!rows.length)return null;let v=rows.reduce((a,r)=>a+r.v,0);v=x.d.int?v:+(v/rows.length).toFixed(x.t==="DW"?2:3);return {v,br:isBreach(x.t,v,x.esik),n:rows.length};};
+ const td=(c,ov)=>c?`<td class="v ${ov?"ovc ":""}${c.br?"br":"ok"}" title="${c.n} ölçüm">${fmt(x.t,c.v)}</td>`:`<td class="v ${ov?"ovc":""}">—</td>`;
+ const body=PHASES.map(p=>{const pr=x.res.filter(r=>r.faz===p);return `<tr><td>${esc(p)}</td>${years.map(y=>td(cell(pr.filter(r=>r.d.getFullYear()===y)))).join("")}${td(cell(pr),true)}</tr>`;}).join("");
+ const ov=`<tr class="ov"><td>Overall</td>${years.map(y=>td(cell(x.res.filter(r=>r.d.getFullYear()===y)))).join("")}${td(cell(x.res),true)}</tr>`;
+ return `<div class="kart"><div class="tw"><table><thead><tr><th>Faz \\ Yıl</th>${years.map(y=>`<th class="num">${y}</th>`).join("")}<th class="num">Overall</th></tr></thead><tbody>${body}${ov}</tbody></table></div><div class="small" style="margin-top:6px">Hücreler dönem ortalamasıdır${x.d.int?" (adet metriklerde toplam)":""}; kırmızı = eşik dışı (eşik ${thrTxt(x)}). ${x.m.ad} için ${x.d.lab} değerinin yaşam döngüsü boyunca seyri.</div></div>`;}
+function relatedModels(m){return MODELS.filter(o=>o!==m&&((m.up||[]).includes(o.id)||(o.up||[]).includes(m.id)));}
+function xrefBlock(x){
+ const auto=relatedModels(x.m).map(o=>METS.find(y=>y.m===o&&y.t===x.t)).filter(Boolean);
+ const man=(S.xrefs[x.id]||[]).map(id=>BYID[id]).filter(Boolean);
+ const all=[...new Map(auto.concat(man).map(y=>[y.id,y])).values()].map(y=>eff(y));
+ const cands=METS.filter(y=>y.t===x.t&&y.m!==x.m&&!all.some(z=>z.id===y.id)&&!S.removed[y.id]);
+ return `<div class="sub"><h3>Çapraz referans — aynı metrik, ilişkili modeller</h3>
+  <div class="tw"><table><thead><tr><th>Kayıt</th><th>Model</th><th>İlişki</th><th class="num">Son değer</th><th class="num">Eşik</th><th>İzleme</th><th></th></tr></thead><tbody>
+  ${all.map(y=>{const isAuto=auto.some(a=>a.id===y.id);const rel=(x.m.up||[]).includes(y.m.id)?"upstream (besleyen)":(y.m.up||[]).includes(x.m.id)?"downstream (beslenen)":"elle bağlandı";
+   return `<tr><td><a class="mono" href="#${y.id}">${y.id}</a></td><td>${esc(y.m.ad)}</td><td><span class="tag">${rel}</span></td><td class="num">${y.last?fmt(y.t,y.last.v):"—"}</td><td class="num">${thrTxt(y)}</td><td>${stChip(y)}</td><td>${isAuto?"":`<button type="button" class="btn sm" data-xdel="${y.id}">Bağı kaldır</button>`}</td></tr>`;}).join("")||`<tr><td colspan="7" class="small">İlişkili modelde bu metrik yok.</td></tr>`}
+  </tbody></table></div>
+  ${cands.length?`<div class="actions" style="margin-top:8px"><select id="xsel" aria-label="Çapraz referans ekle">${cands.map(y=>`<option value="${y.id}">${y.id} · ${esc(y.m.ad)}</option>`).join("")}</select><button type="button" class="btn sm" id="xadd">+ Çapraz referans ekle</button></div>`:""}</div>`;}
+
+/* ===== Dialog yardımcıları ===== */
+const dlg=$("#dlg");let dlgSubmit=null;
+function openDlg(title,body,onOk,okLabel){ $("#dlgTitle").textContent=title;$("#dlgBody").innerHTML=body;$("#dlgOk").textContent=okLabel||"Kaydet";dlgSubmit=onOk;dlg.showModal();}
+$("#dlgCancel").onclick=()=>dlg.close();
+$("#dlgForm").addEventListener("submit",e=>{e.preventDefault();const o={};new FormData(e.target).forEach((v,k)=>o[k]=String(v).trim());const err=dlgSubmit?dlgSubmit(o):null;if(err){alert(err);return;}dlg.close();route();});
+const inp=(n,l,type="text",v="",extra="",full=false)=>`<label${full?' class="full"':""}>${l}<input name="${n}" type="${type}" value="${esc(v)}" ${extra}></label>`;
+const sel=(n,l,opts,v,full=false)=>`<label${full?' class="full"':""}>${l}<select name="${n}">${opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`;
+const ta=(n,l,v="",req=false)=>`<label class="full">${l}<textarea name="${n}" ${req?"required":""}>${esc(v)}</textarea></label>`;
+const gateHtml=()=>`<div class="gate"><h4>Karar kapısı — validasyon + MRM Komitesi kararı olmadan uygulanmaz</h4>
+ ${sel("valKarar","Validasyon kararı",["— seçiniz —","Uygun","Koşullu uygun","Uygun değil"],"— seçiniz —")}${inp("valNo","Validasyon referans no","text","","placeholder=\"VAL-…\" required")}${inp("valTarih","Validasyon karar tarihi","date",today(),"required")}
+ ${sel("komKarar","MRM Komitesi kararı",["— seçiniz —","Onaylandı","Reddedildi"],"— seçiniz —")}${inp("komNo","Komite karar no","text","","placeholder=\"MRK-2026/…\" required")}${inp("komTarih","Komite karar tarihi","date",today(),"required")}
+ ${ta("gerekce","Gerekçe",'',true)}</div>`;
+function gateCheck(o){if(!["Uygun","Koşullu uygun"].includes(o.valKarar))return "Validasyon kararı 'Uygun' ya da 'Koşullu uygun' olmalı — aksi halde metrik düzenlenemez/silinemez.";
+ if(o.komKarar!=="Onaylandı")return "MRM Komitesi kararı 'Onaylandı' olmadan işlem yapılamaz.";if(!o.valNo||!o.komNo||!o.gerekce)return "Karar numaraları ve gerekçe zorunludur.";return null;}
+const decisionOf=(o,islem)=>({ts:today(),islem,valKarar:o.valKarar,valNo:o.valNo,valTarih:o.valTarih,komKarar:o.komKarar,komNo:o.komNo,komTarih:o.komTarih,gerekce:o.gerekce});
+
+/* ===== Liste ===== */
+let VIEW=METS.slice(),SEG="klasik";
+const mlModels=()=>MODELS.filter(m=>m.ml);
+function renderList(){
+ const q=$("#q").value.trim().toLocaleLowerCase("tr"),fs=$("#fs").value,ff=$("#ff").value,fp=$("#fp").value;
+ $("#segK").setAttribute("aria-pressed",SEG==="klasik");$("#segM").setAttribute("aria-pressed",SEG==="ml");
+ $("#classicList").hidden=SEG!=="klasik";$("#mlList").hidden=SEG!=="ml";
+ if(SEG==="ml"){const rows=mlModels().filter(m=>!q||[m.id,m.ad,m.sahip,m.unit].join(" ").toLocaleLowerCase("tr").includes(q)).map(m=>{const st=mlState(m);const perf=METS.filter(x=>x.m===m&&!S.removed[x.id]).map(eff);const brN=perf.filter(x=>x.last&&x.last.br).length;
+   const custom=["ks","mp","mk"].reduce((a,k)=>a+st.metrics[k].length,0),openF=["ks","mp","mk"].reduce((a,k)=>a+st.findings[k].filter(f=>f.durum!=="Kapandı").length,0);
+   return `<tr data-id="ML-${m.id}"><td><button type="button" class="idl" data-id="ML-${m.id}">ML-${m.id}</button></td><td>${esc(m.ad)}</td><td>${esc(m.tip)}${m.genai?' <span class="badge">GenAI</span>':""}</td><td>${fazTag(defaultPhase(m))}</td><td>${esc(m.sahip)}</td><td class="num">${perf.length}</td><td class="num">${custom}</td><td class="num">${openF}</td><td>${brN?`<span class="chip crit">${brN} eşik aşımı</span>`:`<span class="chip good">Normal</span>`}</td></tr>`;}).join("");
+  $("#mlRows").innerHTML=rows||`<tr><td colspan="9" class="small">Eşleşen ML/AI modeli yok.</td></tr>`;$("#mlCnt").textContent=`${mlModels().length} ML/AI modeli`;return;}
+ VIEW=METS.filter(x=>!x.m.ml).map(eff).filter(x=>{
+  if(fs==="del"){if(!x.removed)return false;}else if(x.removed)return false;
+  if(q&&![x.id,nameOf(x),x.m.id,x.sahip,x.m.unit,x.fw,x.faz].join(" ").toLocaleLowerCase("tr").includes(q))return false;
+  if(fs==="br"&&!(x.active&&x.last&&x.last.br))return false;if(fs==="ok"&&!(x.active&&x.last&&!x.last.br))return false;if(fs==="off"&&x.active)return false;
+  if(ff&&x.fwk!==ff)return false;if(fp&&x.faz!==fp)return false;return true;});
+ $("#cnt").textContent=`${VIEW.length} / ${METS.filter(x=>!x.m.ml&&!S.removed[x.id]).length} kayıt`;
+ $("#rows").innerHTML=VIEW.map(x=>`<tr data-id="${x.id}" class="${x.removed?"del":""}"><td><button type="button" class="idl" data-id="${x.id}">${x.id}</button></td><td>${esc(nameOf(x))}${x.added?' <span class="badge">eklendi</span>':""}</td><td>${fazTag(x.faz)}</td><td>${esc(x.sahip)}</td><td>${x.removed?"Silindi":x.active?"Aktif":"İnaktif"}</td><td class="num">${x.last?fmt(x.t,x.last.v):"—"}</td><td class="num">${thrTxt(x)}</td><td class="mono">${x.last?iso(x.last.d):"—"}</td><td>${esc(x.periyot)}</td><td class="mono">${x.m.id}</td><td>${stChip(x)}</td></tr>`).join("")||`<tr><td colspan="11" class="small">Aramayla eşleşen metrik yok. Filtreleri temizleyin.</td></tr>`;
+}
+$("#rows").addEventListener("click",e=>{const tr=e.target.closest("tr[data-id]");if(tr)location.hash=tr.dataset.id;});
+$("#mlRows").addEventListener("click",e=>{const tr=e.target.closest("tr[data-id]");if(tr)location.hash=tr.dataset.id;});
+["q","fs","ff","fp"].forEach(id=>$("#"+id).addEventListener("input",renderList));
+$("#ff").innerHTML=`<option value="">Tüm çerçeveler</option>`+Object.entries(FW).map(([k,v])=>`<option value="${k}">${esc(v[0])}</option>`).join("");
+$("#fp").innerHTML=`<option value="">Tüm fazlar</option>`+PHASES.map(p=>`<option>${p}</option>`).join("");
+$("#segK").onclick=()=>{SEG="klasik";renderList();};$("#segM").onclick=()=>{SEG="ml";renderList();};
+$("#resetAll").onclick=()=>{if(confirm("Bu tarayıcıdaki tüm düzenlemeler (eklenen metrik/ölçüm, bulgular, kararlar, çapraz referanslar, ML/AI özel metrikleri) silinsin mi?")){localStorage.removeItem(SKEY);location.reload();}};
+$("#addMet").onclick=()=>{const cands=MODELS.filter(m=>!m.ml);
+ openDlg("Metrik ekle",`${sel("modelId","Model",cands.map(m=>m.id+" · "+m.ad),"",true)}${sel("t","Metrik türü",Object.keys(DEF).map(k=>k+" — "+DEF[k].lab),"",true)}${sel("faz","Metrik fazı",PHASES,"İzleme (Monitoring)")}${sel("periyot","Ölçüm periyodu",PERIODS,"Aylık")}${inp("esik","Eşik (boşsa tier politikası)","number","","step=\"any\"")}${inp("d","İlk ölçüm tarihi","date",today())}${inp("v","İlk ölçüm değeri","number","","step=\"any\" required")}`,
+  o=>{const mid=o.modelId.split(" · ")[0],t=o.t.split(" — ")[0];const m=MODELS.find(x=>x.id===mid);if(!m||!DEF[t])return "Model/metrik seçilmeli.";
+   if(METS.some(x=>x.m===m&&x.t===t&&!S.removed[x.id]))return "Bu model için bu metrik türü zaten kayıtlı (karar kapısıyla düzenleyin).";
+   const esik=o.esik!==""?+o.esik:(TT[m.tier]&&TT[m.tier][t]!=null?TT[m.tier][t]:DEF[t].esik);
+   const id="MET-"+String(METS.length+1).padStart(3,"0");S.added.push({id,modelId:m.id,t,faz:o.faz,periyot:o.periyot,esik,firstRes:{d:o.d||today(),v:+o.v}});saveS();location.reload();return null;});};
+
+/* ===== Tahmin (izleme sonuçları üzerinden) ===== */
+function forecast(x){const src=(x.mon.length>=3?x.mon:x.res).slice(-6);const ys=src.map(r=>r.v),n=ys.length,mx=(n+1)/2,my=ys.reduce((a,b)=>a+b,0)/n;
+ let sxy=0,sxx=0;ys.forEach((y,i)=>{sxy+=(i+1-mx)*(y-my);sxx+=(i+1-mx)**2;});const b=sxx?sxy/sxx:0,a=my-b*mx;const lo=0,hi=x.d.cap?1:null;const lastD=src[src.length-1].d;
+ return {lo,hi,b,src,pts:[1,2,3,4,5].map(k=>{let v=a+b*(n+k);v=Math.max(lo,hi!=null?Math.min(hi,v):v);if(x.d.int)v=Math.round(v);return {d:new Date(lastD.getFullYear(),lastD.getMonth()+k,1),v,br:isBreach(x.t,v,x.esik)};})};}
+
+/* ===== Grafik ===== */
+function chart(x,withFc){
+ const base=x.mon.length>=2?x.mon:x.res;const W_=860,H=250,L=52,R=withFc?20:74,T=16,B=30;const fc=withFc?forecast(x).pts:[];
+ const all=base.concat(fc);const vals=all.map(p=>p.v).concat(x.d.dir==="band"?x.d.band:[x.esik]);
+ let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo||1)*.18;lo=Math.max(0,lo-pad);hi=hi+pad;
+ const X=i=>L+(W_-L-R)*(all.length>1?i/(all.length-1):0),Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+ let s="";for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4,y=Y(v);s+=`<line class="gl" x1="${L}" y1="${y.toFixed(1)}" x2="${W_-R}" y2="${y.toFixed(1)}"/><text class="ax" x="${L-6}" y="${(y+3).toFixed(1)}" text-anchor="end">${x.d.int?v.toFixed(1):v.toFixed(2)}</text>`;}
+ all.forEach((p,i)=>{s+=`<text class="ax" x="${X(i).toFixed(1)}" y="${H-10}" text-anchor="middle">${iso(p.d).slice(0,7)}</text>`;});
+ const thr=x.d.dir==="band"?x.d.band:[x.esik];
+ thr.forEach((v,i)=>{s+=`<line class="thr" x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W_-R}" y2="${Y(v).toFixed(1)}"/>`;if(!withFc)s+=`<text class="thrl" x="${W_-R+5}" y="${(Y(v)+3).toFixed(1)}">${x.d.dir==="band"?(i?"üst ":"alt "):"eşik "}${fmt(x.t,v)}</text>`;});
+ const n0=base.length;s+=`<polyline class="ser" points="${base.map((p,i)=>X(i).toFixed(1)+","+Y(p.v).toFixed(1)).join(" ")}"/>`;
+ if(fc.length)s+=`<polyline class="fc" points="${[base[n0-1]].concat(fc).map((p,i)=>X(n0-1+i).toFixed(1)+","+Y(p.v).toFixed(1)).join(" ")}"/>`;
+ all.forEach((p,i)=>{s+=`<circle class="pt${p.br?" br":""}${i>=n0?" f":""}" cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${i>=n0?3.2:4}"><title>${iso(p.d)} · ${fmt(x.t,p.v)}${p.br?" · eşik dışı":""}</title></circle>`;});
+ return `<div class="chart"><svg viewBox="0 0 ${W_} ${H}" role="img" aria-label="${esc(nameOf(x))}: izleme ölçümleri${withFc?" ve 5 dönemlik tahmin":""}; son değer ${x.last?fmt(x.t,x.last.v):"—"}, eşik ${thrTxt(x)}">${s}</svg></div>
+ <div class="lg"><span><i></i>izleme ölçümü</span>${withFc?`<span><i class="d"></i>tahmin</span>`:""}<span><i class="t"></i>eşik ${thrTxt(x)}</span><span>dolu kırmızı nokta: eşik dışı</span></div>`;
+}
+
+/* ===== Bulgu (sonuç bazlı) ve ölçüm diyalogları ===== */
+function findingDlg(x,r,existing){
+ openDlg(existing?"Bulgu düzenle":"Bulgu ekle",`<div class="full" style="grid-column:1/-1;font-size:12px;color:var(--muted)">Sonuç <span class="ro">${r.no}</span> · Ölçüm tarihi <span class="ro">${iso(r.d)}</span> · ${esc(r.faz)} · değer ${fmt(x.t,r.v)}${existing?` · oluşturma ${existing.olusturma} · son düzenleme ${existing.duzenleme}`:""}</div>
+  ${inp("baslik","Bulgu başlığı","text",existing?existing.baslik:`[İzleme] ${x.t} ${r.br?"eşik aşımı":"gözlemi"} · ${x.m.ad}`,"required",true)}${sel("onem","Önem",["Yüksek","Orta","Düşük"],existing?existing.onem:(["PSI","CSI"].includes(x.t)?"Yüksek":"Orta"))}${sel("durum","Durum",["Açık","Aksiyon Planlandı","Uygulanıyor","Kapandı"],existing?existing.durum:"Açık")}${inp("sahip","Sorumlu","text",existing?existing.sahip:x.sahip)}${inp("hedef","Hedef tarih","date",existing?existing.hedef:"")}${ta("aciklama","Açıklama / aksiyon (serbest metin)",existing?existing.aciklama:"")}`,
+  o=>{if(!o.baslik)return "Başlık zorunlu.";const f=S.findings[x.id]=S.findings[x.id]||{};const now=today();
+   f[r.rk]=Object.assign({olcum:iso(r.d),olusturma:existing?existing.olusturma:now},existing||{},{baslik:o.baslik,onem:o.onem,durum:o.durum,sahip:o.sahip,hedef:o.hedef,aciklama:o.aciklama,duzenleme:now});saveS();return null;});}
+function measureDlg(x){openDlg("Ölçüm ekle",`${inp("d","Ölçüm tarihi","date",today(),"required")}${inp("v","Değer","number","","step=\"any\" required")}${sel("faz","Faz",PHASES,x.faz)}${ta("note","Not (isteğe bağlı)")}`,
+ o=>{if(o.v==="")return "Değer zorunlu.";(S.extraRes[x.id]=S.extraRes[x.id]||[]).push({d:o.d,v:+o.v,faz:o.faz,note:o.note,created:today()});saveS();return null;});}
+function editMetricDlg(x){openDlg("Metriği düzenle — karar kapılı",`<div class="full" style="grid-column:1/-1;font-size:12px;color:var(--muted)">Metrik App ID <span class="ro">${x.id}</span> değiştirilemez.</div>
+ ${inp("sahip","Metrik sahibi","text",x.sahip)}${sel("faz","Metrik fazı",PHASES,x.faz)}${sel("periyot","Ölçüm periyodu",PERIODS,x.periyot)}${inp("esik","Eşik","number",x.esik,"step=\"any\"")}${ta("aciklama","Metrik açıklaması",x.ac)}${gateHtml()}`,
+ o=>{const err=gateCheck(o);if(err)return err;const e=S.edits[x.id]=S.edits[x.id]||{decisions:[]};Object.assign(e,{sahip:o.sahip,faz:o.faz,periyot:o.periyot,esik:o.esik!==""?+o.esik:x.esik,aciklama:o.aciklama});
+  e.decisions=e.decisions||[];e.decisions.push(decisionOf(o,"Düzenleme"));saveS();return null;},"Kararla kaydet");}
+function deleteMetricDlg(x){openDlg("Metriği sil — karar kapılı",`<div class="full" style="grid-column:1/-1;font-size:12px;color:var(--muted)"><span class="ro">${x.id}</span> · ${esc(nameOf(x))}. Silme geri alınamaz; kayıt "Silinen (kararlı)" filtresinde karar bilgisiyle görünür.</div>${gateHtml()}`,
+ o=>{const err=gateCheck(o);if(err)return err;S.removed[x.id]=decisionOf(o,"Silme");saveS();location.hash="liste";return null;},"Kararla sil");}
+
+/* ===== Kayıt (klasik) ===== */
+let TAB="aciklama",RMODE="ay";
+const F=(k,v,full)=>`<div class="f${full?" full":""}"><dt>${k}:</dt><dd>${v==null||v===""?"—":v}</dd></div>`;
+const sec=(t,body,open=true,extra="")=>`<details class="sec"${open?" open":""}><summary>${t}${extra}</summary>${body}</details>`;
+function resultsTab(x){
+ const rows=agg(x,x.res,RMODE);const fnd=S.findings[x.id]||{};
+ const seg=`<div class="actions" style="padding:10px 16px 0"><span class="small">Ölçüm düzeni:</span><div class="seg">${[["ay","Aylık"],["ceyrek","3 Aylık"],["yil","Yıllık"]].map(([k,l])=>`<button type="button" data-rm="${k}" aria-pressed="${RMODE===k}">${l}</button>`).join("")}</div><span class="small">3 aylık ve yıllık değerler validasyon testleri için dönem ortalamasıdır${x.d.int?" (adet metriğinde toplam)":""}.</span><span class="sp" style="flex:1"></span>${x.removed?"":`<button type="button" class="btn sm pri" id="addRes">+ Ölçüm ekle</button>`}</div>`;
+ const head=RMODE==="ay"?`<tr><th>Sonuç No</th><th>Faz</th><th>Ölçüm Tarihi</th><th>Düzenleme Tarihi</th><th class="num">Değer</th><th class="num">Eşik</th><th class="num">Değişim</th><th>Durum</th><th>Bulgu</th></tr>`:`<tr><th>Dönem</th><th>Fazlar</th><th class="num">Ölçüm sayısı</th><th class="num">Dönem değeri</th><th class="num">Eşik</th><th class="num">Değişim</th><th>Durum</th><th>Bulgu</th></tr>`;
+ let prevV=null;const body=rows.map(g=>{const c=prevV?((g.v-prevV)/Math.abs(prevV)*100).toFixed(1)+" %":"—";prevV=g.v;const st=g.br?`<span class="chip crit">Aşım</span>`:`<span class="chip good">Normal</span>`;
+  if(RMODE==="ay"){const r=g.rows[0],f=fnd[r.rk];const fcell=f?`<span class="chip ${f.durum==="Kapandı"?"good":f.onem==="Yüksek"?"crit":"warn"}" title="${esc(f.baslik)}">${esc(f.onem)} · ${esc(f.durum)}</span><div class="small">ölçüm ${f.olcum} · düzenleme ${f.duzenleme}</div>${x.removed?"":`<div class="actions"><button type="button" class="btn sm" data-fedit="${r.rk}">Düzenle</button><button type="button" class="btn sm danger" data-fdel="${r.rk}">Çıkar</button></div>`}`:(x.removed?"—":`<button type="button" class="btn sm" data-fadd="${r.rk}">Bulgu ekle</button>`);
+   return `<tr><td class="mono">${r.no}</td><td>${fazTag(r.faz)}</td><td class="mono">${iso(r.d)}</td><td class="mono">${r.created||"—"}</td><td class="num">${fmt(x.t,r.v)}</td><td class="num">${thrTxt(x)}</td><td class="num">${c}</td><td>${st}</td><td>${fcell}</td></tr>`;}
+  const nf=g.rows.filter(r=>fnd[r.rk]).length;return `<tr><td class="mono">${g.lab}</td><td>${g.faz.split(" · ").map(fazTag).join(" ")}</td><td class="num">${g.n}</td><td class="num">${fmt(x.t,g.v)}</td><td class="num">${thrTxt(x)}</td><td class="num">${c}</td><td>${st}</td><td>${nf?`<span class="chip warn">${nf} bulgu</span>`:"—"}</td></tr>`;}).reverse().join("");
+ return sec("Metrik sonuçları",`${seg}<div class="tw"><table><thead>${head}</thead><tbody>${body||`<tr><td colspan="9" class="small">Ölçüm yok.</td></tr>`}</tbody></table></div><div class="note" style="padding-bottom:12px">Bulgu işlemleri aylık görünümde satır bazındadır; her bulgu ölçüm tarihini sonuçtan alır, oluşturma ve son düzenleme tarihleri ayrı tutulur.</div>`,true,`<span class="small">${x.res.length} sonuç · ${Object.keys(fnd).length} bulgu</span>`);}
+function tabBody(x){
+ const d=x.d,dirTxt=d.dir==="high"?"Yüksek değer iyi; eşiğin altına düşerse aşım":d.dir==="low"?"Düşük değer iyi; eşiğin üstüne çıkarsa aşım":"Bant içinde kalmalı; dışına çıkarsa aşım";
+ if(TAB==="aciklama")return sec("Metrik bilgileri",`<dl class="fields">${F("Hedef",d.dir==="band"?`${d.band[0]} – ${d.band[1]} aralığı`:(d.dir==="high"?"≥ ":"≤ ")+fmt(x.t,x.esik))}${F("Bilginin Gerçek Kaynağı",esc(x.m.sys))}${F("Tanım",esc(x.ac),true)}${F("Hesaplama Yöntemi",esc(d.lab))}${F("Metrik Fazı",fazTag(x.faz))}</dl>`);
+ if(TAB==="analiz"){const tr=TT["Tier 1"][x.t]!=null?`<div class="sub"><h3>Tier bazlı eşik politikası</h3><div class="tw"><table><thead><tr><th>Tier</th><th class="num">Eşik</th><th>Bu model</th></tr></thead><tbody>${Object.keys(TT).map(k=>`<tr><td>${k}</td><td class="num">${fmt(x.t,TT[k][x.t])}</td><td>${k===x.m.tier?"● uygulanan":""}</td></tr>`).join("")}</tbody></table></div></div>`:"";
+  return sec("Eşik izleme",`<dl class="fields">${F("İzlenen Eşik Değer",d.int?"Adet":"Oran (0–1)")}${F("Eşik Yönlendirme",dirTxt)}${F("Eşik",thrTxt(x)+(S.edits[x.id]&&S.edits[x.id].esik!=null?" · kararla güncellendi":(TT[x.m.tier]&&TT[x.m.tier][x.t]!=null?` · ${x.m.tier} politikası`:" · metrik varsayılanı")))}${F("Son Durum",stChip(x))}${F("Eşik dışı ölçüm",`${x.res.filter(r=>r.br).length} / ${x.res.length}`)}${F("Eşiğe uzaklık",d.dir==="band"||!x.last?"—":fmt(x.t,Math.abs(x.last.v-x.esik)))}</dl>${chart(x,false)}${tr}`);}
+ if(TAB==="sonuc")return resultsTab(x);
+ if(TAB==="kart")return sec(`Metrik kartı — ${esc(x.m.ad)} · ${esc(d.lab)}`,`<div class="note">Aynı metriğin model yaşam döngüsü boyunca seyri: geliştirme, ilk validasyon, izleme ve periyodik validasyon fazlarında yıl bazlı ve overall değer.</div>${phaseYearCard(x)}${xrefBlock(x)}`);
+ if(TAB==="tahmin"){if(x.res.length<2)return sec("Tahmin analizi",`<div class="note" style="padding-bottom:12px">Tahmin için en az 2 ölçüm gerekir.</div>`);const f=forecast(x),p=f.pts,g=x.last&&x.last.v?((p[0].v-x.last.v)/Math.abs(x.last.v)*100):0,first=p.find(q=>q.br&&!(x.last&&x.last.br));
+  return sec("Tahmin analizi",`<div class="note">Tahminler izleme fazındaki son ölçümler üzerinden doğrusal regresyonla (FORECAST) hesaplanır. Metrik değeri belirli sınırların dışına çıkamıyorsa tahmin alt ve üst sınırla kırpılır.</div><dl class="fields">${F("Tahmini Alt Sınır",f.lo)}${F("Tahmini Üst Sınır",f.hi==null?"yok":f.hi)}${F("Aylık eğim",`<span class="mono">${f.b>=0?"+":""}${f.b.toFixed(4)}</span>`)}${F("Eşik uyarısı",first?`<span class="chip warn">${iso(first.d).slice(0,7)} döneminde eşik dışına çıkması bekleniyor</span>`:(x.last&&x.last.br)?`<span class="chip crit">Halen eşik dışı</span>`:"5 dönemde eşik aşımı beklenmiyor")}</dl>${chart(x,true)}`)+
+  sec("Öngörülen tahminler",`<dl class="fields">${p.map((q,i)=>F(`Tahmini Tarih ${i+1}`,`<span class="mono">${iso(q.d)}</span>`)+F(`Tahmini Değer ${i+1}`,`<span class="mono">${fmt(x.t,q.v)}</span>${q.br?` <span class="chip crit">eşik dışı</span>`:""}`)).join("")}</dl>`);}
+ if(TAB==="karar")return sec("Karar geçmişi — düzenleme / silme kararları",x.decisions.length?`<div class="hist"><div class="tw"><table><thead><tr><th>Tarih</th><th>İşlem</th><th>Validasyon kararı</th><th>MRM Komitesi kararı</th><th>Gerekçe</th></tr></thead><tbody>${x.decisions.map(k=>`<tr><td class="mono">${k.ts}</td><td>${esc(k.islem)}</td><td>${esc(k.valKarar)} · <span class="mono">${esc(k.valNo)}</span> · ${k.valTarih}</td><td>${esc(k.komKarar)} · <span class="mono">${esc(k.komNo)}</span> · ${k.komTarih}</td><td>${esc(k.gerekce)}</td></tr>`).join("")}</tbody></table></div></div>`:`<div class="note" style="padding-bottom:12px">Bu metrik için kayıtlı karar yok. Metrik App ID dışındaki alanlar yalnız validasyon + MRM Komitesi kararıyla değiştirilebilir.</div>`);
+ return sec("Metrik sonlandırma isteği",`<dl class="fields">${F("Metrikler sonlandırılmak isteniyor mu?",x.removed?"Evet — kararla silindi":"Hayır")}${F("Sonlandırma Gerekçesi",x.removed?esc(S.removed[x.id].gerekce):"")}</dl>`);
+}
+function renderRec(id){
+ const x0=BYID[id];if(!x0)return;const x=eff(x0);const idx=VIEW.some(v=>v.id===id)?VIEW:METS.filter(y=>!y.m.ml).map(eff);const i=idx.findIndex(v=>v.id===id);
+ const d=x.d,m=x.m;const sib=METS.filter(y=>y.m===m&&!S.removed[y.id]).map(eff);const brN=sib.filter(y=>y.last&&y.last.br).length;
+ const sev=["PSI","CSI"].includes(x.t)?"Yüksek":"Orta",sla=sev==="Yüksek"?30:60;const due=new Date(NOW);due.setDate(due.getDate()+sla);
+ const TABS=[["aciklama","Açıklama"],["analiz","Metrik Analizleri"],["sonuc","Metrik Sonuçları"],["kart","Metrik Kartı"],["tahmin","Tahmin Analizi"],["karar","Karar Geçmişi"],["son","Sonlandırma"]];
+ $("#rec").innerHTML=`
+ <div class="crumb"><a href="#liste">MRM · İzleme · Metrikler</a> › ${x.id}</div>
+ ${x.removed?`<div class="card" style="padding:10px 14px;border-color:var(--crit);color:var(--crit)">Bu metrik ${S.removed[x.id].ts} tarihinde validasyon (${esc(S.removed[x.id].valNo)}) ve MRM Komitesi (${esc(S.removed[x.id].komNo)}) kararıyla silindi. Kayıt salt-okunur.</div>`:""}
+ <div class="rhead"><div><h1><span>Metrikler :</span> ${x.id}</h1><div class="small" style="margin-top:6px">İlk yayın: ${esc(m.pt)} · Son ölçüm: ${x.last?iso(x.last.d):"—"}</div></div><span class="sp"></span>
+  <div class="actions">${x.removed?"":`<button type="button" class="btn" id="edMet">Metriği düzenle</button><button type="button" class="btn danger" id="delMet">Metriği sil</button>`}<span class="small">(karar kapılı · metrik no değişmez)</span></div>
+  <div class="nav"><button type="button" class="btn" id="pv" ${i<=0?"disabled":""} aria-label="Önceki kayıt">◀</button><span>Kayıt ${i+1} / ${idx.length}</span><button type="button" class="btn" id="nx" ${i<0||i>=idx.length-1?"disabled":""} aria-label="Sonraki kayıt">▶</button><a class="btn" href="#liste">Listeye dön</a><a class="btn" href="#aciklama">Açıklama</a></div></div>
+ ${sec("Genel bilgiler",`<dl class="fields">${F("Metrik App ID",`<span class="mono">${x.id}</span> <span class="small">(değiştirilemez)</span>`)}${F("Durum",x.removed?"Silindi":x.active?"Aktif":`İnaktif · model ${esc(m.durum)} durumunda`)}${F("Model metriği mi?","Evet")}${F("İzleme Durumu",stChip(x))}${F("Metrik Adı",esc(nameOf(x)),true)}${F("Metrik Açıklaması",esc(x.ac),true)}${F("Metrik Sahibi",esc(x.sahip)+` <span class="small">· ${esc(m.dev)}</span>`)}${F("Metrik Fazı",fazTag(x.faz))}${F("Ölçüm Periyodu",esc(x.periyot))}${F("Metrik Tipi",d.kri?"Anahtar Risk Göstergesi":"Anahtar Performans Göstergesi")}${F("İzleme Tipi",izType(x))}${F("Aktivasyon Tarihi",`<span class="mono">${esc(m.pt)}</span>`)}</dl>`)}
+ ${sec("İlişkilendirmeler",`<dl class="fields">${F("Model",`<span class="mono">${m.id}</span> · ${esc(m.ad)}`)}${F("Sahip Birim",esc(m.unit))}${F("Risk","Model riski · "+m.tier)}${F("Kontrol",`<b>Dayanak mevzuat:</b> ${DAYANAK(x.t)}`,true)}${F("Metrik Çerçevesi",esc(x.fw))}${F("İlişkili NOTA Süreci",esc(m.nota))}${F("Model Sınıfı",esc(m.sinif)+" · "+esc(m.tip))}</dl>
+  <div class="sub"><h3>Aynı modelin diğer metrikleri</h3><div class="tw"><table><thead><tr><th>Metrik App ID</th><th>Metrik</th><th>Faz</th><th class="num">Mevcut Değer</th><th class="num">Eşik</th><th>İzleme</th></tr></thead><tbody>${sib.filter(y=>y.id!==x.id).map(y=>`<tr><td><a class="mono" href="#${y.id}">${y.id}</a></td><td>${esc(y.d.lab)}</td><td>${fazTag(y.faz)}</td><td class="num">${y.last?fmt(y.t,y.last.v):"—"}</td><td class="num">${thrTxt(y)}</td><td>${stChip(y)}</td></tr>`).join("")||`<tr><td colspan="6" class="small">Bu modelin başka metriği yok.</td></tr>`}</tbody></table></div></div>`)}
+ ${sec("Model bazlı skorlar",`<dl class="fields">${F("Yıl",x.last?x.last.d.getFullYear():"—")}${F("Dönem",x.last?iso(x.last.d).slice(0,7):"—")}${F("Eşik İçindeki Metrik",`${sib.length-brN} / ${sib.length}`)}${F("Eşik Dışındaki Metrik",brN)}${F("Model İzleme Durumu",brN?`<span class="chip crit">Eşik Aşımı</span>`:`<span class="chip good">Normal</span>`)}</dl>`)}
+ ${sec("Durum izleme",`<dl class="fields">${F("Kritiklik",KRT[m.tier]+` <span class="small">· ${m.tier}</span>`)}${F("Metrik Ağırlığı",x.w||"—")}${F("Son Ölçüm Tarihi",x.last?`<span class="mono">${iso(x.last.d)}</span>`:"—")}${F("Mevcut Değer",x.last?`<span class="mono">${fmt(x.t,x.last.v)}</span>`:"—")}${F("Yüzdesel Değişim",`<span class="mono">${x.chg>=0?"+":""}${x.chg.toFixed(1)} %</span>`)}${F("Önceki Değer",x.prev?`<span class="mono">${fmt(x.t,x.prev.v)}</span>`:"—")}</dl>`)}
+ ${sec("İlişkili aksiyon planları",x.active&&x.last&&x.last.br?`<div class="tw"><table><thead><tr><th>Bulgu</th><th>Önem</th><th>Hedef Tarih</th><th>Durum</th></tr></thead><tbody><tr><td>[İzleme] ${esc(x.t)} eşik aşımı · ${esc(m.ad)}</td><td>${sev}</td><td class="mono">${iso(due)}</td><td><span class="chip warn">Sonuç satırından bulgu ekleyin</span></td></tr></tbody></table></div><div class="note" style="padding-bottom:12px">Simülasyon kuralı: PSI ve CSI aşımı Yüksek, diğer metrikler Orta önemde bulgu açar; hedef tarih SLA'dan gelir (${sla} gün).</div>`:`<div class="note" style="padding-bottom:12px">Bu metrik için açık aksiyon planı önerisi yok.</div>`,!!(x.active&&x.last&&x.last.br),`<span class="small">${x.active&&x.last&&x.last.br?"1 öneri":"yok"}</span>`)}
+ <div><div class="tabs" role="tablist">${TABS.map(([k,l])=>`<button type="button" role="tab" id="t-${k}" aria-selected="${TAB===k}" data-tab="${k}">${l}</button>`).join("")}</div><div class="tabp" role="tabpanel" aria-labelledby="t-${TAB}">${tabBody(x)}</div></div>`;
+ const keep=fn=>{const y=window.scrollY;fn();renderRec(id);window.scrollTo(0,y);};
+ $("#rec").querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>keep(()=>{TAB=b.dataset.tab;}));
+ $("#rec").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>keep(()=>{RMODE=b.dataset.rm;}));
+ $("#rec").querySelectorAll("[data-fadd]").forEach(b=>b.onclick=()=>findingDlg(x,x.res.find(r=>r.rk===b.dataset.fadd)));
+ $("#rec").querySelectorAll("[data-fedit]").forEach(b=>b.onclick=()=>findingDlg(x,x.res.find(r=>r.rk===b.dataset.fedit),(S.findings[x.id]||{})[b.dataset.fedit]));
+ $("#rec").querySelectorAll("[data-fdel]").forEach(b=>b.onclick=()=>{if(confirm("Bu sonuca bağlı bulgu çıkarılsın mı?")){delete S.findings[x.id][b.dataset.fdel];saveS();keep(()=>{});}});
+ $("#rec").querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{S.xrefs[x.id]=(S.xrefs[x.id]||[]).filter(i2=>i2!==b.dataset.xdel);saveS();keep(()=>{});});
+ const xa=$("#xadd");if(xa)xa.onclick=()=>{(S.xrefs[x.id]=S.xrefs[x.id]||[]).push($("#xsel").value);saveS();keep(()=>{});};
+ const ar=$("#addRes");if(ar)ar.onclick=()=>measureDlg(x);const em=$("#edMet");if(em)em.onclick=()=>editMetricDlg(x);const dm=$("#delMet");if(dm)dm.onclick=()=>deleteMetricDlg(x);
+ const pv=$("#pv"),nx=$("#nx");if(pv)pv.onclick=()=>{location.hash=idx[i-1].id;};if(nx)nx.onclick=()=>{location.hash=idx[i+1].id;};
+}
+
+/* ===== ML/AI modelleri için ayrı metrik sistemi ===== */
+const MLSECS=[["ks","Kavramsal Sağlamlık","Metodoloji, veri, varsayımlar, açıklanabilirlik, yanlılık — SR 26-2 kavramsal sağlamlık · EU AI Act md.10/13"],["mp","Model Performansı","Ayrım gücü, kalibrasyon, drift, GenAI kalite metrikleri — çerçeve metrikleri otomatik gelir, özel metrik eklenebilir"],["mk","Model Kullanımı","Kullanım kapsamı, override, insan gözetimi, hacim, istisnalar — SR 26-2 model kullanımı · EU AI Act md.14"]];
+function mlState(m){if(!S.ml[m.id]){const last=iso(MONTHS[5]);S.ml[m.id]={metrics:{
+  ks:[{ad:"Açıklanabilirlik yöntemi tanımlı",aciklama:"SHAP/LIME vb. yöntem dokümante ve reason-code üretiyor mu",faz:"İlk Validasyon",tarih:m.pt,deger:m.genai?"Behavioral":"SHAP",hedef:"Tanımlı",durum:"Uygun",seed:true},{ad:"Veri temsil gücü",aciklama:"Eğitim verisi hedef portföyü/kullanımı temsil ediyor mu",faz:"Geliştirme",tarih:m.gt,deger:m.genai?"Kısmen":"Temsil ediyor",hedef:"Temsil ediyor",durum:m.genai?"İzlenecek":"Uygun",seed:true}],
+  mp:[],
+  mk:[{ad:"Override / müdahale oranı",aciklama:"Model kararının insan tarafından değiştirilme oranı",faz:"İzleme (Monitoring)",tarih:last,deger:"3.0 %",hedef:"≤ 5 %",durum:"Uygun",seed:true},{ad:"İnsan gözetimi (human-in-the-loop)",aciklama:"Kritik kararlarda insan onayı zorunlu mu, rol tanımlı mı",faz:"İzleme (Monitoring)",tarih:last,deger:m.genai?"Zorunlu (süpervizör)":"Kısmi",hedef:"Zorunlu",durum:m.genai?"Uygun":"İzlenecek",seed:true}]},
+  findings:{ks:[],mp:[],mk:[]}};saveS();}return S.ml[m.id];}
+function mlMetricDlg(m,k,idx){const st=mlState(m),ex=idx!=null?st.metrics[k][idx]:null;
+ openDlg(`${MLSECS.find(s=>s[0]===k)[1]} — ${ex?"metriği düzenle":"özel metrik ekle"}`,`${inp("ad","Metrik adı (serbest metin)","text",ex?ex.ad:"","required",true)}${ta("aciklama","Açıklama / ölçüm yöntemi (serbest metin)",ex?ex.aciklama:"")}${sel("faz","Faz",PHASES,ex?ex.faz:defaultPhase(m))}${inp("tarih","Ölçüm tarihi","date",ex?ex.tarih:today())}${inp("deger","Değer (serbest)","text",ex?ex.deger:"")}${inp("hedef","Hedef / eşik (serbest)","text",ex?ex.hedef:"")}${sel("durum","Durum",["Uygun","İzlenecek","Aşım","Uygun değil"],ex?ex.durum:"Uygun")}`,
+  o=>{if(!o.ad)return "Metrik adı zorunlu.";const rec={ad:o.ad,aciklama:o.aciklama,faz:o.faz,tarih:o.tarih,deger:o.deger,hedef:o.hedef,durum:o.durum,olusturma:ex?ex.olusturma||today():today(),duzenleme:today()};if(ex)st.metrics[k][idx]=rec;else st.metrics[k].push(rec);saveS();return null;});}
+function mlFindingDlg(m,k,idx){const st=mlState(m),ex=idx!=null?st.findings[k][idx]:null;
+ openDlg(`${MLSECS.find(s=>s[0]===k)[1]} — ${ex?"bulgu düzenle":"bulgu ekle"}`,`${ta("metin","Bulgu (serbest metin)",ex?ex.metin:"",true)}${sel("onem","Önem",["Yüksek","Orta","Düşük"],ex?ex.onem:"Orta")}${inp("tespit","Tespit / ölçüm tarihi","date",ex?ex.tespit:today())}${sel("durum","Durum",["Açık","Aksiyon Planlandı","Uygulanıyor","Kapandı"],ex?ex.durum:"Açık")}${inp("sahip","Sorumlu","text",ex?ex.sahip:m.sahip)}${inp("hedef","Hedef tarih","date",ex?ex.hedef:"")}`,
+  o=>{if(!o.metin)return "Bulgu metni zorunlu.";const rec={metin:o.metin,onem:o.onem,tespit:o.tespit,durum:o.durum,sahip:o.sahip,hedef:o.hedef,olusturma:ex?ex.olusturma:today(),duzenleme:today()};if(ex)st.findings[k][idx]=rec;else st.findings[k].push(rec);saveS();return null;});}
+let MLCARD=null;
+function renderML(mid){
+ const m=MODELS.find(x=>x.id===mid);if(!m)return;const st=mlState(m);const perf=METS.filter(x=>x.m===m&&!S.removed[x.id]).map(eff);
+ const stChipT=s=>`<span class="chip ${s==="Uygun"?"good":s==="İzlenecek"?"warn":s==="Kapandı"?"good":"crit"}">${esc(s)}</span>`;
+ const mtable=k=>`<div class="tw"><table><thead><tr><th>Metrik</th><th>Açıklama</th><th>Faz</th><th>Ölçüm tarihi</th><th>Düzenleme</th><th>Değer</th><th>Hedef / eşik</th><th>Durum</th><th></th></tr></thead><tbody>
+  ${k==="mp"?perf.map(x=>`<tr><td><a class="mono" href="#${x.id}">${x.id}</a> ${esc(x.d.lab)} <span class="badge">çerçeve</span></td><td>${esc(x.ac)}</td><td>${fazTag(x.faz)}</td><td class="mono">${x.last?iso(x.last.d):"—"}</td><td class="mono">—</td><td class="mono">${x.last?fmt(x.t,x.last.v):"—"}</td><td class="mono">${thrTxt(x)}</td><td>${stChip(x)}</td><td><button type="button" class="btn sm" data-card="${x.id}">${MLCARD===x.id?"Kartı gizle":"Kart"}</button></td></tr>${MLCARD===x.id?`<tr><td colspan="9">${phaseYearCard(x)}${xrefBlock(x)}</td></tr>`:""}`).join(""):""}
+  ${st.metrics[k].map((r,i)=>`<tr><td>${esc(r.ad)}${r.seed?' <span class="tag">örnek</span>':""}</td><td>${esc(r.aciklama)}</td><td>${fazTag(r.faz)}</td><td class="mono">${esc(r.tarih)}</td><td class="mono">${esc(r.duzenleme||"—")}</td><td>${esc(r.deger)}</td><td>${esc(r.hedef)}</td><td>${stChipT(r.durum)}</td><td class="actions"><button type="button" class="btn sm" data-me="${k}:${i}">Düzenle</button><button type="button" class="btn sm danger" data-md="${k}:${i}">Çıkar</button></td></tr>`).join("")}
+  ${!st.metrics[k].length&&!(k==="mp"&&perf.length)?`<tr><td colspan="9" class="small">Bu bölümde metrik yok — "+ Metrik ekle" ile serbest metinle tanımlayın.</td></tr>`:""}</tbody></table></div>`;
+ const ftable=k=>`<div class="sub"><h3>Bulgular — ${MLSECS.find(s=>s[0]===k)[1]}</h3><div class="tw"><table><thead><tr><th>Bulgu (serbest metin)</th><th>Önem</th><th>Tespit / ölçüm tarihi</th><th>Oluşturma</th><th>Son düzenleme</th><th>Sorumlu</th><th>Hedef</th><th>Durum</th><th></th></tr></thead><tbody>
+  ${st.findings[k].map((f,i)=>`<tr><td style="white-space:normal;min-width:240px">${esc(f.metin)}</td><td><span class="chip ${f.onem==="Yüksek"?"crit":f.onem==="Orta"?"warn":"off"}">${esc(f.onem)}</span></td><td class="mono">${esc(f.tespit)}</td><td class="mono">${esc(f.olusturma)}</td><td class="mono">${esc(f.duzenleme)}</td><td>${esc(f.sahip)}</td><td class="mono">${esc(f.hedef)||"—"}</td><td>${stChipT(f.durum)}</td><td class="actions"><button type="button" class="btn sm" data-fe="${k}:${i}">Düzenle</button><button type="button" class="btn sm danger" data-fd="${k}:${i}">Çıkar</button></td></tr>`).join("")||`<tr><td colspan="9" class="small">Bulgu yok.</td></tr>`}</tbody></table></div>
+  <div class="actions" style="margin-top:8px"><button type="button" class="btn sm" data-fa="${k}">+ Bulgu ekle</button></div></div>`;
+ const brN=perf.filter(x=>x.last&&x.last.br).length,openF=["ks","mp","mk"].reduce((a,k)=>a+st.findings[k].filter(f=>f.durum!=="Kapandı").length,0);
+ $("#rec").innerHTML=`
+ <div class="crumb"><a href="#liste">MRM · İzleme · Metrikler</a> › ML/AI › ML-${m.id}</div>
+ <div class="rhead"><div><h1><span>ML/AI Metrik Sistemi :</span> ${esc(m.ad)}</h1><div class="small" style="margin-top:6px"><span class="mono">${m.id}</span> · ${esc(m.tip)}${m.genai?' · <span class="badge">GenAI</span>':""} · ${m.tier} · ${esc(m.unit)}</div></div><span class="sp"></span>
+  <div class="nav"><a class="btn" href="#liste">Listeye dön</a><a class="btn" href="#aciklama">Açıklama</a></div></div>
+ ${sec("Genel bilgiler",`<dl class="fields">${F("Kayıt",`<span class="mono">ML-${m.id}</span> <span class="small">(model başına tek kayıt)</span>`)}${F("İzleme Durumu",brN?`<span class="chip crit">${brN} eşik aşımı</span>`:`<span class="chip good">Normal</span>`)}${F("Model Sahibi",esc(m.sahip)+` <span class="small">· ${esc(m.dev)}</span>`)}${F("Varsayılan Faz",fazTag(defaultPhase(m)))}${F("Metrik Çerçevesi",esc((FW[m.mp]||["—"])[0]))}${F("Açık Bulgu",openF)}${F("Kontrol",`<b>Dayanak mevzuat:</b> ${DAYANAK_ML}`,true)}${F("İlişkili NOTA Süreci",esc(m.nota)||"—",true)}</dl>`)}
+ ${MLSECS.map(([k,t,desc])=>sec(t,`<div class="note">${desc}.</div><div class="actions" style="padding:8px 16px 0"><button type="button" class="btn sm pri" data-ma="${k}">+ Metrik ekle</button><span class="small">Metrik adı, açıklama, değer ve hedef serbest metindir; faz ve tarih seçilir.</span></div>${mtable(k)}${ftable(k)}`,true,`<span class="small">${st.metrics[k].length+(k==="mp"?perf.length:0)} metrik · ${st.findings[k].length} bulgu</span>`)).join("")}`;
+ const keep=fn=>{const y=window.scrollY;fn();renderML(mid);window.scrollTo(0,y);};
+ $("#rec").querySelectorAll("[data-ma]").forEach(b=>b.onclick=()=>mlMetricDlg(m,b.dataset.ma));
+ $("#rec").querySelectorAll("[data-me]").forEach(b=>b.onclick=()=>{const [k,i]=b.dataset.me.split(":");mlMetricDlg(m,k,+i);});
+ $("#rec").querySelectorAll("[data-md]").forEach(b=>b.onclick=()=>{const [k,i]=b.dataset.md.split(":");if(confirm("Bu metrik çıkarılsın mı?")){st.metrics[k].splice(+i,1);saveS();keep(()=>{});}});
+ $("#rec").querySelectorAll("[data-fa]").forEach(b=>b.onclick=()=>mlFindingDlg(m,b.dataset.fa));
+ $("#rec").querySelectorAll("[data-fe]").forEach(b=>b.onclick=()=>{const [k,i]=b.dataset.fe.split(":");mlFindingDlg(m,k,+i);});
+ $("#rec").querySelectorAll("[data-fd]").forEach(b=>b.onclick=()=>{const [k,i]=b.dataset.fd.split(":");if(confirm("Bu bulgu çıkarılsın mı?")){st.findings[k].splice(+i,1);saveS();keep(()=>{});}});
+ $("#rec").querySelectorAll("[data-card]").forEach(b=>b.onclick=()=>keep(()=>{MLCARD=MLCARD===b.dataset.card?null:b.dataset.card;}));
+ $("#rec").querySelectorAll("[data-xdel]").forEach(b=>b.onclick=()=>{const x=MLCARD;S.xrefs[x]=(S.xrefs[x]||[]).filter(i2=>i2!==b.dataset.xdel);saveS();keep(()=>{});});
+ const xa=$("#xadd");if(xa)xa.onclick=()=>{(S.xrefs[MLCARD]=S.xrefs[MLCARD]||[]).push($("#xsel").value);saveS();keep(()=>{});};
+}
+
+/* ===== Yönlendirme ===== */
+function route(){const h=location.hash.slice(1);const doc=h==="aciklama";const ml=h.startsWith("ML-")?h.slice(3):null;const rec=BYID[h];
+ $("#list").hidden=!!rec||!!ml||doc;$("#rec").hidden=!rec&&!ml;$("#doc").hidden=!doc;if(doc){window.scrollTo(0,0);return;}
+ if(ml){SEG="ml";renderML(ml);window.scrollTo(0,0);return;}
+ if(rec){if(rec.m.ml)SEG="ml";renderRec(h);window.scrollTo(0,0);}else renderList();}
+window.addEventListener("hashchange",route);
+renderList();route();
+</script>
+</body></html>
